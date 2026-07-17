@@ -1,16 +1,13 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard,
   Calendar,
   Heart,
   MapPin,
   Bell,
   Wallet,
-  User,
   Clock,
-  CheckCircle2,
   XCircle,
   Download,
   Star,
@@ -18,14 +15,13 @@ import {
   Trash2,
   Settings,
   LogOut,
-  Menu,
-  X,
+  ChevronRight,
   TrendingUp,
   TrendingDown,
+  Wrench,
+  Shield,
   CreditCard,
 } from 'lucide-react';
-import { Navbar } from '../components/Navbar';
-import { Footer } from '../components/Footer';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
@@ -36,17 +32,7 @@ import { useAuth } from '../context/AuthContext';
 import { userBookings, savedAddresses, notifications, walletTransactions, services } from '../data/sampleData';
 import type { Booking, SavedAddress } from '../types';
 
-type Tab = 'overview' | 'bookings' | 'favorites' | 'addresses' | 'notifications' | 'wallet' | 'profile';
-
-const tabs: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-  { id: 'bookings', label: 'Bookings', icon: Calendar },
-  { id: 'favorites', label: 'Favorites', icon: Heart },
-  { id: 'addresses', label: 'Addresses', icon: MapPin },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'wallet', label: 'Wallet', icon: Wallet },
-  { id: 'profile', label: 'Profile', icon: User },
-];
+type Tab = 'bookings' | 'favorites' | 'addresses' | 'notifications' | 'wallet' | 'profile' | 'edit_profile';
 
 const statusTone: Record<Booking['status'], 'brand' | 'green' | 'red' | 'amber'> = {
   upcoming: 'brand',
@@ -59,8 +45,9 @@ export function DashboardPage() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<Tab>('overview');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = (searchParams.get('tab') as Tab) || 'bookings';
+
   const [bookingFilter, setBookingFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
   const [bookings, setBookings] = useState(userBookings);
   const [favorites, setFavorites] = useState<string[]>(['s1', 's5']);
@@ -69,9 +56,10 @@ export function DashboardPage() {
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
   const [newAddr, setNewAddr] = useState({ label: '', address: '', city: '', pincode: '' });
 
-  const upcoming = bookings.filter((b) => b.status === 'upcoming');
-  const completed = bookings.filter((b) => b.status === 'completed');
-  const cancelled = bookings.filter((b) => b.status === 'cancelled');
+  const setTab = (newTab: Tab) => {
+    setSearchParams({ tab: newTab });
+  };
+
   const filteredBookings = bookingFilter === 'all' ? bookings : bookings.filter((b) => b.status === bookingFilter);
   const favoriteServices = services.filter((s) => favorites.includes(s.id));
   const walletBalance = walletTransactions.reduce((sum, t) => sum + (t.type === 'credit' ? t.amount : -t.amount), 0);
@@ -94,7 +82,10 @@ export function DashboardPage() {
   };
 
   const addAddress = () => {
-    if (!newAddr.label || !newAddr.address || !newAddr.pincode) { toast('Please fill all fields', 'error'); return; }
+    if (!newAddr.label || !newAddr.address || !newAddr.pincode) {
+      toast('Please fill all fields', 'error');
+      return;
+    }
     setAddresses((prev) => [...prev, { ...newAddr, id: `a${Date.now()}`, isDefault: false }]);
     setNewAddr({ label: '', address: '', city: '', pincode: '' });
     toast('Address added', 'success');
@@ -113,339 +104,487 @@ export function DashboardPage() {
   const userName = user?.name ?? 'Guest User';
   const userEmail = user?.email ?? 'guest@homeseva.com';
 
-  const sidebarContent = (
-    <div className="space-y-1">
-      <div className="px-3 py-4 mb-2 border-b border-gray-100 dark:border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-700 dark:text-brand-300 font-bold">
-            {userName.charAt(0).toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <p className="font-semibold text-sm truncate">{userName}</p>
-            <p className="text-xs text-gray-500 truncate">{userEmail}</p>
-          </div>
-        </div>
-      </div>
-      {tabs.map((t) => (
-        <button
-          key={t.id}
-          onClick={() => { setTab(t.id); setSidebarOpen(false); }}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${
-            tab === t.id ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          <t.icon className="w-4 h-4" />
-          {t.label}
-          {t.id === 'notifications' && unreadCount > 0 && (
-            <span className="ml-auto bg-brand-600 text-white text-xs px-1.5 py-0.5 rounded-full">{unreadCount}</span>
-          )}
-        </button>
-      ))}
-      <div className="pt-3 mt-3 border-t border-gray-100 dark:border-slate-800 space-y-1">
-        <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition">
-          <LogOut className="w-4 h-4" /> Sign out
-        </button>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <div className="pt-16 flex-1">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-extrabold font-display">My Dashboard</h1>
-              <p className="text-sm text-gray-500">Welcome back, {userName.split(' ')[0]}!</p>
-            </div>
-            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800">
-              <Menu className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="grid lg:grid-cols-[240px_1fr] gap-8">
-            {/* Sidebar */}
-            <aside className="hidden lg:block">
-              <div className="card p-3 sticky top-24">{sidebarContent}</div>
-            </aside>
-
-            {/* Mobile sidebar */}
-            <AnimatePresence>
-              {sidebarOpen && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-50 lg:hidden"
-                >
-                  <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-                  <motion.div
-                    initial={{ x: -280 }}
-                    animate={{ x: 0 }}
-                    exit={{ x: -280 }}
-                    className="absolute left-0 top-0 bottom-0 w-72 glass-strong p-4 overflow-y-auto"
-                  >
-                    <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800">
-                      <X className="w-5 h-5" />
+    <div className="flex flex-col flex-1 bg-gray-50 dark:bg-slate-950 pb-8">
+      
+      {/* Dynamic contents depending on current active sub-state tab */}
+      <div className="p-4 flex-1 text-left max-w-2xl mx-auto w-full">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            {/* 1. BOOKINGS LIST TAB */}
+            {tab === 'bookings' && (
+              <div className="space-y-4">
+                {/* Horizontal Filter Pills */}
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 select-none">
+                  {(['all', 'upcoming', 'completed', 'cancelled'] as const).map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setBookingFilter(f)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize whitespace-nowrap transition ${
+                        bookingFilter === f
+                          ? 'bg-brand-600 text-white'
+                          : 'bg-gray-100 dark:bg-slate-950/40 text-gray-500 hover:bg-gray-200 border border-gray-100 dark:border-slate-800'
+                      }`}
+                    >
+                      {f}
                     </button>
-                    {sidebarContent}
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  ))}
+                </div>
 
-            {/* Content */}
-            <div>
-              <AnimatePresence mode="wait">
-                <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-                  {tab === 'overview' && (
-                    <div className="space-y-6">
-                      {/* Stat cards */}
-                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        {[
-                          { label: 'Upcoming', value: upcoming.length, icon: Clock, tone: 'text-brand-600 bg-brand-50 dark:bg-brand-950/40' },
-                          { label: 'Completed', value: completed.length, icon: CheckCircle2, tone: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40' },
-                          { label: 'Cancelled', value: cancelled.length, icon: XCircle, tone: 'text-red-600 bg-red-50 dark:bg-red-950/40' },
-                          { label: 'Wallet', value: `₹${walletBalance}`, icon: Wallet, tone: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40' },
-                        ].map((s) => (
-                          <div key={s.label} className="card p-5">
-                            <div className={`w-10 h-10 rounded-xl ${s.tone} flex items-center justify-center mb-3`}>
-                              <s.icon className="w-5 h-5" />
+                {filteredBookings.length > 0 ? (
+                  <div className="space-y-3.5">
+                    {filteredBookings.map((b) => (
+                      <BookingCard key={b.id} booking={b} onCancel={() => setCancelTarget(b)} />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<Calendar className="w-10 h-10 text-gray-400" />}
+                    title="No bookings found"
+                    description="Your appointments will display here once you book."
+                    action={<Link to="/services"><Button size="sm">Book Service</Button></Link>}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* 2. FAVORITES TAB */}
+            {tab === 'favorites' && (
+              <div>
+                <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-500 mb-4">Saved Services</h3>
+                {favoriteServices.length > 0 ? (
+                  <div className="space-y-4">
+                    {favoriteServices.map((s) => (
+                      <div key={s.id} className="card p-3 flex gap-3 relative">
+                        <img src={s.image} alt={s.name} className="w-20 h-20 object-cover rounded-xl shrink-0" />
+                        <div className="flex-1 flex flex-col justify-between text-left">
+                          <div>
+                            <h4 className="font-bold text-xs line-clamp-1">{s.name}</h4>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{s.categoryName}</p>
+                          </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="font-extrabold text-xs">₹{s.price}</span>
+                            <div className="flex gap-1.5">
+                              <Link to={`/services/${s.slug}`}>
+                                <Button size="sm" variant="outline">View</Button>
+                              </Link>
+                              <button
+                                onClick={() => toggleFavorite(s.id)}
+                                className="p-1 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
+                              >
+                                <Heart className="w-4 h-4 fill-red-500" />
+                              </button>
                             </div>
-                            <p className="text-2xl font-bold">{s.value}</p>
-                            <p className="text-xs text-gray-500">{s.label}</p>
                           </div>
-                        ))}
-                      </div>
-
-                      {/* Upcoming bookings */}
-                      <div className="card p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="font-semibold">Upcoming bookings</h3>
-                          <button onClick={() => setTab('bookings')} className="text-sm text-brand-600 hover:underline">View all</button>
                         </div>
-                        {upcoming.length > 0 ? (
-                          <div className="space-y-3">
-                            {upcoming.slice(0, 2).map((b) => <BookingRow key={b.id} booking={b} onCancel={() => setCancelTarget(b)} />)}
-                          </div>
-                        ) : (
-                          <EmptyState icon={<Calendar className="w-8 h-8" />} title="No upcoming bookings" description="Book a service to see it here." action={<Link to="/services"><Button>Browse services</Button></Link>} />
-                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState
+                    icon={<Heart className="w-10 h-10 text-gray-400" />}
+                    title="No favorites saved"
+                    description="Click the heart on any service card to pin it here."
+                    action={<Link to="/services"><Button size="sm">Explore Services</Button></Link>}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* 3. SAVED ADDRESSES TAB */}
+            {tab === 'addresses' && (
+              <div className="space-y-4">
+                <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-500">Saved Addresses</h3>
+                <div className="space-y-3">
+                  {addresses.map((a) => (
+                    <div key={a.id} className="card p-3.5 flex items-start justify-between">
+                      <div className="flex items-start gap-2.5">
+                        <MapPin className="w-4.5 h-4.5 text-brand-600 shrink-0 mt-0.5" />
+                        <div className="text-xs">
+                          <p className="font-bold flex items-center gap-1.5">
+                            {a.label}
+                            {a.isDefault && <Badge tone="brand" className="text-[8px] py-0">Default</Badge>}
+                          </p>
+                          <p className="text-gray-500 mt-1 leading-normal">
+                            {a.address}, {a.city} - {a.pincode}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeAddress(a.id)}
+                        className="text-gray-400 hover:text-red-500 p-1"
+                        aria-label="Delete address"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="card p-4">
+                  <h4 className="font-bold text-xs mb-3 text-gray-900 dark:text-white">Add New Address</h4>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <Input label="Label" placeholder="e.g. Home" value={newAddr.label} onChange={(e) => setNewAddr({ ...newAddr, label: e.target.value })} />
+                    <Input label="Pincode" placeholder="400050" value={newAddr.pincode} onChange={(e) => setNewAddr({ ...newAddr, pincode: e.target.value })} />
+                    <div className="col-span-2">
+                      <Input label="Address" placeholder="House/Flat/Floor, building name, area" value={newAddr.address} onChange={(e) => setNewAddr({ ...newAddr, address: e.target.value })} />
+                    </div>
+                    <div className="col-span-2">
+                      <Input label="City" placeholder="Mumbai" value={newAddr.city} onChange={(e) => setNewAddr({ ...newAddr, city: e.target.value })} />
+                    </div>
+                  </div>
+                  <Button size="sm" onClick={addAddress} leftIcon={<Plus className="w-4.5 h-4.5" />} className="mt-4 w-full">
+                    Add Address
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* 4. NOTIFICATIONS TAB */}
+            {tab === 'notifications' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-500">Notifications</h3>
+                  {unreadCount > 0 && (
+                    <Button size="sm" variant="ghost" className="px-2" onClick={markAllRead}>
+                      Mark all read
+                    </Button>
+                  )}
+                </div>
+                <div className="space-y-2.5">
+                  {notifList.map((n) => (
+                    <div
+                      key={n.id}
+                      className={`card p-3.5 flex items-start gap-3 ${
+                        !n.read ? 'border-brand-200 dark:border-brand-900/60 shadow-soft' : ''
+                      }`}
+                    >
+                      <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.read ? 'bg-brand-600' : 'bg-transparent'}`} />
+                      <div className="text-xs">
+                        <p className="font-bold text-gray-900 dark:text-white">{n.title}</p>
+                        <p className="text-gray-500 mt-1 leading-normal">{n.message}</p>
+                        <p className="text-[9px] text-gray-400 mt-1">{n.time}</p>
                       </div>
                     </div>
-                  )}
+                  ))}
+                </div>
+              </div>
+            )}
 
-                  {tab === 'bookings' && (
-                    <div>
-                      <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
-                        {(['all', 'upcoming', 'completed', 'cancelled'] as const).map((f) => (
-                          <button
-                            key={f}
-                            onClick={() => setBookingFilter(f)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize whitespace-nowrap transition ${
-                              bookingFilter === f ? 'bg-brand-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
+            {/* 5. WALLET TAB */}
+            {tab === 'wallet' && (
+              <div className="space-y-4">
+                {/* Balance Card */}
+                <div className="rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-5 text-white shadow-soft">
+                  <p className="text-brand-100 text-xs font-semibold">Wallet Balance</p>
+                  <p className="text-3xl font-black font-display mt-1">₹{walletBalance}</p>
+                  <div className="flex gap-2 mt-4.5">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="px-4 font-bold"
+                      onClick={() => toast('Top-up screen is placeholder', 'info')}
+                    >
+                      Add Money
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="!text-white hover:!bg-white/10 font-bold border border-white/20"
+                      onClick={() => toast('Withdraw is placeholder', 'info')}
+                    >
+                      Withdraw
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Transactions list */}
+                <div className="card p-4">
+                  <h3 className="font-bold text-xs uppercase tracking-wider text-gray-400 mb-3">Recent Transactions</h3>
+                  <div className="divide-y divide-gray-50 dark:divide-slate-800/80">
+                    {walletTransactions.map((t) => (
+                      <div key={t.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                              t.type === 'credit'
+                                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40'
+                                : 'bg-red-50 text-red-600 dark:bg-red-950/40'
                             }`}
                           >
-                            {f}
-                          </button>
-                        ))}
-                      </div>
-                      {filteredBookings.length > 0 ? (
-                        <div className="space-y-3">
-                          {filteredBookings.map((b) => <BookingRow key={b.id} booking={b} onCancel={() => setCancelTarget(b)} />)}
-                        </div>
-                      ) : (
-                        <EmptyState icon={<Calendar className="w-8 h-8" />} title="No bookings here" description="Your bookings will appear in this list." action={<Link to="/services"><Button>Book a service</Button></Link>} />
-                      )}
-                    </div>
-                  )}
-
-                  {tab === 'favorites' && (
-                    <div>
-                      {favoriteServices.length > 0 ? (
-                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {favoriteServices.map((s) => (
-                            <div key={s.id} className="card p-4">
-                              <img src={s.image} alt={s.name} className="w-full h-32 object-cover rounded-xl mb-3" />
-                              <h4 className="font-semibold text-sm">{s.name}</h4>
-                              <p className="text-xs text-gray-500 mb-2">{s.categoryName}</p>
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold">₹{s.price}</span>
-                                <div className="flex gap-1.5">
-                                  <Link to={`/services/${s.slug}`}><Button size="sm" variant="outline">View</Button></Link>
-                                  <button onClick={() => toggleFavorite(s.id)} className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"><Heart className="w-4 h-4 fill-red-500" /></button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <EmptyState icon={<Heart className="w-8 h-8" />} title="No favorites yet" description="Tap the heart on any service to save it here." action={<Link to="/services"><Button>Browse services</Button></Link>} />
-                      )}
-                    </div>
-                  )}
-
-                  {tab === 'addresses' && (
-                    <div>
-                      <div className="flex items-center justify-between mb-5">
-                        <h3 className="font-semibold">Saved addresses</h3>
-                      </div>
-                      <div className="grid sm:grid-cols-2 gap-4 mb-6">
-                        {addresses.map((a) => (
-                          <div key={a.id} className="card p-5">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-brand-600" />
-                                <p className="font-semibold text-sm">{a.label}</p>
-                                {a.isDefault && <Badge tone="brand">Default</Badge>}
-                              </div>
-                              <button onClick={() => removeAddress(a.id)} className="text-gray-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                            </div>
-                            <p className="text-sm text-gray-500 mt-2">{a.address}, {a.city} - {a.pincode}</p>
+                            {t.type === 'credit' ? <TrendingUp className="w-4.5 h-4.5" /> : <TrendingDown className="w-4.5 h-4.5" />}
                           </div>
-                        ))}
-                      </div>
-                      <div className="card p-5">
-                        <h4 className="font-semibold text-sm mb-4">Add new address</h4>
-                        <div className="grid sm:grid-cols-2 gap-3">
-                          <Input label="Label" placeholder="Home" value={newAddr.label} onChange={(e) => setNewAddr({ ...newAddr, label: e.target.value })} />
-                          <Input label="Pincode" placeholder="400050" value={newAddr.pincode} onChange={(e) => setNewAddr({ ...newAddr, pincode: e.target.value })} />
-                          <div className="sm:col-span-2"><Input label="Address" placeholder="House no, street, area" value={newAddr.address} onChange={(e) => setNewAddr({ ...newAddr, address: e.target.value })} /></div>
-                          <Input label="City" placeholder="Mumbai" value={newAddr.city} onChange={(e) => setNewAddr({ ...newAddr, city: e.target.value })} />
-                        </div>
-                        <Button onClick={addAddress} leftIcon={<Plus className="w-4 h-4" />} className="mt-4">Add address</Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {tab === 'notifications' && (
-                    <div>
-                      <div className="flex items-center justify-between mb-5">
-                        <h3 className="font-semibold">Notifications</h3>
-                        {unreadCount > 0 && <Button size="sm" variant="ghost" onClick={markAllRead}>Mark all read</Button>}
-                      </div>
-                      <div className="space-y-2">
-                        {notifList.map((n) => (
-                          <div key={n.id} className={`card p-4 flex items-start gap-3 ${!n.read ? 'ring-1 ring-brand-200 dark:ring-brand-800' : ''}`}>
-                            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.read ? 'bg-brand-600' : 'bg-transparent'}`} />
-                            <div className="flex-1">
-                              <p className="font-semibold text-sm">{n.title}</p>
-                              <p className="text-sm text-gray-500">{n.message}</p>
-                              <p className="text-xs text-gray-400 mt-1">{n.time}</p>
-                            </div>
+                          <div className="text-xs">
+                            <p className="font-bold text-gray-900 dark:text-white leading-snug">{t.description}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">
+                              {new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                            </p>
                           </div>
-                        ))}
+                        </div>
+                        <span
+                          className={`font-black text-xs ${
+                            t.type === 'credit' ? 'text-emerald-600' : 'text-red-500'
+                          }`}
+                        >
+                          {t.type === 'credit' ? '+' : '-'}₹{t.amount}
+                        </span>
                       </div>
-                    </div>
-                  )}
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
-                  {tab === 'wallet' && (
-                    <div>
-                      <div className="card p-6 bg-gradient-to-br from-brand-600 to-brand-800 text-white mb-6">
-                        <p className="text-brand-100 text-sm">Wallet balance</p>
-                        <p className="text-4xl font-extrabold font-display mt-1">₹{walletBalance}</p>
-                        <div className="flex gap-3 mt-5">
-                          <Button variant="secondary" size="sm" onClick={() => toast('Add money is a placeholder', 'info')}>Add money</Button>
-                          <Button variant="ghost" size="sm" className="!text-white hover:!bg-white/10" onClick={() => toast('Withdraw is a placeholder', 'info')}>Withdraw</Button>
-                        </div>
-                      </div>
-                      <div className="card p-6">
-                        <h3 className="font-semibold mb-4">Transaction history</h3>
-                        <div className="space-y-2">
-                          {walletTransactions.map((t) => (
-                            <div key={t.id} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-slate-800 last:border-0">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${t.type === 'credit' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40' : 'bg-red-50 text-red-600 dark:bg-red-950/40'}`}>
-                                  {t.type === 'credit' ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium">{t.description}</p>
-                                  <p className="text-xs text-gray-400">{new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                                </div>
-                              </div>
-                              <p className={`font-semibold text-sm ${t.type === 'credit' ? 'text-emerald-600' : 'text-red-500'}`}>
-                                {t.type === 'credit' ? '+' : '-'}₹{t.amount}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+            {/* 6. PROFILE MAIN SETTINGS TAB */}
+            {tab === 'profile' && (
+              <div className="space-y-4">
+                {/* Profile Detail Header */}
+                <div className="card p-4 flex items-center gap-3.5">
+                  <div className="w-14 h-14 rounded-2xl bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-800 dark:text-brand-300 text-xl font-black">
+                    {userName.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-gray-900 dark:text-white">{userName}</h3>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{userEmail}</p>
+                  </div>
+                  <button
+                    onClick={() => setTab('edit_profile')}
+                    className="ml-auto text-xs font-bold text-brand-600 hover:underline shrink-0"
+                  >
+                    Edit
+                  </button>
+                </div>
 
-                  {tab === 'profile' && (
-                    <div className="card p-6 max-w-2xl">
-                      <h3 className="font-semibold mb-5">Profile settings</h3>
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-16 h-16 rounded-2xl bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-700 dark:text-brand-300 text-2xl font-bold">
-                          {userName.charAt(0).toUpperCase()}
+                {/* Mobile Menu List Options */}
+                <div className="card overflow-hidden">
+                  <div className="flex flex-col divide-y divide-gray-50 dark:divide-slate-800/80 text-xs">
+                    
+                    <button
+                      onClick={() => setTab('wallet')}
+                      className="w-full flex items-center justify-between p-3.5 hover:bg-gray-50 dark:hover:bg-slate-800 transition text-left"
+                    >
+                      <div className="flex items-center gap-3 font-semibold text-gray-700 dark:text-gray-200">
+                        <Wallet className="w-4.5 h-4.5 text-gray-400" />
+                        <span>Wallet (₹{walletBalance})</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </button>
+
+                    <button
+                      onClick={() => setTab('addresses')}
+                      className="w-full flex items-center justify-between p-3.5 hover:bg-gray-50 dark:hover:bg-slate-800 transition text-left"
+                    >
+                      <div className="flex items-center gap-3 font-semibold text-gray-700 dark:text-gray-200">
+                        <MapPin className="w-4.5 h-4.5 text-gray-400" />
+                        <span>Saved Addresses</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </button>
+
+                    <button
+                      onClick={() => setTab('favorites')}
+                      className="w-full flex items-center justify-between p-3.5 hover:bg-gray-50 dark:hover:bg-slate-800 transition text-left"
+                    >
+                      <div className="flex items-center gap-3 font-semibold text-gray-700 dark:text-gray-200">
+                        <Heart className="w-4.5 h-4.5 text-gray-400" />
+                        <span>Bookmarks & Saved</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </button>
+
+                    <button
+                      onClick={() => setTab('notifications')}
+                      className="w-full flex items-center justify-between p-3.5 hover:bg-gray-50 dark:hover:bg-slate-800 transition text-left"
+                    >
+                      <div className="flex items-center gap-3 font-semibold text-gray-700 dark:text-gray-200">
+                        <Bell className="w-4.5 h-4.5 text-gray-400" />
+                        <span>Notifications</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {unreadCount > 0 && (
+                          <span className="w-4.5 h-4.5 rounded-full bg-brand-600 text-white text-[9px] font-black flex items-center justify-center">
+                            {unreadCount}
+                          </span>
+                        )}
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                      </div>
+                    </button>
+
+                    {user?.role === 'professional' && (
+                      <Link
+                        to="/pro/dashboard"
+                        className="w-full flex items-center justify-between p-3.5 hover:bg-gray-50 dark:hover:bg-slate-800 transition text-left font-semibold text-brand-600 dark:text-brand-400"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Wrench className="w-4.5 h-4.5" />
+                          <span>Switch to Pro Dashboard</span>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => toast('Image upload is a placeholder', 'info')}>Change photo</Button>
+                        <ChevronRight className="w-4 h-4" />
+                      </Link>
+                    )}
+
+                    {user?.role === 'admin' && (
+                      <Link
+                        to="/admin"
+                        className="w-full flex items-center justify-between p-3.5 hover:bg-gray-50 dark:hover:bg-slate-800 transition text-left font-semibold text-violet-600 dark:text-violet-400"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Shield className="w-4.5 h-4.5" />
+                          <span>Go to Admin Dashboard</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4" />
+                      </Link>
+                    )}
+
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full flex items-center justify-between p-3.5 hover:bg-red-50/50 dark:hover:bg-red-950/20 text-red-600 text-left font-bold"
+                    >
+                      <div className="flex items-center gap-3">
+                        <LogOut className="w-4.5 h-4.5" />
+                        <span>Sign Out</span>
                       </div>
-                      <div className="grid sm:grid-cols-2 gap-4">
-                        <Input label="Full name" defaultValue={userName} />
-                        <Input label="Email" defaultValue={userEmail} />
-                        <Input label="Phone" placeholder="+91 98765 43210" />
-                        <Input label="City" defaultValue="Mumbai" />
-                      </div>
-                      <Button className="mt-5" leftIcon={<Settings className="w-4 h-4" />} onClick={() => toast('Profile saved', 'success')}>Save changes</Button>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 7. PROFILE EDITOR (SUB-TAB) */}
+            {tab === 'edit_profile' && (
+              <div className="space-y-4">
+                <div className="card p-4">
+                  <h3 className="font-bold text-xs uppercase tracking-wider text-gray-400 mb-4">Edit Profile</h3>
+                  <div className="flex items-center gap-4 mb-5">
+                    <div className="w-13 h-13 rounded-2xl bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-800 dark:text-brand-300 text-lg font-black">
+                      {userName.charAt(0).toUpperCase()}
                     </div>
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
-        </div>
+                    <Button variant="outline" size="sm" onClick={() => toast('Image upload is mockup', 'info')}>
+                      Upload Avatar
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Input label="Full Name" defaultValue={userName} />
+                    <Input label="Email address" defaultValue={userEmail} />
+                    <Input label="Phone Number" placeholder="+91 98765 43210" />
+                    <Input label="City" defaultValue="Mumbai" />
+                  </div>
+                  
+                  <div className="flex gap-2.5 mt-5">
+                    <Button variant="outline" size="sm" fullWidth onClick={() => setTab('profile')}>
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      fullWidth
+                      leftIcon={<Settings className="w-4 h-4" />}
+                      onClick={() => {
+                        toast('Profile updated successfully', 'success');
+                        setTab('profile');
+                      }}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
-      <Footer />
 
-      {/* Cancel modal */}
+      {/* Booking Cancellation Alert Modal */}
       <Modal
         open={!!cancelTarget}
         onClose={() => setCancelTarget(null)}
         title="Cancel booking?"
         footer={
-          <>
-            <Button variant="ghost" onClick={() => setCancelTarget(null)}>Keep booking</Button>
-            <Button variant="danger" onClick={cancelBooking}>Yes, cancel</Button>
-          </>
+          <div className="flex justify-end gap-2.5 w-full">
+            <Button variant="ghost" onClick={() => setCancelTarget(null)}>No, Keep</Button>
+            <Button variant="danger" onClick={cancelBooking}>Yes, Cancel</Button>
+          </div>
         }
       >
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Are you sure you want to cancel <span className="font-semibold">{cancelTarget?.serviceName}</span> scheduled for{' '}
-          {cancelTarget && new Date(cancelTarget.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}? Free cancellation up to 2 hours before.
+        <p className="text-xs text-gray-600 dark:text-gray-400 text-left leading-normal">
+          Are you sure you want to cancel booking for <span className="font-bold">{cancelTarget?.serviceName}</span> scheduled on{' '}
+          {cancelTarget && new Date(cancelTarget.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}? Free cancellations permitted up to 2 hours in advance.
         </p>
       </Modal>
+
     </div>
   );
 }
 
-function BookingRow({ booking, onCancel }: { booking: Booking; onCancel: () => void }) {
+function BookingCard({ booking, onCancel }: { booking: Booking; onCancel: () => void }) {
   const { toast } = useToast();
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border border-gray-100 dark:border-slate-800 hover:shadow-soft transition">
-      <img src={booking.serviceImage} alt={booking.serviceName} className="w-full sm:w-20 h-20 object-cover rounded-xl shrink-0" />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <h4 className="font-semibold text-sm truncate">{booking.serviceName}</h4>
-          <Badge tone={statusTone[booking.status]} className="capitalize">{booking.status}</Badge>
+    <div className="card p-3.5 flex flex-col gap-3 hover:shadow-soft transition text-left">
+      <div className="flex items-center gap-3">
+        <img src={booking.serviceImage} alt={booking.serviceName} className="w-13 h-13 object-cover rounded-xl shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 justify-between">
+            <h4 className="font-bold text-xs text-gray-900 dark:text-white truncate pr-1">{booking.serviceName}</h4>
+            <Badge tone={statusTone[booking.status]} className="capitalize text-[8px] py-0 shrink-0">
+              {booking.status}
+            </Badge>
+          </div>
+          <p className="text-[10px] text-gray-400 mt-0.5">{booking.professionalName}</p>
         </div>
-        <p className="text-xs text-gray-500">{booking.professionalName}</p>
-        <p className="text-xs text-gray-500 mt-1 flex items-center gap-1.5"><Clock className="w-3 h-3" /> {new Date(booking.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} • {booking.timeSlot}</p>
       </div>
-      <div className="flex items-center gap-2 sm:flex-col sm:items-end">
-        <div className="text-right">
-          <p className="font-bold">₹{booking.price}</p>
-          <p className="text-xs text-gray-400 capitalize flex items-center gap-1"><CreditCard className="w-3 h-3" /> {booking.paymentMethod}</p>
-        </div>
-        <div className="flex gap-1.5">
-          <button onClick={() => toast('Invoice download is a placeholder', 'info')} className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800" title="Download invoice"><Download className="w-4 h-4" /></button>
+
+      <div className="text-[10px] text-gray-500 bg-gray-50 dark:bg-slate-900/40 p-2.5 rounded-xl border border-gray-100 dark:border-slate-800/80 flex justify-between select-none">
+        <span className="flex items-center gap-1">
+          <Clock className="w-3.5 h-3.5 text-brand-600" />
+          {new Date(booking.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} • {booking.timeSlot}
+        </span>
+        <span className="font-black text-gray-800 dark:text-white">
+          ₹{booking.price}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-800/40 pt-2.5">
+        <span className="text-[9px] text-gray-400 capitalize flex items-center gap-1 font-medium">
+          <CreditCard className="w-3 h-3" /> {booking.paymentMethod}
+        </span>
+        <div className="flex gap-2">
+          <button
+            onClick={() => toast('Invoice download is a placeholder', 'info')}
+            className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800"
+            title="Download Invoice"
+            aria-label="Download invoice"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+          
           {booking.status === 'completed' && (
-            <button onClick={() => toast('Thanks for rating!', 'success')} className="p-2 rounded-lg text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30" title="Rate"><Star className="w-4 h-4" /></button>
+            <button
+              onClick={() => toast('Feedback received, thank you!', 'success')}
+              className="p-2 rounded-lg text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+              title="Rate Service"
+              aria-label="Rate service"
+            >
+              <Star className="w-4 h-4 fill-amber-400" />
+            </button>
           )}
+
           {booking.status === 'upcoming' && (
-            <button onClick={onCancel} className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30" title="Cancel"><XCircle className="w-4 h-4" /></button>
+            <button
+              onClick={onCancel}
+              className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
+              title="Cancel Booking"
+              aria-label="Cancel booking"
+            >
+              <XCircle className="w-4 h-4" />
+            </button>
           )}
         </div>
       </div>

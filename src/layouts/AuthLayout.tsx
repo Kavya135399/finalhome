@@ -1,62 +1,57 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home as HomeIcon, ShieldCheck, Star, Users } from 'lucide-react';
+import { Home as HomeIcon, ChevronLeft } from 'lucide-react';
 
 export function AuthLayout({ children, title, subtitle }: { children: ReactNode; title: string; subtitle: string }) {
+  const navigate = useNavigate();
+
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
-      {/* Left — form */}
-      <div className="flex flex-col p-6 sm:p-10 lg:p-16">
-        <Link to="/" className="flex items-center gap-2 mb-auto">
-          <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center">
-            <HomeIcon className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-xl font-extrabold font-display">Home<span className="text-brand-600">Seva</span></span>
-        </Link>
-
-        <div className="max-w-md w-full mx-auto py-10">
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-            <h1 className="text-3xl font-extrabold font-display">{title}</h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">{subtitle}</p>
-          </motion.div>
-          <div className="mt-8">{children}</div>
-        </div>
-
-        <p className="text-xs text-gray-400 mt-auto">© {new Date().getFullYear()} HomeSeva Technologies</p>
-      </div>
-
-      {/* Right — visual */}
-      <div className="hidden lg:flex relative bg-gradient-to-br from-brand-600 to-brand-800 p-16 flex-col justify-center text-white overflow-hidden">
-        <div className="absolute inset-0 bg-grid-light opacity-20" />
-        <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-sky-400/20 rounded-full blur-3xl" />
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="relative max-w-md"
+    <div className="flex-1 flex flex-col bg-white dark:bg-slate-950 px-5 py-6 justify-between min-h-0 select-none text-left">
+      
+      {/* Top bar with back arrow and small logo */}
+      <div className="flex items-center justify-between shrink-0 mb-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-1.5 -ml-1.5 rounded-full hover:bg-gray-150 dark:hover:bg-slate-800 text-gray-650 dark:text-gray-250 transition touch-target"
+          aria-label="Go back"
         >
-          <h2 className="text-4xl font-extrabold font-display leading-tight">Trusted home services, one tap away.</h2>
-          <p className="mt-4 text-brand-100 text-lg">Join 12M+ customers who trust HomeSeva for quality, verified home services.</p>
+          <ChevronLeft className="w-5 h-5" />
+        </button>
 
-          <div className="mt-10 space-y-4">
-            {[
-              { icon: ShieldCheck, text: '50K+ background-verified professionals' },
-              { icon: Star, text: '4.8 average rating across 45M+ services' },
-              { icon: Users, text: 'Trusted by families in 35+ cities' },
-            ].map((item) => (
-              <div key={item.text} className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-sm">
-                  <item.icon className="w-5 h-5" />
-                </div>
-                <p className="text-brand-50">{item.text}</p>
-              </div>
-            ))}
+        <Link to="/" className="flex items-center gap-1.5">
+          <div className="w-6.5 h-6.5 rounded-lg bg-brand-600 flex items-center justify-center">
+            <HomeIcon className="w-3.5 h-3.5 text-white" />
           </div>
-        </motion.div>
+          <span className="text-sm font-extrabold tracking-tight font-display text-gray-900 dark:text-white">
+            Home<span className="text-brand-600">Seva</span>
+          </span>
+        </Link>
       </div>
+
+      {/* Main Form content wrapper */}
+      <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col justify-center max-w-sm w-full mx-auto py-2">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <h2 className="text-2xl font-black font-display text-gray-900 dark:text-white tracking-tight">
+            {title}
+          </h2>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {subtitle}
+          </p>
+        </motion.div>
+
+        <div className="mt-6">{children}</div>
+      </div>
+
+      {/* Footer text */}
+      <p className="text-[10px] text-gray-400 text-center shrink-0 mt-4 select-none">
+        © {new Date().getFullYear()} HomeSeva Technologies. Secure Connection.
+      </p>
+
     </div>
   );
 }
