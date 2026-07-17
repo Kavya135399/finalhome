@@ -56,20 +56,20 @@ export const router = createBrowserRouter([
         path: 'pro/dashboard',
         element: <ProtectedRoute><SuspenseWrap><ProfessionalDashboardPage /></SuspenseWrap></ProtectedRoute>,
       },
+      {
+        path: 'login',
+        element: <SuspenseWrap><LoginPage /></SuspenseWrap>,
+      },
+      {
+        path: 'register',
+        element: <SuspenseWrap><RegisterPage /></SuspenseWrap>,
+      },
+      {
+        path: 'forgot-password',
+        element: <SuspenseWrap><ForgotPasswordPage /></SuspenseWrap>,
+      },
       { path: '*', element: <NotFoundPage /> },
     ],
-  },
-  {
-    path: '/login',
-    element: <SuspenseWrap><LoginPage /></SuspenseWrap>,
-  },
-  {
-    path: '/register',
-    element: <SuspenseWrap><RegisterPage /></SuspenseWrap>,
-  },
-  {
-    path: '/forgot-password',
-    element: <SuspenseWrap><ForgotPasswordPage /></SuspenseWrap>,
   },
 ]);
 

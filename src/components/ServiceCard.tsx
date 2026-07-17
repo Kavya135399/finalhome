@@ -1,59 +1,81 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, ArrowRight } from 'lucide-react';
+import { Clock, Star, Plus } from 'lucide-react';
 import type { Service } from '../types';
-import { Rating } from './ui/Rating';
-import { Badge } from './ui/Badge';
 
 export function ServiceCard({ service, index = 0 }: { service: Service; index?: number }) {
   const discount = Math.round(((service.originalPrice - service.price) / service.originalPrice) * 100);
+  
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-50px' }}
-      transition={{ delay: index * 0.05, duration: 0.4 }}
+      viewport={{ once: true, margin: '-20px' }}
+      transition={{ delay: index * 0.04, duration: 0.35 }}
     >
-      <Link to={`/services/${service.slug}`} className="group block card overflow-hidden hover:shadow-soft-lg hover:-translate-y-1 transition-all duration-300 h-full">
-        <div className="relative h-44 overflow-hidden">
-          <img
-            src={service.image}
-            alt={service.name}
-            loading="lazy"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-          <div className="absolute top-3 left-3 flex gap-1.5">
-            {service.tags.includes('bestseller') && <Badge tone="amber">Bestseller</Badge>}
-            {service.tags.includes('same-day') && <Badge tone="green">Same-day</Badge>}
+      <Link
+        to={`/services/${service.slug}`}
+        className="group block card p-3 hover:shadow-soft-lg transition-all duration-200 active-scale"
+      >
+        <div className="flex items-center gap-3">
+          {/* Left: Thumbnail Image */}
+          <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+            <img
+              src={service.image}
+              alt={service.name}
+              loading="lazy"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            {discount > 0 && (
+              <div className="absolute top-1 left-1 bg-brand-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm">
+                {discount}% OFF
+              </div>
+            )}
           </div>
-          {discount > 0 && (
-            <div className="absolute top-3 right-3 bg-brand-600 text-white text-xs font-bold px-2 py-1 rounded-lg shadow-soft">
-              {discount}% OFF
-            </div>
-          )}
-        </div>
-        <div className="p-4">
-          <p className="text-xs text-brand-600 dark:text-brand-400 font-medium mb-1">{service.categoryName}</p>
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1.5 line-clamp-1 group-hover:text-brand-600 transition">{service.name}</h3>
-          <div className="flex items-center gap-2 mb-3">
-            <Rating value={service.rating} size="sm" showValue={false} />
-            <span className="text-xs text-gray-500">{service.rating} • {service.reviewCount.toLocaleString()} reviews</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-3">
-            <Clock className="w-3.5 h-3.5" /> {service.duration}
-          </div>
-          <div className="flex items-end justify-between">
+
+          {/* Right: Details */}
+          <div className="flex-1 min-w-0 flex flex-col justify-between h-24 py-0.5">
             <div>
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400 truncate">
+                  {service.categoryName}
+                </span>
+                
+                {/* Duration */}
+                <span className="text-[10px] text-gray-400 flex items-center gap-1 shrink-0">
+                  <Clock className="w-3 h-3 text-gray-450" /> {service.duration.split(' ')[0]}hr
+                </span>
+              </div>
+
+              <h3 className="font-extrabold text-sm text-gray-900 dark:text-white truncate mt-0.5 group-hover:text-brand-600 transition">
+                {service.name}
+              </h3>
+
+              {/* Rating */}
+              <div className="flex items-center gap-1.5 mt-1 text-[10px] text-gray-500">
+                <div className="flex items-center gap-0.5 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 px-1 py-0.5 rounded font-extrabold shrink-0">
+                  <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                  {service.rating}
+                </div>
+                <span className="truncate">({service.reviewCount.toLocaleString()} bookings)</span>
+              </div>
+            </div>
+
+            {/* Price & Book Button */}
+            <div className="flex items-center justify-between mt-1">
               <div className="flex items-baseline gap-1.5">
-                <span className="text-lg font-bold text-gray-900 dark:text-white">₹{service.price}</span>
+                <span className="text-base font-extrabold text-gray-900 dark:text-white">₹{service.price}</span>
                 {service.originalPrice > service.price && (
                   <span className="text-xs text-gray-400 line-through">₹{service.originalPrice}</span>
                 )}
               </div>
+
+              {/* Tap Target Optimized button */}
+              <div className="h-8 min-w-[70px] bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 font-extrabold text-xs rounded-xl flex items-center justify-center gap-1 px-3 border border-brand-100/30 group-hover:bg-brand-600 group-hover:text-white transition">
+                <span>Book</span>
+                <Plus className="w-3 h-3" />
+              </div>
             </div>
-            <span className="text-xs font-semibold text-brand-600 dark:text-brand-400 flex items-center gap-1 group-hover:gap-2 transition-all">
-              Book <ArrowRight className="w-3.5 h-3.5" />
-            </span>
           </div>
         </div>
       </Link>

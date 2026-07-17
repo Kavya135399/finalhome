@@ -9,21 +9,21 @@ export function CategoryCard({ category, index = 0 }: { category: Category; inde
   const Icon = (Icons as unknown as Record<string, LucideIcon>)[category.icon] ?? Wrench;
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-50px' }}
-      transition={{ delay: index * 0.04, duration: 0.4 }}
+      initial={{ opacity: 0, scale: 0.95 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true, margin: '-20px' }}
+      transition={{ delay: index * 0.03, duration: 0.3 }}
+      className="h-full"
     >
       <Link
         to={`/services?category=${category.slug}`}
-        className="group block card p-5 hover:shadow-soft-lg hover:-translate-y-1 transition-all duration-300"
+        className="flex flex-col items-center justify-center p-3.5 card hover:shadow-soft-lg active-scale h-full text-center"
       >
-        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-4 shadow-soft group-hover:scale-110 transition-transform`}>
-          <Icon className="w-6 h-6 text-white" />
+        <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-2.5 shadow-sm text-white shrink-0`}>
+          <Icon className="w-5.5 h-5.5" />
         </div>
-        <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-1 group-hover:text-brand-600 transition">{category.name}</h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{category.description}</p>
-        <p className="text-xs text-brand-600 dark:text-brand-400 font-medium mt-2">{category.serviceCount} services</p>
+        <h3 className="font-bold text-[11px] text-gray-800 dark:text-gray-200 line-clamp-1 leading-tight">{category.name}</h3>
+        <p className="text-[9px] text-gray-500 mt-0.5">{category.serviceCount} Services</p>
       </Link>
     </motion.div>
   );

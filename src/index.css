@@ -62,10 +62,64 @@
   html.dark .skeleton::after {
     @apply via-white/10;
   }
+
+  /* Floating Label Input */
+  .floating-group {
+    @apply relative flex w-full items-stretch;
+  }
+  .floating-input {
+    @apply w-full rounded-xl border border-gray-200 bg-white px-4 pt-6 pb-1.5 text-sm text-gray-900 placeholder-transparent outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10;
+  }
+  html.dark .floating-input {
+    @apply border-slate-700 bg-slate-900 text-gray-100 placeholder-transparent;
+  }
+  .floating-label {
+    @apply absolute left-4 top-1.5 origin-[0_0] translate-y-0 scale-75 text-xs text-gray-400 transition-all duration-200 pointer-events-none;
+  }
+  /* If empty and not focused, label sits in the middle */
+  .floating-input:placeholder-shown:not(:focus) ~ .floating-label {
+    @apply top-1/2 -translate-y-1/2 scale-100 text-sm;
+  }
+  /* When focused, label turns brand color */
+  .floating-input:focus ~ .floating-label {
+    @apply text-brand-600 dark:text-brand-400 font-medium;
+  }
+
+  /* Left Icon Support */
+  .floating-input-icon {
+    @apply pl-10;
+  }
+  .floating-label-icon {
+    @apply left-10;
+  }
+  /* If input has icon, is empty and not focused, label sits in middle with left offset */
+  .floating-input-icon:placeholder-shown:not(:focus) ~ .floating-label-icon {
+    @apply left-10 top-1/2 -translate-y-1/2 scale-100 text-sm;
+  }
+
+  /* Hide scrollbar for category pills, horizontal carousels */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* App Bottom Navigation style */
+  .bottom-nav-blur {
+    @apply bg-white/90 dark:bg-slate-950/90 backdrop-blur-lg border-t border-gray-100 dark:border-slate-900;
+  }
+
+  /* Touch accessibility standards */
+  .touch-target {
+    @apply min-h-[48px] min-w-[48px] flex items-center justify-center;
+  }
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { @apply bg-gray-300 rounded-full; }
-html.dark ::-webkit-scrollbar-thumb { @apply bg-slate-700; }
+::-webkit-scrollbar-thumb { @apply bg-gray-200 dark:bg-slate-800 rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-gray-300 dark:bg-slate-700; }
+
