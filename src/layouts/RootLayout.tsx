@@ -66,7 +66,7 @@ export function RootLayout() {
   else if (pathname === '/terms') pageTitle = 'Terms of Service';
 
   // Navigation flags
-  const hideBottomNavList = ['/login', '/register', '/forgot-password', '/book'];
+  const hideBottomNavList = ['/login', '/register', '/forgot-password', '/book', '/admin', '/pro'];
   const isDetailsView = pathname.startsWith('/services/') && pathname !== '/services';
   const showBottomNav = !hideBottomNavList.some((p) => pathname.startsWith(p)) && !isDetailsView;
   

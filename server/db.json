@@ -1,0 +1,277 @@
+{
+  "users": [
+    {
+      "id": "usr1",
+      "name": "Vikram Singh",
+      "email": "vikram@example.com",
+      "password": "password",
+      "role": "customer"
+    },
+    {
+      "id": "usr2",
+      "name": "Rajesh Kumar",
+      "email": "rajesh@example.com",
+      "password": "password",
+      "role": "professional"
+    },
+    {
+      "id": "usr3",
+      "name": "Admin User",
+      "email": "admin@example.com",
+      "password": "password",
+      "role": "admin"
+    },
+    {
+      "id": "usr4",
+      "name": "Amit Patel",
+      "email": "amit@example.com",
+      "password": "password",
+      "role": "staff"
+    },
+    {
+      "id": "usr5",
+      "name": "Sunita Reddy",
+      "email": "sunita@example.com",
+      "password": "password",
+      "role": "manager"
+    }
+  ],
+  "services": [
+    {
+      "id": "s1",
+      "name": "Wedding Catering",
+      "slug": "wedding-catering",
+      "categoryId": "c4",
+      "categoryName": "AC Repair",
+      "description": "Complete catering servicing with verified caterers.",
+      "longDescription": "Our catering service provides full meal planning and serving for events. We serve traditional dishes, desserts, appetizers, and beverages. All ingredients sourced fresh.",
+      "features": [
+        "Fresh ingredients",
+        "Trained staff",
+        "Eco-friendly plates",
+        "Clean counters"
+      ],
+      "price": 499,
+      "originalPrice": 799,
+      "duration": "60-90 min",
+      "rating": 4.8,
+      "reviewCount": 124,
+      "image": "https://images.pexels.com/photos/7526962/pexels-photo-7526962.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop",
+      "popular": true,
+      "tags": ["bestseller", "same-day"]
+    },
+    {
+      "id": "s2",
+      "name": "Full Home Cleaning",
+      "slug": "full-home-deep-cleaning",
+      "categoryId": "c6",
+      "categoryName": "Home Cleaning",
+      "description": "Professional deep cleaning for your entire home.",
+      "longDescription": "A thorough deep cleaning service covering every room in your home. Our trained professionals use eco-friendly cleaning agents and professional-grade equipment to leave your home spotless.",
+      "features": [
+        "All rooms covered",
+        "Eco-friendly chemicals",
+        "Professional equipment",
+        "Satisfaction guaranteed"
+      ],
+      "price": 2499,
+      "originalPrice": 3499,
+      "duration": "4-6 hours",
+      "rating": 4.7,
+      "reviewCount": 89,
+      "image": "https://images.pexels.com/photos/4239034/pexels-photo-4239034.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop",
+      "popular": true,
+      "tags": ["bestseller"]
+    },
+    {
+      "id": "s3",
+      "name": "Electrical Inspection",
+      "slug": "electrician-visit",
+      "categoryId": "c1",
+      "categoryName": "Electrical",
+      "description": "General electrician visit for repairs and installations.",
+      "longDescription": "Book a verified electrician for any electrical work — switchboard repair, fan installation, light fitting, MCB replacement, wiring checks, and more.",
+      "features": [
+        "Verified electrician",
+        "Safety inspected",
+        "30-day warranty"
+      ],
+      "price": 149,
+      "originalPrice": 249,
+      "duration": "30-45 min",
+      "rating": 4.6,
+      "reviewCount": 156,
+      "image": "https://images.pexels.com/photos/6476753/pexels-photo-6476753.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop",
+      "popular": true,
+      "tags": ["same-day"]
+    },
+    {
+      "id": "s4",
+      "name": "Pipe Leak Repair",
+      "slug": "plumber-visit",
+      "categoryId": "c2",
+      "categoryName": "Plumbing",
+      "description": "Trusted plumber for leaks, fittings and fixtures.",
+      "longDescription": "Book a professional plumber for tap repair, pipe leakage, drainage cleaning, geyser installation, bathroom fittings, and more.",
+      "features": [
+        "Leak detection",
+        "Tap repair",
+        "45-day warranty"
+      ],
+      "price": 129,
+      "originalPrice": 199,
+      "duration": "30-60 min",
+      "rating": 4.7,
+      "reviewCount": 112,
+      "image": "https://images.pexels.com/photos/8961345/pexels-photo-8961345.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop",
+      "popular": true,
+      "tags": ["same-day"]
+    }
+  ],
+  "bookings": [
+    {
+      "id": "b1",
+      "userId": "usr1",
+      "serviceId": "s1",
+      "serviceName": "Wedding Catering",
+      "serviceImage": "https://images.pexels.com/photos/7526962/pexels-photo-7526962.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop",
+      "professionalName": "Rajesh Kumar",
+      "date": "2026-08-20",
+      "timeSlot": "06:00 PM - 11:00 PM",
+      "address": "221B, Hill Road, Bandra West, Mumbai",
+      "status": "upcoming",
+      "price": 499,
+      "paymentMethod": "upi",
+      "paid": true,
+      "timeline": [
+        { "status": "pending", "time": "2026-07-17T21:00:00.000Z", "note": "Booking requested" },
+        { "status": "upcoming", "time": "2026-07-17T21:05:00.000Z", "note": "Booking confirmed & helper assigned" }
+      ]
+    },
+    {
+      "id": "b2",
+      "userId": "usr1",
+      "serviceId": "s2",
+      "serviceName": "Full Home Cleaning",
+      "serviceImage": "https://images.pexels.com/photos/4239034/pexels-photo-4239034.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop",
+      "professionalName": "Sunita Reddy",
+      "date": "2026-08-15",
+      "timeSlot": "09:00 AM - 01:00 PM",
+      "address": "221B, Hill Road, Bandra West, Mumbai",
+      "status": "upcoming",
+      "price": 2499,
+      "paymentMethod": "card",
+      "paid": true,
+      "timeline": [
+        { "status": "pending", "time": "2026-07-16T15:00:00.000Z", "note": "Booking requested" }
+      ]
+    }
+  ],
+  "categories": [
+    { "id": "c1", "name": "Electrical", "slug": "electrician", "icon": "Zap", "color": "from-amber-400 to-orange-500", "description": "Wiring, repairs, installations", "serviceCount": 24 },
+    { "id": "c2", "name": "Plumbing", "slug": "plumber", "icon": "Wrench", "color": "from-sky-400 to-blue-500", "description": "Leaks, fittings, fixtures", "serviceCount": 18 },
+    { "id": "c3", "name": "Carpenter", "slug": "carpenter", "icon": "Hammer", "color": "from-amber-600 to-yellow-700", "description": "Furniture, doors, repairs", "serviceCount": 15 },
+    { "id": "c4", "name": "AC Repair", "slug": "ac-repair", "icon": "Snowflake", "color": "from-cyan-400 to-sky-500", "description": "Service, install, gas refill", "serviceCount": 21 },
+    { "id": "c6", "name": "Home Cleaning", "slug": "home-cleaning", "icon": "Sparkles", "color": "from-emerald-400 to-teal-500", "description": "Full home deep clean", "serviceCount": 12 }
+  ],
+  "coupons": [
+    { "code": "FIRST50", "discount": 50, "type": "percent", "maxDiscount": 200, "minOrder": 199, "description": "50% off on first booking (max ₹200)" },
+    { "code": "CLEAN20", "discount": 20, "type": "percent", "maxDiscount": 500, "minOrder": 999, "description": "20% off on cleaning services (max ₹500)" },
+    { "code": "FLAT100", "discount": 100, "type": "flat", "maxDiscount": 100, "minOrder": 499, "description": "Flat ₹100 off on orders above ₹499" }
+  ],
+  "orders": [
+    {
+      "id": "ord_1",
+      "bookingId": "b1",
+      "customerName": "Vikram Singh",
+      "serviceName": "Wedding Catering",
+      "amount": 499,
+      "status": "paid",
+      "date": "2026-07-17T21:00:00.000Z",
+      "paymentMethod": "upi"
+    },
+    {
+      "id": "ord_2",
+      "bookingId": "b2",
+      "customerName": "Vikram Singh",
+      "serviceName": "Full Home Cleaning",
+      "amount": 2499,
+      "status": "paid",
+      "date": "2026-07-16T15:00:00.000Z",
+      "paymentMethod": "card"
+    }
+  ],
+  "reviews": [
+    {
+      "id": "rev_1",
+      "serviceId": "s1",
+      "author": "Vikram Singh",
+      "rating": 5,
+      "date": "2026-07-12",
+      "comment": "Wedding catering was extremely well organized, very tasty, and served on time.",
+      "status": "approved",
+      "serviceTitle": "Wedding Catering"
+    },
+    {
+      "id": "rev_2",
+      "serviceId": "s2",
+      "author": "Neha Gupta",
+      "rating": 5,
+      "date": "2026-07-09",
+      "comment": "The deep cleaning team was professional. My home looks sparkling new.",
+      "status": "pending",
+      "serviceTitle": "Full Home Cleaning"
+    }
+  ],
+  "messages": [
+    {
+      "id": "msg_1",
+      "name": "Karan Malhotra",
+      "email": "karan@example.com",
+      "subject": "Catering Quote",
+      "message": "Hi, I would like to get a quote for a birthday party catering for 50 people next month.",
+      "date": "2026-07-16T10:00:00.000Z",
+      "status": "unread"
+    },
+    {
+      "id": "msg_2",
+      "name": "Pooja Nair",
+      "email": "pooja@example.com",
+      "subject": "Plumbing service warranty query",
+      "message": "Hi, I booked a pipe leak repair last week. Is there a warranty if it leaks again?",
+      "date": "2026-07-15T14:30:00.000Z",
+      "status": "archived"
+    }
+  ],
+  "settings": {
+    "appName": "HomeSeva Pro",
+    "contactEmail": "support@homeseva.com",
+    "contactPhone": "+91 98765 43210",
+    "backupTimestamp": "2026-07-17T22:30:00.000Z",
+    "address": "221B, Hill Road, Bandra West, Mumbai, India",
+    "currency": "INR",
+    "socialLinks": {
+      "twitter": "https://twitter.com/homeseva",
+      "facebook": "https://facebook.com/homeseva",
+      "instagram": "https://instagram.com/homeseva"
+    }
+  },
+  "logs": [
+    {
+      "id": "log_1",
+      "userId": "usr3",
+      "userName": "Admin User",
+      "action": "Admin Login",
+      "details": "Admin logged in from IP 192.168.1.1",
+      "timestamp": "2026-07-17T22:00:00.000Z"
+    },
+    {
+      "id": "log_2",
+      "userId": "usr1",
+      "userName": "Vikram Singh",
+      "action": "Create Booking",
+      "details": "Created booking #b1 for Wedding Catering",
+      "timestamp": "2026-07-17T21:05:00.000Z"
+    }
+  ]
+}

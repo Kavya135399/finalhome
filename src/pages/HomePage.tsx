@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -19,6 +19,8 @@ import { TestimonialCard } from '../components/TestimonialCard';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../context/ToastContext';
 import { services, professionals, testimonials, faqs } from '../data/sampleData';
+import { apiClient } from '../services/apiClient';
+import type { Service } from '../types';
 
 const whyChoose = [
   {
@@ -53,6 +55,12 @@ const whyChoose = [
     shadowClass: 'shadow-rose-500/20 dark:shadow-rose-950/30',
     hoverBg: 'hover:border-rose-500/20 dark:hover:border-rose-800/40 hover:shadow-[0_12px_30px_rgba(244,63,94,0.08)] dark:hover:shadow-[0_12px_30px_rgba(244,63,94,0.2)]'
   },
+
+  { icon: ShieldCheck, title: 'Verified Experts', desc: 'Background-checked professionals.', color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/40' },
+  { icon: Wallet, title: 'Ufront Price', desc: 'No hidden charges, ever.', color: 'text-brand-500 bg-brand-50 dark:bg-brand-950/40' },
+  { icon: CalendarClock, title: 'Flexible Slots', desc: 'Book anytime between 8 AM and 8 PM.', color: 'text-amber-500 bg-amber-50 dark:bg-amber-950/40' },
+  { icon: HeadphonesIcon, title: '24/7 Support', desc: 'Dedicated support team for help.', color: 'text-blue-500 bg-blue-50 dark:bg-blue-950/40' },
+
 ];
 
 const howSteps = [
@@ -94,8 +102,15 @@ export function HomePage() {
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [servicesList, setServicesList] = useState<Service[]>([]);
 
-  const popularServices = services.filter((s) => s.popular);
+  useEffect(() => {
+    apiClient.getServices()
+      .then((data) => setServicesList(data))
+      .catch(() => setServicesList(services));
+  }, []);
+
+  const popularServices = servicesList.filter((s) => s.popular);
 
   const subscribe = (e: React.FormEvent) => {
     e.preventDefault();

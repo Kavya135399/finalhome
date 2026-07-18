@@ -7,6 +7,8 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ListSkeleton } from '../components/ui/Loader';
 import { BottomSheet } from '../components/ui/BottomSheet';
 import { categories, services } from '../data/sampleData';
+import { apiClient } from '../services/apiClient';
+import type { Service } from '../types';
 
 const sortOptions = [
   { value: 'popular', label: 'Popularity' },
@@ -29,6 +31,13 @@ export function ServicesPage() {
   const [loading, setLoading] = useState(true);
   const [showFiltersSheet, setShowFiltersSheet] = useState(false);
   const [page, setPage] = useState(1);
+  const [servicesList, setServicesList] = useState<Service[]>([]);
+
+  useEffect(() => {
+    apiClient.getServices()
+      .then((data) => setServicesList(data))
+      .catch(() => setServicesList(services));
+  }, []);
 
   const query = searchParams.get('q') ?? '';
   const categorySlug = searchParams.get('category') ?? '';
@@ -45,7 +54,7 @@ export function ServicesPage() {
   useEffect(() => setPage(1), [query, categorySlug, sort, priceRange, minRating]);
 
   const filtered = useMemo(() => {
-    let result = [...services];
+    let result = [...servicesList];
     if (query) {
       const q = query.toLowerCase();
       result = result.filter((s) => s.name.toLowerCase().includes(q) || s.categoryName.toLowerCase().includes(q) || s.description.toLowerCase().includes(q));
@@ -67,7 +76,7 @@ export function ServicesPage() {
       default: result.sort((a, b) => Number(b.popular) - Number(a.popular));
     }
     return result;
-  }, [query, categorySlug, sort, priceRange, minRating]);
+  }, [query, categorySlug, sort, priceRange, minRating, servicesList]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice(0, page * PAGE_SIZE);

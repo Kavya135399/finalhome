@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ShieldCheck,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -19,6 +20,9 @@ import { Badge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../context/ToastContext';
 import { services, coupons, savedAddresses } from '../data/sampleData';
+import { useAuth } from '../context/AuthContext';
+import { apiClient } from '../services/apiClient';
+import type { Service } from '../types';
 
 const steps = ['Schedule', 'Address', 'Coupon', 'Payment'];
 
@@ -50,7 +54,24 @@ export function BookingPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const service = services.find((s) => s.slug === slug);
+  const { user } = useAuth();
+  
+  const [servicesList, setServicesList] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiClient.getServices()
+      .then((data) => {
+        setServicesList(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setServicesList(services);
+        setLoading(false);
+      });
+  }, []);
+
+  const service = servicesList.find((s) => s.slug === slug);
 
   const [step, setStep] = useState(0);
   const [selectedDate, setSelectedDate] = useState(nextDays(1)[0].date);
@@ -60,6 +81,10 @@ export function BookingPage() {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<typeof coupons[0] | null>(null);
   const [payment, setPayment] = useState<'card' | 'upi' | 'cash'>('upi');
+  const [showPhonePeModal, setShowPhonePeModal] = useState(false);
+  const [utrNumber, setUtrNumber] = useState('');
+  const [verifyingUtr, setVerifyingUtr] = useState(false);
+  const [simulatingPayment, setSimulatingPayment] = useState(false);
 
   const days = useMemo(() => nextDays(10), []);
   const discount = useMemo(() => {
@@ -68,6 +93,10 @@ export function BookingPage() {
     const pct = Math.round((service.price * appliedCoupon.discount) / 100);
     return Math.min(pct, appliedCoupon.maxDiscount);
   }, [appliedCoupon, service]);
+
+  if (loading) {
+    return <div className="flex-1 flex items-center justify-center p-6 text-sm font-bold">Loading booking...</div>;
+  }
 
   if (!service) {
     return (
@@ -93,9 +122,83 @@ export function BookingPage() {
     return true;
   };
 
-  const confirmBooking = () => {
-    toast('Booking confirmed! Check your dashboard for details.', 'success');
-    navigate('/dashboard?tab=bookings');
+  const confirmBooking = async (verifiedUtr?: string) => {
+    if (!user) {
+      toast('Please sign in to complete booking', 'error');
+      navigate('/login');
+      return;
+    }
+
+    if (payment === 'upi' && !verifiedUtr) {
+      setShowPhonePeModal(true);
+      return;
+    }
+
+    let finalAddress = '';
+    if (addressId) {
+      const addr = savedAddresses.find((a) => a.id === addressId);
+      finalAddress = addr ? `${addr.address}, ${addr.city} - ${addr.pincode}` : '';
+    } else {
+      finalAddress = `${newAddr.address}, ${newAddr.city} - ${newAddr.pincode}`;
+    }
+
+    try {
+      await apiClient.createBooking({
+        serviceId: service.id,
+        serviceName: service.name,
+        serviceImage: service.image,
+        price: total,
+        date: selectedDate,
+        timeSlot: slot,
+        address: finalAddress,
+        paymentMethod: payment,
+        userId: user.id,
+        utr: verifiedUtr
+      });
+      if (payment === 'upi') {
+        toast('Booking requested! Payment UTR pending admin verification.', 'success');
+      } else {
+        toast('Booking confirmed! Check your dashboard for details.', 'success');
+      }
+      navigate('/dashboard?tab=bookings');
+    } catch (err: any) {
+      toast(err.message || 'Failed to complete booking', 'error');
+    }
+  };
+
+  const handleVerifyAndConfirm = async () => {
+    if (!utrNumber) {
+      toast('Please enter the 12-digit UTR/Ref number', 'error');
+      return;
+    }
+    if (!/^\d{12}$/.test(utrNumber)) {
+      toast('Invalid UTR format. Must be a 12-digit number.', 'error');
+      return;
+    }
+    setVerifyingUtr(true);
+    try {
+      await confirmBooking(utrNumber);
+      setShowPhonePeModal(false);
+    } catch (err: any) {
+      toast(err.response?.data?.error || err.message || 'Failed to complete booking. Try again.', 'error');
+    } finally {
+      setVerifyingUtr(false);
+    }
+  };
+
+  const handleSimulatePayment = async () => {
+    setSimulatingPayment(true);
+    // Generate a random 12-digit UTR
+    const generatedUtr = Array.from({ length: 12 }, () => Math.floor(Math.random() * 10)).join('');
+    try {
+      await apiClient.simulateReceivePayment(generatedUtr, total);
+      setUtrNumber(generatedUtr);
+      toast('Simulated UPI transaction created! Click "Verify & Book"', 'success');
+    } catch (err: any) {
+      toast('Simulation failed: ' + err.message, 'error');
+    } finally {
+      setSimulatingPayment(false);
+    }
   };
 
   return (
@@ -289,7 +392,7 @@ export function BookingPage() {
 
                 <div className="space-y-3">
                   {[
-                    { id: 'upi', label: 'UPI Payment', desc: 'Pay instantly via GPay, PhonePe, Paytm', icon: Wallet },
+                    { id: 'upi', label: 'PhonePe / UPI QR', desc: 'Pay instantly via static QR & UTR verification', icon: Wallet },
                     { id: 'card', label: 'Credit / Debit Card', desc: 'Secure card checkout via Stripe', icon: CreditCard },
                     { id: 'cash', label: 'Cash on Service', desc: 'Pay helper directly after work is done', icon: Banknote },
                   ].map((m) => (
@@ -351,7 +454,7 @@ export function BookingPage() {
             </Button>
           ) : (
             <Button
-              onClick={confirmBooking}
+              onClick={() => confirmBooking()}
               className="h-12 px-6 rounded-xl font-bold bg-brand-600 text-white active-scale"
             >
               Book Now
@@ -359,6 +462,109 @@ export function BookingPage() {
           )}
         </div>
       </div>
+      {/* PhonePe UPI QR Modal */}
+      <AnimatePresence>
+        {showPhonePeModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-gray-105 dark:border-slate-800"
+            >
+              {/* PhonePe Header */}
+              <div className="bg-[#5f259f] text-white px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center">
+                    <svg className="w-5.5 h-5.5 fill-[#5f259f]" viewBox="0 0 24 24">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm tracking-wide">PhonePe</h3>
+                    <p className="text-[10px] text-purple-200">Secure UPI Payment Gateway</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPhonePeModal(false)}
+                  className="text-purple-200 hover:text-white p-1.5 rounded-full hover:bg-white/10"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-5 text-center">
+                <div>
+                  <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-wider">Merchant Payee</span>
+                  <h4 className="text-base font-black text-gray-800 dark:text-white">3232_Ayushi Patel</h4>
+                  <p className="text-xs text-gray-500 font-mono mt-0.5">ayushijpatel52@okhdfcbank</p>
+                </div>
+
+                {/* QR Code Container */}
+                <div className="bg-gray-50 dark:bg-slate-950 p-4 rounded-2xl inline-block border border-gray-100 dark:border-slate-800/40">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                      `upi://pay?pa=ayushijpatel52@okhdfcbank&pn=3232_Ayushi Patel&am=${total}&cu=INR`
+                    )}`}
+                    alt="PhonePe UPI QR Code"
+                    className="w-48 h-48 mx-auto"
+                  />
+                  <div className="mt-2 text-[10px] font-extrabold text-brand-600 dark:text-brand-400">
+                    Scan to pay ₹{total}
+                  </div>
+                </div>
+
+                {/* Instructions */}
+                <div className="text-left bg-purple-50 dark:bg-purple-950/20 p-3.5 rounded-2xl border border-purple-100 dark:border-purple-900/20">
+                  <p className="text-[11px] text-purple-800 dark:text-purple-300 leading-relaxed">
+                    <strong>Instructions:</strong><br />
+                    1. Scan the QR code above with PhonePe or any UPI app.<br />
+                    2. Complete the payment of <strong>₹{total}</strong>.<br />
+                    3. Copy the 12-digit <strong>UTR / UPI Transaction ID</strong> and enter it below.
+                  </p>
+                </div>
+
+                {/* UTR Input Form */}
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      maxLength={12}
+                      placeholder="Enter 12-digit UTR/Ref Number"
+                      value={utrNumber}
+                      onChange={(e) => setUtrNumber(e.target.value.replace(/\D/g, ''))}
+                      className="flex-1 h-12 px-4 rounded-2xl bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-850 text-sm font-black tracking-widest text-center focus:border-[#5f259f] focus:bg-white transition outline-none"
+                    />
+                    <Button
+                      variant="outline"
+                      loading={simulatingPayment}
+                      onClick={handleSimulatePayment}
+                      className="h-12 text-[10px] font-black uppercase rounded-2xl border-purple-200 dark:border-purple-900/50 hover:bg-purple-50 dark:hover:bg-purple-950/20 text-[#5f259f] dark:text-purple-300 px-3 shrink-0"
+                    >
+                      Simulate Pay
+                    </Button>
+                  </div>
+                  <p className="text-[9px] text-gray-450 text-left">
+                    💡 Hint: Click <strong>"Simulate Pay"</strong> to automatically pay and generate a valid UTR in the test environment.
+                  </p>
+                </div>
+
+                {/* Verify and Book Button */}
+                <Button
+                  fullWidth
+                  size="lg"
+                  loading={verifyingUtr}
+                  onClick={handleVerifyAndConfirm}
+                  className="bg-[#5f259f] hover:bg-[#4d1e82] text-white h-12 font-bold rounded-2xl active-scale shadow-lg shadow-purple-500/10"
+                >
+                  Verify & Complete Booking
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

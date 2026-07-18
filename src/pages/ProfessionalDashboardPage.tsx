@@ -1,23 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calendar, DollarSign, Star, Clock, CheckCircle2,
-  Wallet, MapPin, BadgeCheck, ChevronRight, TrendingUp
+  Wallet, MapPin, BadgeCheck, ChevronRight, TrendingUp, Plus, Wrench
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { Rating } from '../components/ui/Rating';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
+import { apiClient } from '../services/apiClient';
+import type { Booking } from '../types';
 
-type Tab = 'overview' | 'bookings' | 'calendar' | 'earnings' | 'reviews' | 'profile';
-
-const jobRequests = [
-  { id: 'jr1', customer: 'Vikram Singh', service: 'Wedding Catering', address: '221B, Bandra West, Mumbai', slot: 'Today, 10:00 AM', distance: '2.1 km', amount: 499 },
-  { id: 'jr2', customer: 'Neha Gupta', service: 'Birthday Catering', address: 'Marine Drive, Mumbai', slot: 'Tomorrow, 02:00 PM', distance: '5.4 km', amount: 1299 },
-  { id: 'jr3', customer: 'Arjun Mehta', service: 'Corporate Catering', address: 'Andheri East, Mumbai', slot: 'Jan 16, 11:00 AM', distance: '8.2 km', amount: 899 },
-];
+type Tab = 'overview' | 'bookings' | 'calendar' | 'earnings' | 'reviews' | 'profile' | 'add_service';
 
 const myReviews = [
   { author: 'Vikram Singh', rating: 5, date: 'Jan 12', comment: 'Excellent service! Punctual and professional.' },
@@ -32,6 +30,7 @@ const earnings = [
 
 export function ProfessionalDashboardPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = (searchParams.get('tab') as Tab) || 'overview';
   
@@ -39,22 +38,144 @@ export function ProfessionalDashboardPage() {
     setSearchParams({ tab: newTab });
   };
 
-  const [requests, setRequests] = useState(jobRequests);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const accept = (id: string) => {
-    setRequests((prev) => prev.filter((r) => r.id !== id));
-    toast('Job accepted! Check your calendar.', 'success');
+  // Add Service Form States
+  const [serviceForm, setServiceForm] = useState({
+    name: '',
+    categoryName: 'Electrical',
+    description: '',
+    price: '',
+    duration: '60 min',
+    image: '',
+    featuresText: ''
+  });
+  const [addingService, setAddingService] = useState(false);
+
+  const fetchBookings = () => {
+    if (user) {
+      setLoading(true);
+      apiClient.getBookings({ role: 'professional', name: user.name })
+        .then((data) => {
+          setBookings(data);
+          setLoading(false);
+        })
+        .catch(() => {
+          setLoading(false);
+        });
+    }
   };
-  const reject = (id: string) => {
-    setRequests((prev) => prev.filter((r) => r.id !== id));
-    toast('Job request declined', 'info');
+
+  useEffect(() => {
+    fetchBookings();
+  }, [user]);
+
+  // Accept a booking: update status from 'pending' to 'upcoming'
+  const acceptJob = async (id: string) => {
+    try {
+      const updated = await apiClient.updateBookingStatus(id, 'upcoming', 'Booking accepted & confirmed by professional helper');
+      setBookings((prev) => prev.map((b) => (b.id === id ? updated : b)));
+      toast('Job accepted! Check active work list.', 'success');
+    } catch (err: any) {
+      toast(err.message || 'Failed to accept job', 'error');
+    }
   };
+
+  // Decline/cancel a booking: update status from 'pending' to 'cancelled'
+  const declineJob = async (id: string) => {
+    try {
+      const updated = await apiClient.updateBookingStatus(id, 'cancelled', 'Booking declined by helper');
+      setBookings((prev) => prev.map((b) => (b.id === id ? updated : b)));
+      toast('Job request declined', 'info');
+    } catch (err: any) {
+      toast(err.message || 'Failed to decline job', 'error');
+    }
+  };
+
+  // Start travel / In-Progress transition
+  const startTravel = async (id: string) => {
+    try {
+      const updated = await apiClient.updateBookingStatus(id, 'in-progress', 'Helper is on the way & has arrived at service location');
+      setBookings((prev) => prev.map((b) => (b.id === id ? updated : b)));
+      toast('Status updated to In-Progress!', 'success');
+    } catch (err: any) {
+      toast(err.message || 'Failed to update status', 'error');
+    }
+  };
+
+  // Complete booking transition
+  const completeJob = async (id: string) => {
+    try {
+      const updated = await apiClient.updateBookingStatus(id, 'completed', 'Service completed successfully by Rajesh Kumar');
+      setBookings((prev) => prev.map((b) => (b.id === id ? updated : b)));
+      toast('Job completed! Invoice generated.', 'success');
+    } catch (err: any) {
+      toast(err.message || 'Failed to update status', 'error');
+    }
+  };
+
+  // Add Service submission
+  const handleAddService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!serviceForm.name || !serviceForm.price || !serviceForm.description) {
+      toast('Please fill all required fields', 'error');
+      return;
+    }
+
+    setAddingService(true);
+    try {
+      const features = serviceForm.featuresText
+        ? serviceForm.featuresText.split(',').map((f) => f.trim()).filter(Boolean)
+        : ['Verified professional', 'Quality guarantee'];
+
+      await apiClient.addService({
+        name: serviceForm.name,
+        categoryName: serviceForm.categoryName,
+        description: serviceForm.description,
+        price: Number(serviceForm.price),
+        duration: serviceForm.duration,
+        image: serviceForm.image || undefined,
+        features
+      });
+
+      toast('New service added successfully to explore catalog!', 'success');
+      setServiceForm({
+        name: '',
+        categoryName: 'Electrical',
+        description: '',
+        price: '',
+        duration: '60 min',
+        image: '',
+        featuresText: ''
+      });
+      setTab('profile');
+    } catch (err: any) {
+      toast(err.message || 'Failed to add service', 'error');
+    } finally {
+      setAddingService(false);
+    }
+  };
+
+  const pendingRequests = bookings.filter((b) => b.status === 'pending');
+  const activeJobs = bookings.filter((b) => b.status === 'upcoming' || b.status === 'in-progress');
 
   const totalEarnings = earnings.reduce((s, e) => s + e.amount, 0);
   const maxEarning = Math.max(...earnings.map((e) => e.amount));
 
+  const proName = user?.name ?? 'Rajesh Kumar';
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50 dark:bg-slate-950 min-h-[50vh] text-center">
+        <Clock className="w-8 h-8 text-brand-650 animate-spin mb-4" />
+        <p className="text-xs font-bold text-gray-500">Syncing work orders database...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 bg-gray-50 dark:bg-slate-950 p-4 select-none">
+    <div className="flex flex-col flex-1 bg-gray-50 dark:bg-slate-950 p-4 select-none max-w-2xl mx-auto w-full">
       
       {/* Tab Synchronized Container */}
       <div className="flex-1">
@@ -64,8 +185,8 @@ export function ProfessionalDashboardPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-4"
+            transition={{ duration: 0.15 }}
+            className="space-y-4 text-left"
           >
             {/* OVERVIEW TAB */}
             {tab === 'overview' && (
@@ -74,11 +195,11 @@ export function ProfessionalDashboardPage() {
                 <div className="card p-4 flex items-center gap-3 bg-gradient-to-br from-brand-700 to-brand-800 text-white shadow-soft-lg select-none relative overflow-hidden">
                   <div className="absolute right-[-10px] top-[-10px] w-28 h-28 bg-white/10 rounded-full blur-2xl" />
                   <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center font-black text-xl backdrop-blur-sm shrink-0">
-                    R
+                    {proName.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <h2 className="font-extrabold text-sm flex items-center gap-1 leading-none">
-                      Rajesh Kumar <BadgeCheck className="w-4 h-4 text-brand-300" />
+                      {proName} <BadgeCheck className="w-4 h-4 text-brand-300" />
                     </h2>
                     <p className="text-[10px] text-white/80 mt-1">Catering Manager • Mumbai</p>
                   </div>
@@ -90,7 +211,7 @@ export function ProfessionalDashboardPage() {
                     { label: 'Weekly Revenue', value: `₹${totalEarnings}`, icon: DollarSign, tone: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40', key: 'earnings' },
                     { label: 'Jobs Completed', value: '47', icon: CheckCircle2, tone: 'text-brand-600 bg-brand-50 dark:bg-brand-950/40', key: 'overview' },
                     { label: 'Average Rating', value: '4.9 ★', icon: Star, tone: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40', key: 'reviews' },
-                    { label: 'Pending Requests', value: requests.length, icon: Clock, tone: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40', key: 'bookings' },
+                    { label: 'Pending Requests', value: pendingRequests.length, icon: Clock, tone: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40', key: 'bookings' },
                   ].map((s) => (
                     <button
                       key={s.label}
@@ -98,7 +219,7 @@ export function ProfessionalDashboardPage() {
                       className="card p-3.5 text-left flex flex-col justify-between h-24 hover:shadow-soft active-scale select-none"
                     >
                       <div className={`w-8 h-8 rounded-lg ${s.tone} flex items-center justify-center shrink-0`}>
-                        <s.icon className="w-4 h-4" />
+                        <s.icon className="w-4.5 h-4.5" />
                       </div>
                       <div>
                         <p className="text-lg font-black text-gray-900 dark:text-white leading-none">{s.value}</p>
@@ -133,40 +254,80 @@ export function ProfessionalDashboardPage() {
             {/* BOOKINGS / JOB REQUESTS TAB */}
             {tab === 'bookings' && (
               <div className="space-y-4">
-                <h3 className="font-extrabold text-sm text-gray-900 dark:text-white mb-2">Incoming Job Requests</h3>
-                {requests.length > 0 ? (
-                  <div className="space-y-3">
-                    {requests.map((r) => (
+                
+                {/* 1. Pending incoming requests */}
+                <div className="space-y-3">
+                  <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-400">Incoming Requests ({pendingRequests.length})</h3>
+                  {pendingRequests.length > 0 ? (
+                    pendingRequests.map((r) => (
                       <div key={r.id} className="card p-4 bg-white dark:bg-slate-900 flex flex-col gap-3">
                         <div>
                           <div className="flex items-center justify-between gap-1.5">
-                            <h4 className="font-extrabold text-xs text-gray-900 dark:text-white">{r.service}</h4>
-                            <Badge tone="amber" className="text-[8.5px] leading-none uppercase shrink-0">{r.slot}</Badge>
+                            <h4 className="font-extrabold text-xs text-gray-900 dark:text-white">{r.serviceName}</h4>
+                            <Badge tone="amber" className="text-[8.5px] leading-none uppercase shrink-0">{r.timeSlot}</Badge>
                           </div>
-                          <p className="text-[10px] text-gray-500 mt-1">Customer: {r.customer}</p>
-                          <p className="text-[9px] text-gray-400 mt-0.5 flex items-center gap-1 leading-snug">
-                            <MapPin className="w-3 h-3 text-brand-650 shrink-0" />
-                            {r.address} ({r.distance})
+                          <p className="text-[9px] text-gray-400 mt-1 flex items-center gap-1 leading-snug">
+                            <MapPin className="w-3.5 h-3.5 text-brand-650 shrink-0" />
+                            {r.address}
                           </p>
+                          <p className="text-[9px] text-gray-400 mt-0.5">Date: {new Date(r.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}</p>
                         </div>
                         
-                        <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-800 pt-2.5">
-                          <p className="font-black text-sm text-gray-900 dark:text-white">Est. Payout: ₹{r.amount}</p>
+                        <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-800/40 pt-2.5">
+                          <p className="font-black text-sm text-gray-905 dark:text-white">Payout: ₹{r.price}</p>
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => reject(r.id)} className="h-9 px-3 rounded-lg text-[10px] font-bold active-scale">
+                            <Button variant="outline" size="sm" onClick={() => declineJob(r.id)} className="h-9 px-3 rounded-lg text-[10px] font-bold active-scale">
                               Decline
                             </Button>
-                            <Button size="sm" onClick={() => accept(r.id)} className="h-9 px-4 rounded-lg text-[10px] font-bold active-scale">
+                            <Button size="sm" onClick={() => acceptJob(r.id)} className="h-9 px-4 rounded-lg text-[10px] font-bold active-scale">
                               Accept Job
                             </Button>
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState icon={<CheckCircle2 className="w-8 h-8" />} title="No pending jobs" description="Job pipeline is currently clear." />
-                )}
+                    ))
+                  ) : (
+                    <p className="text-[11px] text-gray-450 italic pl-1">No incoming request tickets pending.</p>
+                  )}
+                </div>
+
+                {/* 2. Active ongoing jobs */}
+                <div className="space-y-3 pt-2">
+                  <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-400">Active Work Orders ({activeJobs.length})</h3>
+                  {activeJobs.length > 0 ? (
+                    activeJobs.map((r) => (
+                      <div key={r.id} className="card p-4 bg-white dark:bg-slate-900 flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-extrabold text-xs text-gray-900 dark:text-white">{r.serviceName}</h4>
+                          <Badge tone={r.status === 'in-progress' ? 'amber' : 'brand'} className="text-[8px] leading-none uppercase">
+                            {r.status}
+                          </Badge>
+                        </div>
+                        <div className="text-[10px] text-gray-500 leading-normal">
+                          <p className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-brand-600 shrink-0" /> {r.address}</p>
+                          <p className="mt-1">Date: {new Date(r.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })} • {r.timeSlot}</p>
+                        </div>
+
+                        <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-800/40 pt-2.5">
+                          <p className="font-black text-sm text-gray-905 dark:text-white">Payout: ₹{r.price}</p>
+                          <div>
+                            {r.status === 'upcoming' ? (
+                              <Button size="sm" onClick={() => startTravel(r.id)} className="h-9 px-4 rounded-lg text-[10px] font-bold bg-amber-600 text-white active-scale">
+                                Start Travel
+                              </Button>
+                            ) : (
+                              <Button size="sm" onClick={() => completeJob(r.id)} className="h-9 px-4 rounded-lg text-[10px] font-bold bg-emerald-600 text-white active-scale">
+                                Complete Job
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <EmptyState icon={<CheckCircle2 className="w-8 h-8" />} title="No active jobs" description="No accepted bookings currently ongoing." />
+                  )}
+                </div>
               </div>
             )}
 
@@ -278,11 +439,11 @@ export function ProfessionalDashboardPage() {
               <div className="space-y-4">
                 <div className="card p-4 flex items-center gap-3 bg-white dark:bg-slate-900">
                   <div className="w-14 h-14 rounded-2xl bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 flex items-center justify-center font-black text-xl shrink-0">
-                    R
+                    {proName.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <h3 className="font-extrabold text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
-                      Rajesh Kumar <BadgeCheck className="w-4 h-4 text-brand-650" />
+                      {proName} <BadgeCheck className="w-4 h-4 text-brand-650" />
                     </h3>
                     <p className="text-[10px] text-gray-500 mt-0.5">Catering Manager • Mumbai</p>
                     <Badge tone="green" className="text-[7.5px] py-0.5 px-1 mt-1 leading-none">Verified Helper</Badge>
@@ -290,21 +451,21 @@ export function ProfessionalDashboardPage() {
                 </div>
 
                 <div className="card p-4 bg-white dark:bg-slate-900 space-y-3 select-none">
-                  <h4 className="font-extrabold text-xs text-gray-450 uppercase tracking-wider mb-2">Verification details</h4>
+                  <h4 className="font-extrabold text-xs text-gray-455 uppercase tracking-wider mb-2">Verification details</h4>
                   <div className="flex justify-between border-b border-gray-100 dark:border-slate-800 pb-2">
-                    <span className="text-[10px] text-gray-400">Experience</span>
+                    <span className="text-[10px] text-gray-405">Experience</span>
                     <span className="text-[11px] font-bold">8 Years</span>
                   </div>
                   <div className="flex justify-between border-b border-gray-100 dark:border-slate-800 pb-2">
-                    <span className="text-[10px] text-gray-400">Jobs Completed</span>
+                    <span className="text-[10px] text-gray-405">Jobs Completed</span>
                     <span className="text-[11px] font-bold">3,210 Bookings</span>
                   </div>
                   <div className="flex justify-between border-b border-gray-100 dark:border-slate-800 pb-2">
-                    <span className="text-[10px] text-gray-400">Helper Rating</span>
+                    <span className="text-[10px] text-gray-405">Helper Rating</span>
                     <span className="text-[11px] font-bold">4.92 ★</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-gray-400">Helper Availability</span>
+                    <span className="text-[10px] text-gray-405">Helper Availability</span>
                     <Badge tone="green" className="text-[8px] py-0.5 px-1.5">Active</Badge>
                   </div>
                 </div>
@@ -315,6 +476,7 @@ export function ProfessionalDashboardPage() {
                     { label: 'Schedule Calendar', key: 'calendar', icon: Calendar },
                     { label: 'Earnings statement', key: 'earnings', icon: Wallet },
                     { label: 'Reviews & Feedback', key: 'reviews', icon: Star },
+                    { label: 'Add New Service Catalog', key: 'add_service', icon: Plus },
                   ].map((link) => (
                     <button
                       key={link.label}
@@ -328,6 +490,93 @@ export function ProfessionalDashboardPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* ADD SERVICE TAB FORM */}
+            {tab === 'add_service' && (
+              <div className="card p-4 bg-white dark:bg-slate-900 text-left">
+                <div className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-800 pb-3">
+                  <Wrench className="w-4.5 h-4.5 text-brand-600" />
+                  <h3 className="font-extrabold text-xs uppercase tracking-wider">Add New Service</h3>
+                </div>
+
+                <form onSubmit={handleAddService} className="space-y-4">
+                  <Input
+                    label="Service Name"
+                    placeholder="e.g. Sofa Cleaning"
+                    value={serviceForm.name}
+                    onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
+                    required
+                  />
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-450 dark:text-gray-400 mb-1.5">Category</label>
+                    <select
+                      value={serviceForm.categoryName}
+                      onChange={(e) => setServiceForm({ ...serviceForm, categoryName: e.target.value })}
+                      className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3.5 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500"
+                    >
+                      <option value="Electrical">Electrical</option>
+                      <option value="Plumbing">Plumbing</option>
+                      <option value="Carpenter">Carpenter</option>
+                      <option value="AC Repair">AC Repair</option>
+                      <option value="Appliance Repair">Appliance Repair</option>
+                      <option value="Home Cleaning">Home Cleaning</option>
+                    </select>
+                  </div>
+
+                  <Input
+                    label="Price (₹)"
+                    type="number"
+                    placeholder="e.g. 499"
+                    value={serviceForm.price}
+                    onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
+                    required
+                  />
+
+                  <Input
+                    label="Duration"
+                    placeholder="e.g. 60 min"
+                    value={serviceForm.duration}
+                    onChange={(e) => setServiceForm({ ...serviceForm, duration: e.target.value })}
+                  />
+
+                  <Input
+                    label="Service Thumbnail Image URL"
+                    placeholder="https://images.pexels.com/..."
+                    value={serviceForm.image}
+                    onChange={(e) => setServiceForm({ ...serviceForm, image: e.target.value })}
+                  />
+
+                  <Input
+                    label="Features (comma separated)"
+                    placeholder="e.g. Foam jet wash, Coil scrub, 45-day warranty"
+                    value={serviceForm.featuresText}
+                    onChange={(e) => setServiceForm({ ...serviceForm, featuresText: e.target.value })}
+                  />
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-450 dark:text-gray-400 mb-1.5">Description</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Explain what is included..."
+                      value={serviceForm.description}
+                      onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
+                      required
+                      className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3.5 text-xs text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none resize-none focus:border-brand-500"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" size="sm" type="button" fullWidth onClick={() => setTab('profile')}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" type="submit" fullWidth loading={addingService}>
+                      Submit Service
+                    </Button>
+                  </div>
+                </form>
               </div>
             )}
           </motion.div>

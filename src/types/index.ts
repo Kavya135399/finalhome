@@ -74,10 +74,11 @@ export interface Booking {
   date: string;
   timeSlot: string;
   address: string;
-  status: 'upcoming' | 'completed' | 'cancelled' | 'in-progress';
+  status: 'pending' | 'upcoming' | 'completed' | 'cancelled' | 'in-progress';
   price: number;
   paymentMethod: 'card' | 'upi' | 'cash';
   paid: boolean;
+  timeline?: { status: string; time: string; note: string }[];
 }
 
 export interface SavedAddress {

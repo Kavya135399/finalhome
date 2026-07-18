@@ -32,9 +32,16 @@ export function LoginPage() {
     if (!validate()) return;
     setLoading(true);
     try {
-      await signIn(email, password);
+      const loggedUser = await signIn(email, password);
       toast('Welcome back!', 'success');
-      navigate('/dashboard');
+      
+      if (loggedUser.role === 'admin') {
+        navigate('/admin');
+      } else if (loggedUser.role === 'professional') {
+        navigate('/pro/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Login failed', 'error');
     } finally {

@@ -4,7 +4,12 @@ import { Clock, Star, Plus } from 'lucide-react';
 import type { Service } from '../types';
 
 export function ServiceCard({ service, index = 0 }: { service: Service; index?: number }) {
-  const discount = Math.round(((service.originalPrice - service.price) / service.originalPrice) * 100);
+  // Support both camelCase (frontend data) and snake_case (API response)
+  const price = service.price ?? 0;
+  const originalPrice = (service.originalPrice ?? (service as any).original_price) ?? price;
+  const reviewCount = (service.reviewCount ?? (service as any).review_count) ?? 0;
+  const duration = service.duration ?? '60 min';
+  const discount = originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
   
   return (
     <motion.div
@@ -21,7 +26,7 @@ export function ServiceCard({ service, index = 0 }: { service: Service; index?: 
           {/* Left: Thumbnail Image */}
           <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-gray-100 dark:bg-slate-800 shrink-0">
             <img
-              src={service.image}
+              src={service.image || 'https://images.pexels.com/photos/4239034/pexels-photo-4239034.jpeg?auto=compress&cs=tinysrgb&w=400'}
               alt={service.name}
               loading="lazy"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -42,8 +47,13 @@ export function ServiceCard({ service, index = 0 }: { service: Service; index?: 
                 </span>
                 
                 {/* Duration */}
+<<<<<<< HEAD
                 <span className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1 shrink-0">
                   <Clock className="w-3 h-3 text-gray-400" /> {service.duration.split(' ')[0]}hr
+=======
+                <span className="text-[10px] text-gray-400 flex items-center gap-1 shrink-0">
+                  <Clock className="w-3 h-3 text-gray-450" /> {duration.split(' ')[0]}hr
+>>>>>>> e2187f669b6e4d065fd93981bedbefc20cf66dc3
                 </span>
               </div>
 
@@ -57,16 +67,22 @@ export function ServiceCard({ service, index = 0 }: { service: Service; index?: 
                   <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
                   {service.rating}
                 </div>
-                <span className="truncate">({service.reviewCount.toLocaleString()} bookings)</span>
+                <span className="truncate">({reviewCount.toLocaleString()} bookings)</span>
               </div>
             </div>
 
             {/* Price & Book Button */}
             <div className="flex items-center justify-between mt-1">
               <div className="flex items-baseline gap-1.5">
+<<<<<<< HEAD
                 <span className="text-base font-extrabold text-gray-900 dark:text-white">₹{service.price}</span>
                 {service.originalPrice > service.price && (
                   <span className="text-xs text-gray-450 dark:text-gray-550 line-through font-medium">₹{service.originalPrice}</span>
+=======
+                <span className="text-base font-extrabold text-gray-900 dark:text-white">₹{price}</span>
+                {originalPrice > price && (
+                  <span className="text-xs text-gray-400 line-through">₹{originalPrice}</span>
+>>>>>>> e2187f669b6e4d065fd93981bedbefc20cf66dc3
                 )}
               </div>
 
