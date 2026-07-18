@@ -117,8 +117,29 @@ export const apiClient = {
     address: string;
     paymentMethod: string;
     userId: string;
+    utr?: string;
   }) {
     const res = await api.post('/bookings', bookingData);
+    return res.data;
+  },
+
+  async simulateReceivePayment(utr: string, amount: number) {
+    const res = await api.post('/payments/simulate-receive', { utr, amount });
+    return res.data;
+  },
+
+  async verifyUtr(utr: string, amount: number) {
+    const res = await api.post('/payments/verify-utr', { utr, amount });
+    return res.data;
+  },
+
+  async verifyBookingPayment(id: string, utr?: string) {
+    const res = await api.post(`/bookings/${id}/verify-payment`, { utr });
+    return res.data;
+  },
+
+  async rejectBookingPayment(id: string) {
+    const res = await api.post(`/bookings/${id}/reject-payment`);
     return res.data;
   },
 

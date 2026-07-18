@@ -132,6 +132,7 @@ const createTables = async () => {
       price REAL NOT NULL,
       payment_method TEXT NOT NULL,
       paid INTEGER DEFAULT 1,
+      utr TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -162,6 +163,7 @@ const createTables = async () => {
       status TEXT NOT NULL,
       payment_method TEXT NOT NULL,
       date TEXT NOT NULL,
+      utr TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE SET NULL
@@ -238,6 +240,16 @@ const createTables = async () => {
       maxDiscount REAL,
       minOrder REAL,
       description TEXT
+    )
+  `);
+
+  // 16. Bank transactions table (incoming UPI payments)
+  await runQuery(`
+    CREATE TABLE bank_transactions (
+      utr TEXT PRIMARY KEY,
+      amount REAL NOT NULL,
+      status TEXT CHECK(status IN ('unused', 'used')) DEFAULT 'unused',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
@@ -378,17 +390,14 @@ const seedData = async () => {
 
   // Seed Bookings & Orders & Timeline
   const bookings = [
-    { id: 'b1', serviceId: 's1', serviceName: 'Wedding Catering', professionalName: 'Rajesh Kumar', date: '2026-08-20', timeSlot: '06:00 PM - 11:00 PM', address: '221B, Hill Road, Bandra West, Mumbai', status: 'upcoming', price: 49999, paymentMethod: 'upi', paid: 1, customerName: 'Vikram Singh', userId: 'usr1' },
-    { id: 'b2', serviceId: 's27', serviceName: 'Full Home Cleaning', professionalName: 'Sunita Reddy', date: '2026-08-15', timeSlot: '09:00 AM - 01:00 PM', address: '221B, Hill Road, Bandra West, Mumbai', status: 'upcoming', price: 2499, paymentMethod: 'card', paid: 1, customerName: 'Vikram Singh', userId: 'usr1' },
-    { id: 'b3', serviceId: 's22', serviceName: 'Electrical Inspection', professionalName: 'Amit Patel', date: '2026-07-28', timeSlot: '02:00 PM - 03:00 PM', address: '221B, Hill Road, Bandra West, Mumbai', status: 'completed', price: 499, paymentMethod: 'upi', paid: 1, customerName: 'Vikram Singh', userId: 'usr1' },
-    { id: 'b4', serviceId: 's29', serviceName: 'Bathroom Cleaning', professionalName: 'Sunita Reddy', date: '2026-07-15', timeSlot: '11:00 AM - 12:30 PM', address: '221B, Hill Road, Bandra West, Mumbai', status: 'completed', price: 399, paymentMethod: 'upi', paid: 1, customerName: 'Vikram Singh', userId: 'usr1' },
-    { id: 'b5', serviceId: 's18', serviceName: 'Pipe Leak Repair', professionalName: 'Amit Patel', date: '2026-07-10', timeSlot: '04:00 PM - 05:00 PM', address: '221B, Hill Road, Bandra West, Mumbai', status: 'cancelled', price: 299, paymentMethod: 'card', paid: 1, customerName: 'Vikram Singh', userId: 'usr1' }
+    { id: 'b1', serviceId: 's1', serviceName: 'Wedding Catering', professionalName: 'Rajesh Kumar', date: '2026-08-20', timeSlot: '06:00 PM - 11:00 PM', address: '221B, Hill Road, Bandra West, Mumbai', status: 'upcoming', price: 49999, paymentMethod: 'upi', paid: 1, customerName: 'Vikram Singh', userId: 'usr1', utr: 'utr_mock_1' },
+    { id: 'b2', serviceId: 's27', serviceName: 'Full Home Cleaning', professionalName: 'Sunita Reddy', date: '2026-08-15', timeSlot: '09:00 AM - 01:00 PM', address: '221B, Hill Road, Bandra West, Mumbai', status: 'upcoming', price: 2499, paymentMethod: 'card', paid: 1, customerName: 'Vikram Singh', userId: 'usr1', utr: null }
   ];
 
   for (const b of bookings) {
     await runQuery(
-      `INSERT INTO bookings (id, user_id, service_id, professional_name, date, time_slot, address, status, price, payment_method, paid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [b.id, b.userId, b.serviceId, b.professionalName, b.date, b.timeSlot, b.address, b.status, b.price, b.paymentMethod, b.paid]
+      `INSERT INTO bookings (id, user_id, service_id, professional_name, date, time_slot, address, status, price, payment_method, paid, utr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [b.id, b.userId, b.serviceId, b.professionalName, b.date, b.timeSlot, b.address, b.status, b.price, b.paymentMethod, b.paid, b.utr]
     );
 
     // Seed timeline
@@ -405,8 +414,8 @@ const seedData = async () => {
 
     // Seed orders ledger
     await runQuery(
-      `INSERT INTO orders (id, booking_id, customer_name, service_name, amount, status, payment_method, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [`ord_${b.id}`, b.id, b.customerName, b.serviceName, b.price, b.status === 'cancelled' ? 'refunded' : 'paid', b.paymentMethod, '2026-07-17T21:00:00.000Z']
+      `INSERT INTO orders (id, booking_id, customer_name, service_name, amount, status, payment_method, date, utr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [`ord_${b.id}`, b.id, b.customerName, b.serviceName, b.price, b.status === 'cancelled' ? 'refunded' : 'paid', b.paymentMethod, '2026-07-17T21:00:00.000Z', b.utr]
     );
   }
 
@@ -467,6 +476,26 @@ const seedData = async () => {
       [c.code, c.discount, c.type, c.maxDiscount, c.minOrder, c.description]
     );
   }
+
+  // Seed Bank transactions (UTRs) for PhonePe verification
+  const defaultUtrs = [
+    { utr: '123456789012', amount: 49999 },
+    { utr: '987654321098', amount: 2499 },
+    { utr: '888888888888', amount: 499 }
+  ];
+
+  for (const item of defaultUtrs) {
+    await runQuery(
+      `INSERT INTO bank_transactions (utr, amount, status) VALUES (?, ?, ?)`,
+      [item.utr, item.amount, 'unused']
+    );
+  }
+
+  // Insert mock records for already used UTRs
+  await runQuery(
+    `INSERT INTO bank_transactions (utr, amount, status) VALUES (?, ?, ?)`,
+    ['utr_mock_1', 49999, 'used']
+  );
 
   console.log('Seeding completed successfully.');
 };

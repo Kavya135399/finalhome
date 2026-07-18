@@ -497,17 +497,30 @@ app.get('/api/bookings', async (req, res) => {
 });
 
 app.post('/api/bookings', authenticateToken, async (req, res) => {
-  const { serviceId, serviceName, serviceImage, price, date, timeSlot, address, paymentMethod, userId } = req.body;
+  const { serviceId, serviceName, serviceImage, price, date, timeSlot, address, paymentMethod, userId, utr } = req.body;
   if (!serviceId || !date || !timeSlot || !address || !userId) {
     return res.status(400).json({ error: 'Required checkout parameters missing' });
   }
 
   try {
+    if (paymentMethod === 'upi') {
+      if (!utr) {
+        return res.status(400).json({ error: 'UTR number is required for UPI payments.' });
+      }
+      if (!/^\d{12}$/.test(utr)) {
+        return res.status(400).json({ error: 'Invalid UTR format. Must be a 12-digit number.' });
+      }
+    }
+
     const bookingId = `b_${Date.now()}`;
     const professionalName = 'Amit Patel'; // default assigned pro
 
+    const bookingStatus = paymentMethod === 'upi' ? 'pending' : 'upcoming';
+    const isPaid = paymentMethod === 'card' ? 1 : 0;
+    const orderStatus = paymentMethod === 'card' ? 'paid' : 'pending';
+
     await dbRun(
-      'INSERT INTO bookings (id, user_id, service_id, professional_name, date, time_slot, address, status, price, payment_method, paid, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO bookings (id, user_id, service_id, professional_name, date, time_slot, address, status, price, payment_method, paid, utr, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         bookingId,
         userId,
@@ -516,42 +529,208 @@ app.post('/api/bookings', authenticateToken, async (req, res) => {
         date,
         timeSlot,
         address,
-        'pending',
+        bookingStatus,
         Number(price),
         paymentMethod || 'upi',
-        1,
+        isPaid,
+        utr || null,
         new Date().toISOString()
       ]
     );
 
     // Timeline seed note
+    const timelineNote = paymentMethod === 'upi'
+      ? `Booking requested by customer (Paid via PhonePe QR, UTR: ${utr} - Pending Admin Verification)`
+      : 'Booking confirmed';
     await dbRun(
       'INSERT INTO booking_timeline (id, booking_id, status, note, time) VALUES (?, ?, ?, ?, ?)',
-      [`bt_${Date.now()}`, bookingId, 'pending', 'Booking requested by customer', new Date().toISOString()]
+      [`bt_${Date.now()}`, bookingId, bookingStatus, timelineNote, new Date().toISOString()]
     );
 
     // Auto-generate transaction ledger
     const userName = (await dbGet('SELECT name FROM users WHERE id = ?', [userId]))?.name || 'Guest User';
     await dbRun(
-      'INSERT INTO orders (id, booking_id, customer_name, service_name, amount, status, payment_method, date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO orders (id, booking_id, customer_name, service_name, amount, status, payment_method, date, utr, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         `ord_${Date.now()}`,
         bookingId,
         userName,
         serviceName || 'Home Service',
         Number(price),
-        'paid',
+        orderStatus,
         paymentMethod || 'upi',
         new Date().toISOString(),
+        utr || null,
         new Date().toISOString()
       ]
     );
 
-    await addAuditLog(userId, 'Customer', 'Create Booking', `Created booking ledger ${bookingId}`);
+    await addAuditLog(userId, 'Customer', 'Create Booking', `Created booking ledger ${bookingId}${utr ? ` with UPI UTR: ${utr}` : ''}`);
 
     const booking = await dbGet('SELECT * FROM bookings WHERE id = ?', [bookingId]);
     booking.timeline = await dbAll('SELECT status, note, time FROM booking_timeline WHERE booking_id = ? ORDER BY time ASC', [bookingId]);
     res.json({ booking });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// UPI Payment Systems & UTR Verification APIs
+// ==========================================
+app.post('/api/payments/simulate-receive', async (req, res) => {
+  const { utr, amount } = req.body;
+  if (!utr || !amount) {
+    return res.status(400).json({ error: 'UTR and amount are required' });
+  }
+  try {
+    // Check if it already exists to avoid unique constraint error
+    const existing = await dbGet('SELECT * FROM bank_transactions WHERE utr = ?', [utr]);
+    if (existing) {
+      return res.json({ success: true, message: 'Simulated payment already exists' });
+    }
+
+    await dbRun(
+      'INSERT INTO bank_transactions (id, utr, amount, status) VALUES (?, ?, ?, ?)',
+      [utr, utr, Number(amount), 'unused']
+    );
+    res.json({ success: true, message: 'Simulated payment received' });
+  } catch (err) {
+    // Fallback if ID column doesn't match primary key
+    try {
+      await dbRun(
+        'INSERT INTO bank_transactions (utr, amount, status) VALUES (?, ?, ?)',
+        [utr, Number(amount), 'unused']
+      );
+      res.json({ success: true, message: 'Simulated payment received' });
+    } catch (dbErr) {
+      res.status(500).json({ error: dbErr.message });
+    }
+  }
+});
+
+app.post('/api/payments/verify-utr', async (req, res) => {
+  const { utr, amount } = req.body;
+  if (!utr || !amount) {
+    return res.status(400).json({ error: 'UTR and amount are required' });
+  }
+
+  if (!/^\d{12}$/.test(utr)) {
+    return res.status(400).json({ error: 'Invalid UTR format. Must be a 12-digit number.' });
+  }
+
+  try {
+    const tx = await dbGet('SELECT * FROM bank_transactions WHERE utr = ?', [utr]);
+    if (!tx) {
+      return res.status(400).json({ error: 'UTR verification failed. Reference number not found in bank logs.' });
+    }
+    if (Math.round(tx.amount) !== Math.round(Number(amount))) {
+      return res.status(400).json({ error: `UTR amount mismatch. Expected ₹${amount}, but transaction is for ₹${tx.amount}.` });
+    }
+    if (tx.status === 'used') {
+      return res.status(400).json({ error: 'This UTR has already been verified and used for another booking.' });
+    }
+    res.json({ success: true, message: 'UTR verified successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/bookings/:id/verify-payment', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { utr } = req.body;
+
+  try {
+    const booking = await dbGet('SELECT * FROM bookings WHERE id = ?', [id]);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found.' });
+    }
+
+    const verifyUtr = utr || booking.utr;
+    if (!verifyUtr) {
+      return res.status(400).json({ error: 'No UTR reference found for this booking.' });
+    }
+    if (!/^\d{12}$/.test(verifyUtr)) {
+      return res.status(400).json({ error: 'Invalid UTR format. Must be a 12-digit number.' });
+    }
+
+    const price = booking.price;
+    const tx = await dbGet('SELECT * FROM bank_transactions WHERE utr = ?', [verifyUtr]);
+    if (!tx) {
+      return res.status(400).json({ error: `UTR verification failed. Reference number "${verifyUtr}" not found in bank logs.` });
+    }
+    if (Math.round(tx.amount) !== Math.round(price)) {
+      return res.status(400).json({ error: `UTR verification failed. Booking amount is ₹${price}, but transaction in bank logs is for ₹${tx.amount}.` });
+    }
+    if (tx.status === 'used') {
+      return res.status(400).json({ error: 'This UTR reference number has already been used for another booking.' });
+    }
+
+    // Update bank log
+    await dbRun('UPDATE bank_transactions SET status = ? WHERE utr = ?', ['used', verifyUtr]);
+
+    // Update booking
+    await dbRun(
+      'UPDATE bookings SET status = ?, paid = ?, utr = ?, updated_at = ? WHERE id = ?',
+      ['upcoming', 1, verifyUtr, new Date().toISOString(), id]
+    );
+
+    // Update order ledger
+    await dbRun(
+      'UPDATE orders SET status = ?, utr = ?, updated_at = ? WHERE booking_id = ?',
+      ['paid', verifyUtr, new Date().toISOString(), id]
+    );
+
+    // Insert timeline record
+    await dbRun(
+      'INSERT INTO booking_timeline (id, booking_id, status, note, time) VALUES (?, ?, ?, ?, ?)',
+      [`bt_${Date.now()}`, id, 'upcoming', `Payment verified by Admin. UTR: ${verifyUtr}. Booking confirmed.`, new Date().toISOString()]
+    );
+
+    await addAuditLog(req.user?.id || 'admin', 'Admin', 'Verify Payment', `Verified UPI payment for booking ${id} using UTR ${verifyUtr}`);
+
+    const updatedBooking = await dbGet('SELECT * FROM bookings WHERE id = ?', [id]);
+    updatedBooking.timeline = await dbAll('SELECT status, note, time FROM booking_timeline WHERE booking_id = ? ORDER BY time ASC', [id]);
+    
+    res.json({ success: true, booking: updatedBooking });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/bookings/:id/reject-payment', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const booking = await dbGet('SELECT * FROM bookings WHERE id = ?', [id]);
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found.' });
+    }
+
+    // Update booking to cancelled
+    await dbRun(
+      'UPDATE bookings SET status = ?, paid = ?, updated_at = ? WHERE id = ?',
+      ['cancelled', 0, new Date().toISOString(), id]
+    );
+
+    // Update order ledger
+    await dbRun(
+      'UPDATE orders SET status = ?, updated_at = ? WHERE booking_id = ?',
+      ['cancelled', new Date().toISOString(), id]
+    );
+
+    // Insert timeline record
+    await dbRun(
+      'INSERT INTO booking_timeline (id, booking_id, status, note, time) VALUES (?, ?, ?, ?, ?)',
+      [`bt_${Date.now()}`, id, 'cancelled', 'Payment verification failed. Booking rejected by Admin.', new Date().toISOString()]
+    );
+
+    await addAuditLog(req.user?.id || 'admin', 'Admin', 'Reject Payment', `Rejected UPI payment and cancelled booking ${id}`);
+
+    const updatedBooking = await dbGet('SELECT * FROM bookings WHERE id = ?', [id]);
+    updatedBooking.timeline = await dbAll('SELECT status, note, time FROM booking_timeline WHERE booking_id = ? ORDER BY time ASC', [id]);
+    
+    res.json({ success: true, booking: updatedBooking });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

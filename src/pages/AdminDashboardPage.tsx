@@ -99,6 +99,11 @@ export function AdminDashboardPage() {
   const [trackModal, setTrackModal] = useState<{ open: boolean; booking?: any }>({ open: false });
   const [customNote, setCustomNote] = useState('');
 
+  const [verifyModal, setVerifyModal] = useState<{ open: boolean; booking?: any }>({ open: false });
+  const [verifyUtrInput, setVerifyUtrInput] = useState('');
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [rejectingPayment, setRejectingPayment] = useState(false);
+
   // Fetch all db parameters
   const fetchData = async () => {
     setLoading(true);
@@ -304,6 +309,50 @@ export function AdminDashboardPage() {
       fetchData();
     } catch (err: any) {
       toast(err.message || 'Failed to update status', 'error');
+    }
+  };
+
+  const handleVerifyPaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verifyModal.booking) return;
+    if (!verifyUtrInput) {
+      toast('Please enter a UTR number to verify', 'error');
+      return;
+    }
+    if (!/^\d{12}$/.test(verifyUtrInput)) {
+      toast('UTR format is invalid. Must be exactly 12 digits.', 'error');
+      return;
+    }
+    setVerifyingPayment(true);
+    try {
+      const res = await apiClient.verifyBookingPayment(verifyModal.booking.id, verifyUtrInput);
+      if (res.success) {
+        toast('Payment verified and booking confirmed successfully!', 'success');
+        setVerifyModal({ open: false });
+        fetchData();
+      }
+    } catch (err: any) {
+      toast(err.response?.data?.error || err.message || 'Payment verification failed', 'error');
+    } finally {
+      setVerifyingPayment(false);
+    }
+  };
+
+  const handleRejectPaymentSubmit = async () => {
+    if (!verifyModal.booking) return;
+    if (!window.confirm('Are you sure you want to reject the payment and cancel this booking?')) return;
+    setRejectingPayment(true);
+    try {
+      const res = await apiClient.rejectBookingPayment(verifyModal.booking.id);
+      if (res.success) {
+        toast('UPI payment rejected and booking cancelled.', 'success');
+        setVerifyModal({ open: false });
+        fetchData();
+      }
+    } catch (err: any) {
+      toast(err.response?.data?.error || err.message || 'Action failed', 'error');
+    } finally {
+      setRejectingPayment(false);
     }
   };
 
@@ -913,8 +962,18 @@ export function AdminDashboardPage() {
                       <tbody className="divide-y divide-gray-105 dark:divide-slate-800">
                         {filteredBookings.map((b) => (
                           <tr key={b.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-850/20 text-gray-700 dark:text-gray-350">
-                            <td className="p-3.5 pl-4 font-bold text-gray-900 dark:text-white uppercase">{b.id.slice(0,8)}</td>
-                            <td className="p-3.5 font-semibold text-gray-800 dark:text-gray-200">{b.serviceName}</td>
+                            <td className="p-3.5 pl-4 font-bold text-gray-900 dark:text-white uppercase">
+                              {b.id.slice(0,8)}
+                              {b.paymentMethod === 'upi' && (
+                                <span className="block text-[8px] bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-black tracking-wider uppercase px-1 rounded w-max mt-1">UPI Pay</span>
+                              )}
+                            </td>
+                            <td className="p-3.5 font-semibold text-gray-800 dark:text-gray-200">
+                              {b.serviceName}
+                              {b.utr && (
+                                <span className="block text-[9px] text-gray-450 font-mono mt-1 select-all bg-gray-50 dark:bg-slate-850 px-1 py-0.5 rounded w-max">UTR: {b.utr}</span>
+                              )}
+                            </td>
                             <td className="p-3.5 leading-relaxed">{new Date(b.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}<br/><span className="text-[10px] text-gray-450">{b.timeSlot}</span></td>
                             <td className="p-3.5">
                               <div className="flex items-center gap-1.5">
@@ -931,8 +990,8 @@ export function AdminDashboardPage() {
                               </div>
                             </td>
                             <td className="p-3.5">
-                              <Badge tone={b.status === 'completed' ? 'green' : b.status === 'cancelled' ? 'red' : 'amber'} className="capitalize text-[7.5px] font-bold">
-                                {b.status}
+                              <Badge tone={b.status === 'completed' ? 'green' : b.status === 'cancelled' ? 'red' : b.status === 'pending' && b.paymentMethod === 'upi' && !b.paid ? 'amber' : 'amber'} className="capitalize text-[7.5px] font-bold">
+                                {b.status === 'pending' && b.paymentMethod === 'upi' && !b.paid ? 'Pending Pay Verify' : b.status}
                               </Badge>
                             </td>
                             <td className="p-3.5 text-right pr-4">
@@ -948,18 +1007,31 @@ export function AdminDashboardPage() {
                                 </button>
                                 {b.status === 'pending' && (
                                   <button
-                                    onClick={() => updateBookingStatus(b.id, 'upcoming')}
-                                    className="p-1.5 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition"
-                                    title="Accept & Confirm Job"
+                                    onClick={() => {
+                                      if (b.paymentMethod === 'upi') {
+                                        setVerifyUtrInput(b.utr || '');
+                                        setVerifyModal({ open: true, booking: b });
+                                      } else {
+                                        updateBookingStatus(b.id, 'upcoming');
+                                      }
+                                    }}
+                                    className="p-1.5 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition active-scale"
+                                    title={b.paymentMethod === 'upi' ? "Verify UPI Payment & Confirm" : "Accept & Confirm Job"}
                                   >
                                     <Check className="w-4 h-4" />
                                   </button>
                                 )}
                                 {(b.status === 'upcoming' || b.status === 'pending') && (
                                   <button
-                                    onClick={() => updateBookingStatus(b.id, 'cancelled')}
-                                    className="p-1.5 rounded bg-rose-50 text-red-500 hover:bg-rose-100 transition"
-                                    title="Cancel Booking"
+                                    onClick={() => {
+                                      if (b.status === 'pending' && b.paymentMethod === 'upi') {
+                                        setVerifyModal({ open: true, booking: b });
+                                      } else {
+                                        updateBookingStatus(b.id, 'cancelled');
+                                      }
+                                    }}
+                                    className="p-1.5 rounded bg-rose-50 text-red-500 hover:bg-rose-100 transition active-scale"
+                                    title={b.status === 'pending' && b.paymentMethod === 'upi' ? "Inspect / Reject Payment" : "Cancel Booking"}
                                   >
                                     <XCircle className="w-4 h-4" />
                                   </button>
@@ -1801,6 +1873,85 @@ export function AdminDashboardPage() {
                 <Button type="submit" size="sm" fullWidth className="h-9 text-[10px] font-bold">
                   Publish Milestone Log
                 </Button>
+              </form>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Verify UPI Payment / UTR Modal */}
+      {verifyModal.open && verifyModal.booking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 p-5 shadow-soft-lg text-left"
+          >
+            <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-slate-800 pb-2.5">
+              <h4 className="font-extrabold text-xs uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-1.5">
+                <Database className="w-4 h-4 text-purple-650" /> Verify UPI Payment
+              </h4>
+              <button onClick={() => setVerifyModal({ open: false })} className="p-1 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800">
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-[10px] text-gray-400 font-extrabold uppercase">Booking ID</p>
+                <p className="text-xs font-black uppercase text-gray-800 dark:text-white mt-0.5">{verifyModal.booking.id}</p>
+              </div>
+
+              <div>
+                <p className="text-[10px] text-gray-400 font-extrabold uppercase">Service Booked</p>
+                <p className="text-xs font-bold text-gray-700 dark:text-gray-200 mt-0.5">{verifyModal.booking.serviceName}</p>
+              </div>
+
+              <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/30 p-3 rounded-2xl">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-purple-800 dark:text-purple-300">Bill Amount:</span>
+                  <span className="font-black text-purple-950 dark:text-purple-200">₹{verifyModal.booking.price}</span>
+                </div>
+              </div>
+
+              {/* Verify Form */}
+              <form onSubmit={handleVerifyPaymentSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-455 mb-1.5">Customer Entered UTR / Ref Number</label>
+                  <input
+                    type="text"
+                    maxLength={12}
+                    placeholder="Enter 12-digit UPI UTR Code"
+                    value={verifyUtrInput}
+                    onChange={(e) => setVerifyUtrInput(e.target.value.replace(/\D/g, ''))}
+                    className="w-full h-11 px-3 rounded-xl border border-gray-250 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold font-mono tracking-widest text-center outline-none focus:border-brand-500"
+                    required
+                  />
+                  <p className="text-[9.5px] text-gray-455 mt-1.5">
+                    Verify this reference number matches the bank transaction logs.
+                  </p>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={handleRejectPaymentSubmit}
+                    disabled={verifyingPayment || rejectingPayment}
+                    variant="outline"
+                    type="button"
+                    className="h-10 text-xs border-red-200 hover:bg-red-50 hover:text-red-650 font-bold"
+                    fullWidth
+                  >
+                    {rejectingPayment ? 'Rejecting...' : 'Reject Booking'}
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={verifyingPayment || rejectingPayment}
+                    className="h-10 text-xs font-bold bg-purple-650 hover:bg-purple-750 text-white"
+                    fullWidth
+                  >
+                    {verifyingPayment ? 'Verifying...' : 'Verify & Confirm'}
+                  </Button>
+                </div>
               </form>
             </div>
           </motion.div>
