@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Clock, Check, ShieldCheck, Star } from 'lucide-react';
@@ -9,12 +9,33 @@ import { Rating } from '../components/ui/Rating';
 import { Badge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { services, reviews, professionals } from '../data/sampleData';
+import { apiClient } from '../services/apiClient';
+import type { Service } from '../types';
 
 export function ServiceDetailsPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const service = services.find((s) => s.slug === slug);
+  const [servicesList, setServicesList] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiClient.getServices()
+      .then((data) => {
+        setServicesList(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setServicesList(services);
+        setLoading(false);
+      });
+  }, []);
+
+  const service = servicesList.find((s) => s.slug === slug);
   const [tab, setTab] = useState<'overview' | 'reviews' | 'similar'>('overview');
+
+  if (loading) {
+    return <div className="flex-1 flex items-center justify-center p-6 text-sm font-bold">Loading details...</div>;
+  }
 
   if (!service) {
     return (

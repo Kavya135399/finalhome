@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -16,11 +16,12 @@ import {
   Settings,
   LogOut,
   ChevronRight,
+  ChevronDown,
+  Check,
   TrendingUp,
   TrendingDown,
   Wrench,
   Shield,
-  CreditCard,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -30,16 +31,10 @@ import { Modal } from '../components/ui/Modal';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { userBookings, savedAddresses, notifications, walletTransactions, services } from '../data/sampleData';
+import { apiClient } from '../services/apiClient';
 import type { Booking, SavedAddress } from '../types';
 
 type Tab = 'bookings' | 'favorites' | 'addresses' | 'notifications' | 'wallet' | 'profile' | 'edit_profile';
-
-const statusTone: Record<Booking['status'], 'brand' | 'green' | 'red' | 'amber'> = {
-  upcoming: 'brand',
-  completed: 'green',
-  cancelled: 'red',
-  'in-progress': 'amber',
-};
 
 export function DashboardPage() {
   const { user, signOut } = useAuth();
@@ -49,12 +44,20 @@ export function DashboardPage() {
   const tab = (searchParams.get('tab') as Tab) || 'bookings';
 
   const [bookingFilter, setBookingFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
-  const [bookings, setBookings] = useState(userBookings);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [favorites, setFavorites] = useState<string[]>(['s1', 's5']);
   const [addresses, setAddresses] = useState<SavedAddress[]>(savedAddresses);
   const [notifList, setNotifList] = useState(notifications);
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
   const [newAddr, setNewAddr] = useState({ label: '', address: '', city: '', pincode: '' });
+
+  useEffect(() => {
+    if (user) {
+      apiClient.getBookings({ userId: user.id })
+        .then((data) => setBookings(data))
+        .catch(() => setBookings(userBookings));
+    }
+  }, [user]);
 
   const setTab = (newTab: Tab) => {
     setSearchParams({ tab: newTab });
@@ -65,11 +68,17 @@ export function DashboardPage() {
   const walletBalance = walletTransactions.reduce((sum, t) => sum + (t.type === 'credit' ? t.amount : -t.amount), 0);
   const unreadCount = notifList.filter((n) => !n.read).length;
 
-  const cancelBooking = () => {
+  const cancelBooking = async () => {
     if (!cancelTarget) return;
-    setBookings((prev) => prev.map((b) => (b.id === cancelTarget.id ? { ...b, status: 'cancelled' as const } : b)));
-    toast('Booking cancelled successfully', 'success');
-    setCancelTarget(null);
+    try {
+      const updated = await apiClient.updateBookingStatus(cancelTarget.id, 'cancelled', 'Booking cancelled by customer');
+      setBookings((prev) => prev.map((b) => (b.id === cancelTarget.id ? updated : b)));
+      toast('Booking cancelled successfully', 'success');
+    } catch (err: any) {
+      toast(err.message || 'Failed to cancel booking', 'error');
+    } finally {
+      setCancelTarget(null);
+    }
   };
 
   const toggleFavorite = (id: string) => {
@@ -526,68 +535,200 @@ export function DashboardPage() {
 
 function BookingCard({ booking, onCancel }: { booking: Booking; onCancel: () => void }) {
   const { toast } = useToast();
+  const [showTrack, setShowTrack] = useState(false);
+
+  const stepsList = [
+    { id: 'pending', label: 'Order Placed', desc: 'Booking requested by customer' },
+    { id: 'upcoming', label: 'Confirmed', desc: 'Booking confirmed & helper assigned' },
+    { id: 'in-progress', label: 'In Progress', desc: 'Helper has started the service' },
+    { id: 'completed', label: 'Completed', desc: 'Service completed successfully' },
+  ];
+
+  const currentStatusIdx = stepsList.findIndex((s) => s.id === booking.status);
+
+  const statusStyles: Record<Booking['status'], { bg: string; text: string; dot: string; label: string }> = {
+    pending: {
+      bg: 'bg-amber-50 dark:bg-amber-950/20 border-amber-200/30',
+      text: 'text-amber-600 dark:text-amber-400',
+      dot: 'bg-amber-500',
+      label: 'Order Placed'
+    },
+    upcoming: {
+      bg: 'bg-blue-50 dark:bg-blue-950/20 border-blue-200/30',
+      text: 'text-blue-600 dark:text-blue-400',
+      dot: 'bg-blue-500',
+      label: 'Confirmed'
+    },
+    'in-progress': {
+      bg: 'bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200/30',
+      text: 'text-indigo-600 dark:text-indigo-400',
+      dot: 'bg-indigo-500',
+      label: 'In Progress'
+    },
+    completed: {
+      bg: 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200/30',
+      text: 'text-emerald-600 dark:text-emerald-400',
+      dot: 'bg-emerald-505',
+      label: 'Completed'
+    },
+    cancelled: {
+      bg: 'bg-rose-50 dark:bg-rose-950/20 border-rose-200/30',
+      text: 'text-rose-600 dark:text-rose-400',
+      dot: 'bg-rose-500',
+      label: 'Cancelled'
+    }
+  };
+
+  const style = statusStyles[booking.status];
+
   return (
-    <div className="card p-3.5 flex flex-col gap-3 hover:shadow-soft transition text-left">
-      <div className="flex items-center gap-3">
-        <img src={booking.serviceImage} alt={booking.serviceName} className="w-13 h-13 object-cover rounded-xl shrink-0" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 justify-between">
-            <h4 className="font-bold text-xs text-gray-900 dark:text-white truncate pr-1">{booking.serviceName}</h4>
-            <Badge tone={statusTone[booking.status]} className="capitalize text-[8px] py-0 shrink-0">
-              {booking.status}
-            </Badge>
+    <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 rounded-3xl p-4.5 flex flex-col gap-4 shadow-sm hover:shadow-soft transition-all duration-300 text-left relative overflow-hidden select-none">
+      <div className="flex items-center gap-3.5">
+        <div className="relative shrink-0">
+          <img src={booking.serviceImage} alt={booking.serviceName} className="w-14 h-14 object-cover rounded-2xl border border-gray-100 dark:border-slate-800" />
+          <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-brand-50 dark:bg-slate-800 border-2 border-white dark:border-slate-900 flex items-center justify-center">
+            <Wrench className="w-3.5 h-3.5 text-brand-650" />
           </div>
-          <p className="text-[10px] text-gray-400 mt-0.5">{booking.professionalName}</p>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <h4 className="font-black text-sm text-gray-900 dark:text-white truncate pr-1">{booking.serviceName}</h4>
+            <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider shrink-0 ${style.bg} ${style.text}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${style.dot} ${booking.status === 'in-progress' ? 'animate-pulse' : ''}`} />
+              {style.label}
+            </div>
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1 font-bold">
+            Assigned Pro: <span className="text-gray-700 dark:text-brand-350">{booking.professionalName}</span>
+          </p>
         </div>
       </div>
 
-      <div className="text-[10px] text-gray-500 bg-gray-50 dark:bg-slate-900/40 p-2.5 rounded-xl border border-gray-100 dark:border-slate-800/80 flex justify-between select-none">
-        <span className="flex items-center gap-1">
-          <Clock className="w-3.5 h-3.5 text-brand-600" />
-          {new Date(booking.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} • {booking.timeSlot}
-        </span>
-        <span className="font-black text-gray-800 dark:text-white">
-          ₹{booking.price}
-        </span>
+      <div className="text-[11px] text-gray-500 bg-gray-50/50 dark:bg-slate-950/40 p-3 rounded-2xl border border-gray-100/60 dark:border-slate-850/60 flex items-center justify-between">
+        <div className="flex flex-col gap-1">
+          <span className="flex items-center gap-1.5 font-bold text-gray-700 dark:text-gray-300">
+            <Calendar className="w-4 h-4 text-brand-600" />
+            {new Date(booking.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </span>
+          <span className="flex items-center gap-1.5 font-bold text-gray-500 dark:text-gray-400">
+            <Clock className="w-4 h-4 text-gray-400" />
+            {booking.timeSlot}
+          </span>
+        </div>
+        <div className="text-right">
+          <span className="text-[9px] uppercase tracking-wider text-gray-400 font-bold block mb-0.5">Grand Total</span>
+          <span className="font-black text-brand-650 dark:text-brand-400 text-base">
+            ₹{booking.price}
+          </span>
+        </div>
       </div>
 
-      <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-800/40 pt-2.5">
-        <span className="text-[9px] text-gray-400 capitalize flex items-center gap-1 font-medium">
-          <CreditCard className="w-3 h-3" /> {booking.paymentMethod}
-        </span>
+      <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-800/40 pt-3">
+        <button
+          onClick={() => setShowTrack(!showTrack)}
+          className="flex items-center gap-1 text-[11px] font-black text-brand-650 dark:text-brand-400 hover:text-brand-700 transition"
+        >
+          {showTrack ? 'Hide Tracking Details' : 'Track Booking Progress'}
+          <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showTrack ? 'rotate-180 text-brand-650' : 'text-gray-400'}`} />
+        </button>
+        
         <div className="flex gap-2">
           <button
             onClick={() => toast('Invoice download is a placeholder', 'info')}
-            className="p-2 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800"
+            className="w-8 h-8 rounded-full border border-gray-150 dark:border-slate-800 flex items-center justify-center text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 transition active:scale-95"
             title="Download Invoice"
             aria-label="Download invoice"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-3.5 h-3.5" />
           </button>
           
           {booking.status === 'completed' && (
             <button
               onClick={() => toast('Feedback received, thank you!', 'success')}
-              className="p-2 rounded-lg text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+              className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-950/20 text-amber-500 flex items-center justify-center hover:bg-amber-100 dark:hover:bg-amber-950/40 transition active:scale-95 border border-amber-200/20"
               title="Rate Service"
               aria-label="Rate service"
             >
-              <Star className="w-4 h-4 fill-amber-400" />
+              <Star className="w-3.5 h-3.5 fill-amber-400" />
             </button>
           )}
 
-          {booking.status === 'upcoming' && (
+          {(booking.status === 'upcoming' || booking.status === 'pending') && (
             <button
               onClick={onCancel}
-              className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
+              className="w-8 h-8 rounded-full bg-rose-50 dark:bg-rose-950/20 text-red-550 flex items-center justify-center hover:bg-rose-100 dark:hover:bg-rose-950/40 transition active:scale-95 border border-rose-200/20"
               title="Cancel Booking"
               aria-label="Cancel booking"
             >
-              <XCircle className="w-4 h-4" />
+              <XCircle className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
       </div>
+
+      {/* Expanded status progress timeline */}
+      {showTrack && (
+        <div className="bg-slate-50 dark:bg-slate-950/20 border border-gray-150/40 dark:border-slate-850/45 p-4 rounded-2xl space-y-4">
+          <h5 className="font-extrabold text-[9px] uppercase text-gray-400 tracking-wider">Live Tracking Timeline</h5>
+          
+          <div className="relative pl-6 space-y-5">
+            <div className="absolute left-2 w-0.5 top-1.5 bottom-1.5 bg-gray-200 dark:bg-slate-800" />
+            
+            {stepsList.map((step, idx) => {
+              const isPassed = idx <= currentStatusIdx;
+              const isCurrent = idx === currentStatusIdx;
+              
+              if (booking.status === 'cancelled' && step.id === 'completed') {
+                return null;
+              }
+
+              return (
+                <div key={step.id} className="relative flex gap-3 text-xs leading-relaxed">
+                  {isCurrent ? (
+                    <div className="absolute left-0 -translate-x-[7px] w-4 h-4">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-450 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-4 w-4 bg-brand-600 border-2 border-white dark:border-slate-900 flex items-center justify-center">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                      </span>
+                    </div>
+                  ) : isPassed ? (
+                    <div className="absolute left-0 -translate-x-[7px] w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center">
+                      <Check className="w-2.5 h-2.5 text-white stroke-[3px]" />
+                    </div>
+                  ) : (
+                    <div className="absolute left-0 -translate-x-[7px] w-4 h-4 rounded-full border-2 border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900" />
+                  )}
+                  
+                  <div className="pl-2">
+                    <p className={`font-black ${isCurrent ? 'text-brand-600 dark:text-brand-450' : isPassed ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>
+                      {step.label}
+                    </p>
+                    <p className="text-[10px] text-gray-500 mt-0.5 leading-snug">
+                      {isCurrent && booking.timeline && booking.timeline.length > 0 
+                        ? booking.timeline[booking.timeline.length - 1].note 
+                        : step.desc}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+
+            {booking.status === 'cancelled' && (
+              <div className="relative flex gap-3 text-xs pl-6">
+                <div className="absolute left-0 -translate-x-[7px] w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
+                  <Check className="w-2.5 h-2.5 text-white stroke-[3px]" />
+                </div>
+                <div className="pl-2">
+                  <p className="font-extrabold text-red-500">Booking Cancelled</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5 leading-snug">
+                    {booking.timeline?.find((t) => t.status === 'cancelled')?.note || 'Cancelled by customer'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

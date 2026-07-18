@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -19,6 +19,9 @@ import { Badge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../context/ToastContext';
 import { services, coupons, savedAddresses } from '../data/sampleData';
+import { useAuth } from '../context/AuthContext';
+import { apiClient } from '../services/apiClient';
+import type { Service } from '../types';
 
 const steps = ['Schedule', 'Address', 'Coupon', 'Payment'];
 
@@ -50,7 +53,24 @@ export function BookingPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const service = services.find((s) => s.slug === slug);
+  const { user } = useAuth();
+  
+  const [servicesList, setServicesList] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiClient.getServices()
+      .then((data) => {
+        setServicesList(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setServicesList(services);
+        setLoading(false);
+      });
+  }, []);
+
+  const service = servicesList.find((s) => s.slug === slug);
 
   const [step, setStep] = useState(0);
   const [selectedDate, setSelectedDate] = useState(nextDays(1)[0].date);
@@ -68,6 +88,10 @@ export function BookingPage() {
     const pct = Math.round((service.price * appliedCoupon.discount) / 100);
     return Math.min(pct, appliedCoupon.maxDiscount);
   }, [appliedCoupon, service]);
+
+  if (loading) {
+    return <div className="flex-1 flex items-center justify-center p-6 text-sm font-bold">Loading booking...</div>;
+  }
 
   if (!service) {
     return (
@@ -93,9 +117,38 @@ export function BookingPage() {
     return true;
   };
 
-  const confirmBooking = () => {
-    toast('Booking confirmed! Check your dashboard for details.', 'success');
-    navigate('/dashboard?tab=bookings');
+  const confirmBooking = async () => {
+    if (!user) {
+      toast('Please sign in to complete booking', 'error');
+      navigate('/login');
+      return;
+    }
+
+    let finalAddress = '';
+    if (addressId) {
+      const addr = savedAddresses.find((a) => a.id === addressId);
+      finalAddress = addr ? `${addr.address}, ${addr.city} - ${addr.pincode}` : '';
+    } else {
+      finalAddress = `${newAddr.address}, ${newAddr.city} - ${newAddr.pincode}`;
+    }
+
+    try {
+      await apiClient.createBooking({
+        serviceId: service.id,
+        serviceName: service.name,
+        serviceImage: service.image,
+        price: total,
+        date: selectedDate,
+        timeSlot: slot,
+        address: finalAddress,
+        paymentMethod: payment,
+        userId: user.id
+      });
+      toast('Booking confirmed! Check your dashboard for details.', 'success');
+      navigate('/dashboard?tab=bookings');
+    } catch (err: any) {
+      toast(err.message || 'Failed to complete booking', 'error');
+    }
   };
 
   return (

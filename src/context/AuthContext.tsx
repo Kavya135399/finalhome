@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from '../services/supabaseClient';
+import { apiClient } from '../services/apiClient';
 import type { Role } from '../types';
 
 interface AuthUser {
@@ -14,19 +15,14 @@ interface AuthContextValue {
   user: AuthUser | null;
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<AuthUser>;
   signUp: (name: string, email: string, password: string, role: Role) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const LOCAL_USERS_KEY = 'homeseva.localUsers';
 const LOCAL_CURRENT_USER_KEY = 'homeseva.currentUser';
-
-interface LocalStoredUser extends AuthUser {
-  password: string;
-}
 
 function mapUser(user: User | null): AuthUser | null {
   if (!user) return null;
@@ -37,18 +33,6 @@ function mapUser(user: User | null): AuthUser | null {
     name: meta.name ?? (user.email ? user.email.split('@')[0] : 'User'),
     role: (meta.role as Role) ?? 'customer',
   };
-}
-
-function readLocalUsers(): LocalStoredUser[] {
-  try {
-    return JSON.parse(localStorage.getItem(LOCAL_USERS_KEY) ?? '[]') as LocalStoredUser[];
-  } catch {
-    return [];
-  }
-}
-
-function writeLocalUsers(users: LocalStoredUser[]) {
-  localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
 }
 
 function readCurrentLocalUser(): AuthUser | null {
@@ -92,38 +76,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const user = isSupabaseConfigured ? mapUser(session?.user ?? null) : localUser;
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<AuthUser> => {
     if (!isSupabaseConfigured) {
-      const normalizedEmail = email.trim().toLowerCase();
-      const foundUser = readLocalUsers().find((u) => u.email === normalizedEmail && u.password === password);
-      if (!foundUser) throw new Error('Invalid email or password');
-      const { password: _password, ...authUser } = foundUser;
-      setLocalUser(authUser);
-      saveCurrentLocalUser(authUser);
-      return;
+      try {
+        const data = await apiClient.login(email, password);
+        setLocalUser(data.user);
+        saveCurrentLocalUser(data.user);
+        localStorage.setItem('homeseva.token', data.token);
+        return data.user;
+      } catch (err: any) {
+        const msg = err.response?.data?.error || err.message || 'Invalid email or password';
+        throw new Error(msg);
+      }
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    const mapped = mapUser(data.user);
+    if (!mapped) throw new Error('User not found');
+    return mapped;
   };
 
   const signUp = async (name: string, email: string, password: string, role: Role) => {
     if (!isSupabaseConfigured) {
-      const normalizedEmail = email.trim().toLowerCase();
-      const users = readLocalUsers();
-      if (users.some((u) => u.email === normalizedEmail)) {
-        throw new Error('An account with this email already exists');
+      try {
+        const data = await apiClient.register(name, email, password, role);
+        setLocalUser(data.user);
+        saveCurrentLocalUser(data.user);
+        localStorage.setItem('homeseva.token', data.token);
+        return;
+      } catch (err: any) {
+        const msg = err.response?.data?.error || err.message || 'Registration failed';
+        throw new Error(msg);
       }
-
-      users.push({
-        id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `local-${Date.now()}`,
-        email: normalizedEmail,
-        name: name.trim(),
-        role,
-        password,
-      });
-      writeLocalUsers(users);
-      return;
     }
 
     const { error } = await supabase.auth.signUp({
@@ -138,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isSupabaseConfigured) {
       setLocalUser(null);
       saveCurrentLocalUser(null);
+      localStorage.removeItem('homeseva.token');
       return;
     }
 
@@ -146,9 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = async (email: string) => {
     if (!isSupabaseConfigured) {
-      const normalizedEmail = email.trim().toLowerCase();
-      const exists = readLocalUsers().some((u) => u.email === normalizedEmail);
-      if (!exists) throw new Error('No local account found for this email');
+      // Mock local password reset
       return;
     }
 
