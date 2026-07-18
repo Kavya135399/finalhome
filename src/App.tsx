@@ -24,10 +24,13 @@ function SuspenseWrap({ children }: { children: ReactNode }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
 }
 
-function ProtectedRoute({ children }: { children: ReactNode }) {
+function ProtectedRoute({ children, allowedRoles }: { children: ReactNode; allowedRoles?: string[] }) {
   const { user, loading } = useAuth();
   if (loading) return <PageLoader />;
   if (!user) return <Navigate to="/login" replace />;
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
   return <>{children}</>;
 }
 
@@ -46,15 +49,15 @@ export const router = createBrowserRouter([
       { path: 'book/:slug', element: <SuspenseWrap><BookingPage /></SuspenseWrap> },
       {
         path: 'dashboard',
-        element: <ProtectedRoute><SuspenseWrap><DashboardPage /></SuspenseWrap></ProtectedRoute>,
+        element: <ProtectedRoute allowedRoles={['customer']}><SuspenseWrap><DashboardPage /></SuspenseWrap></ProtectedRoute>,
       },
       {
         path: 'admin',
-        element: <ProtectedRoute><SuspenseWrap><AdminDashboardPage /></SuspenseWrap></ProtectedRoute>,
+        element: <ProtectedRoute allowedRoles={['admin']}><SuspenseWrap><AdminDashboardPage /></SuspenseWrap></ProtectedRoute>,
       },
       {
         path: 'pro/dashboard',
-        element: <ProtectedRoute><SuspenseWrap><ProfessionalDashboardPage /></SuspenseWrap></ProtectedRoute>,
+        element: <ProtectedRoute allowedRoles={['professional']}><SuspenseWrap><ProfessionalDashboardPage /></SuspenseWrap></ProtectedRoute>,
       },
       {
         path: 'login',
