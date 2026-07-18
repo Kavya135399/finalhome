@@ -92,38 +92,40 @@ export function RootLayout() {
     <div className="min-h-screen w-full bg-gray-50 dark:bg-slate-950 flex flex-col text-gray-900 dark:text-white antialiased">
       
       {/* Top App Bar */}
-      <header className="fixed top-0 inset-x-0 h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-b border-gray-150 dark:border-slate-800/60 flex items-center justify-between px-4 z-40 select-none">
-        <div className="flex items-center gap-2">
-          {showBackButton ? (
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 active-scale"
-              aria-label="Go back"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-          ) : (
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 active-scale"
-              aria-label="Open drawer menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-          )}
-          <span className="text-base font-extrabold font-display tracking-tight text-gray-900 dark:text-white truncate max-w-[200px]">
-            {pageTitle}
-          </span>
-        </div>
+      <header className="fixed top-0 inset-x-0 h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-b border-gray-150 dark:border-slate-800/60 z-40 select-none">
+        <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            {showBackButton ? (
+              <button
+                onClick={() => navigate(-1)}
+                className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 active-scale"
+                aria-label="Go back"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            ) : (
+              <button
+                onClick={() => setDrawerOpen(true)}
+                className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 active-scale"
+                aria-label="Open drawer menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+            )}
+            <span className="text-base font-extrabold font-display tracking-tight text-gray-900 dark:text-white truncate max-w-[200px]">
+              {pageTitle}
+            </span>
+          </div>
 
-        <div className="flex items-center gap-1">
-          <button
-            onClick={toggle}
-            className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 active-scale"
-            aria-label="Toggle theme"
-          >
-            {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={toggle}
+              className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 active-scale"
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -192,49 +194,61 @@ export function RootLayout() {
               )}
 
               {/* Links */}
-              <nav className="flex-1 space-y-1.5">
+              <nav className="flex-1 space-y-2">
                 <Link
                   to="/"
                   onClick={() => setDrawerOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800/80 transition"
+                  className="group flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sm font-bold text-gray-700 dark:text-gray-200 border border-transparent hover:border-brand-100/40 dark:hover:border-brand-900/30 hover:bg-brand-50/50 dark:hover:bg-slate-800/50 hover:shadow-soft hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all duration-200"
                 >
-                  <HomeIcon className="w-4.5 h-4.5 text-gray-500" /> Home
+                  <HomeIcon className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-brand-600 dark:group-hover:text-brand-400 group-hover:scale-110 transition-transform duration-200 shrink-0" />
+                  <span className="group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors duration-200">Home</span>
                 </Link>
+                
                 <Link
                   to="/services"
                   onClick={() => setDrawerOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800/80 transition"
+                  className="group flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sm font-bold text-gray-700 dark:text-gray-200 border border-transparent hover:border-brand-100/40 dark:hover:border-brand-900/30 hover:bg-brand-50/50 dark:hover:bg-slate-800/50 hover:shadow-soft hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all duration-200"
                 >
-                  <Search className="w-4.5 h-4.5 text-gray-500" /> Explore Services
+                  <Search className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-brand-600 dark:group-hover:text-brand-400 group-hover:scale-110 transition-transform duration-200 shrink-0" />
+                  <span className="group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors duration-200">Explore Services</span>
                 </Link>
+
                 <div className="h-px bg-gray-100 dark:bg-slate-800 my-4" />
+
                 <Link
                   to="/about"
                   onClick={() => setDrawerOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+                  className="group flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sm font-semibold text-gray-600 dark:text-gray-300 border border-transparent hover:border-brand-100/40 dark:hover:border-brand-900/30 hover:bg-brand-50/50 dark:hover:bg-slate-800/50 hover:shadow-soft hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all duration-200"
                 >
-                  <Info className="w-4.5 h-4.5 text-gray-450" /> About HomeSeva
+                  <Info className="w-5 h-5 text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 group-hover:scale-110 transition-transform duration-200 shrink-0" />
+                  <span className="group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors duration-200">About HomeSeva</span>
                 </Link>
+                
                 <Link
                   to="/contact"
                   onClick={() => setDrawerOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+                  className="group flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sm font-semibold text-gray-600 dark:text-gray-300 border border-transparent hover:border-brand-100/40 dark:hover:border-brand-900/30 hover:bg-brand-50/50 dark:hover:bg-slate-800/50 hover:shadow-soft hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all duration-200"
                 >
-                  <Mail className="w-4.5 h-4.5 text-gray-450" /> Contact Support
+                  <Mail className="w-5 h-5 text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 group-hover:scale-110 transition-transform duration-200 shrink-0" />
+                  <span className="group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors duration-200">Contact Support</span>
                 </Link>
+                
                 <Link
                   to="/privacy"
                   onClick={() => setDrawerOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+                  className="group flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sm font-semibold text-gray-600 dark:text-gray-300 border border-transparent hover:border-brand-100/40 dark:hover:border-brand-900/30 hover:bg-brand-50/50 dark:hover:bg-slate-800/50 hover:shadow-soft hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all duration-200"
                 >
-                  <Shield className="w-4.5 h-4.5 text-gray-450" /> Privacy Policy
+                  <Shield className="w-5 h-5 text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 group-hover:scale-110 transition-transform duration-200 shrink-0" />
+                  <span className="group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors duration-200">Privacy Policy</span>
                 </Link>
+                
                 <Link
                   to="/terms"
                   onClick={() => setDrawerOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+                  className="group flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sm font-semibold text-gray-600 dark:text-gray-300 border border-transparent hover:border-brand-100/40 dark:hover:border-brand-900/30 hover:bg-brand-50/50 dark:hover:bg-slate-800/50 hover:shadow-soft hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all duration-200"
                 >
-                  <FileText className="w-4.5 h-4.5 text-gray-450" /> Terms of Service
+                  <FileText className="w-5 h-5 text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 group-hover:scale-110 transition-transform duration-200 shrink-0" />
+                  <span className="group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors duration-200">Terms of Service</span>
                 </Link>
               </nav>
 
@@ -265,76 +279,78 @@ export function RootLayout() {
 
       {/* Bottom Navigation Bar */}
       {showBottomNav && (
-        <nav className="fixed bottom-0 inset-x-0 h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-gray-150 dark:border-slate-800/60 flex items-center justify-around z-45 pb-[env(safe-area-inset-bottom)] select-none">
-          {/* Tab 1: Home */}
-          <Link
-            to="/"
-            className={`flex flex-col items-center justify-center w-14 h-full relative transition active-scale ${
-              activeTab === 'home' ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'
-            }`}
-          >
-            <HomeIcon className="w-5 h-5" />
-            <span className="text-[10px] font-bold mt-1">Home</span>
-            {activeTab === 'home' && (
-              <motion.div layoutId="nav-dot" className="absolute bottom-1 w-1 h-1 bg-brand-600 dark:bg-brand-400 rounded-full" />
-            )}
-          </Link>
+        <nav className="fixed bottom-0 inset-x-0 h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-gray-150 dark:border-slate-800/60 z-45 pb-[env(safe-area-inset-bottom)] select-none">
+          <div className="max-w-7xl mx-auto h-full flex items-center justify-around">
+            {/* Tab 1: Home */}
+            <Link
+              to="/"
+              className={`flex flex-col items-center justify-center w-14 h-full relative transition active-scale ${
+                activeTab === 'home' ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'
+              }`}
+            >
+              <HomeIcon className="w-5 h-5" />
+              <span className="text-[10px] font-bold mt-1">Home</span>
+              {activeTab === 'home' && (
+                <motion.div layoutId="nav-dot" className="absolute bottom-1 w-1 h-1 bg-brand-600 dark:bg-brand-400 rounded-full" />
+              )}
+            </Link>
 
-          {/* Tab 2: Explore */}
-          <Link
-            to="/services"
-            className={`flex flex-col items-center justify-center w-14 h-full relative transition active-scale ${
-              activeTab === 'explore' ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'
-            }`}
-          >
-            <Search className="w-5 h-5" />
-            <span className="text-[10px] font-bold mt-1">Explore</span>
-            {activeTab === 'explore' && (
-              <motion.div layoutId="nav-dot" className="absolute bottom-1 w-1 h-1 bg-brand-600 dark:bg-brand-400 rounded-full" />
-            )}
-          </Link>
+            {/* Tab 2: Explore */}
+            <Link
+              to="/services"
+              className={`flex flex-col items-center justify-center w-14 h-full relative transition active-scale ${
+                activeTab === 'explore' ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'
+              }`}
+            >
+              <Search className="w-5 h-5" />
+              <span className="text-[10px] font-bold mt-1">Explore</span>
+              {activeTab === 'explore' && (
+                <motion.div layoutId="nav-dot" className="absolute bottom-1 w-1 h-1 bg-brand-600 dark:bg-brand-400 rounded-full" />
+              )}
+            </Link>
 
-          {/* Tab 3: Bookings */}
-          <Link
-            to={user ? '/dashboard?tab=bookings' : '/login'}
-            className={`flex flex-col items-center justify-center w-14 h-full relative transition active-scale ${
-              activeTab === 'bookings' ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'
-            }`}
-          >
-            <Calendar className="w-5 h-5" />
-            <span className="text-[10px] font-bold mt-1">Bookings</span>
-            {activeTab === 'bookings' && (
-              <motion.div layoutId="nav-dot" className="absolute bottom-1 w-1 h-1 bg-brand-600 dark:bg-brand-400 rounded-full" />
-            )}
-          </Link>
+            {/* Tab 3: Bookings */}
+            <Link
+              to={user ? '/dashboard?tab=bookings' : '/login'}
+              className={`flex flex-col items-center justify-center w-14 h-full relative transition active-scale ${
+                activeTab === 'bookings' ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'
+              }`}
+            >
+              <Calendar className="w-5 h-5" />
+              <span className="text-[10px] font-bold mt-1">Bookings</span>
+              {activeTab === 'bookings' && (
+                <motion.div layoutId="nav-dot" className="absolute bottom-1 w-1 h-1 bg-brand-600 dark:bg-brand-400 rounded-full" />
+              )}
+            </Link>
 
-          {/* Tab 4: Favorites */}
-          <Link
-            to={user ? '/dashboard?tab=favorites' : '/login'}
-            className={`flex flex-col items-center justify-center w-14 h-full relative transition active-scale ${
-              activeTab === 'favorites' ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'
-            }`}
-          >
-            <Heart className="w-5 h-5" />
-            <span className="text-[10px] font-bold mt-1">Favorites</span>
-            {activeTab === 'favorites' && (
-              <motion.div layoutId="nav-dot" className="absolute bottom-1 w-1 h-1 bg-brand-600 dark:bg-brand-400 rounded-full" />
-            )}
-          </Link>
+            {/* Tab 4: Favorites */}
+            <Link
+              to={user ? '/dashboard?tab=favorites' : '/login'}
+              className={`flex flex-col items-center justify-center w-14 h-full relative transition active-scale ${
+                activeTab === 'favorites' ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'
+              }`}
+            >
+              <Heart className="w-5 h-5" />
+              <span className="text-[10px] font-bold mt-1">Favorites</span>
+              {activeTab === 'favorites' && (
+                <motion.div layoutId="nav-dot" className="absolute bottom-1 w-1 h-1 bg-brand-600 dark:bg-brand-400 rounded-full" />
+              )}
+            </Link>
 
-          {/* Tab 5: Profile */}
-          <Link
-            to={user ? '/dashboard?tab=profile' : '/login'}
-            className={`flex flex-col items-center justify-center w-14 h-full relative transition active-scale ${
-              activeTab === 'profile' ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'
-            }`}
-          >
-            <UserIcon className="w-5 h-5" />
-            <span className="text-[10px] font-bold mt-1">Profile</span>
-            {activeTab === 'profile' && (
-              <motion.div layoutId="nav-dot" className="absolute bottom-1 w-1 h-1 bg-brand-600 dark:bg-brand-400 rounded-full" />
-            )}
-          </Link>
+            {/* Tab 5: Profile */}
+            <Link
+              to={user ? '/dashboard?tab=profile' : '/login'}
+              className={`flex flex-col items-center justify-center w-14 h-full relative transition active-scale ${
+                activeTab === 'profile' ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'
+              }`}
+            >
+              <UserIcon className="w-5 h-5" />
+              <span className="text-[10px] font-bold mt-1">Profile</span>
+              {activeTab === 'profile' && (
+                <motion.div layoutId="nav-dot" className="absolute bottom-1 w-1 h-1 bg-brand-600 dark:bg-brand-400 rounded-full" />
+              )}
+            </Link>
+          </div>
         </nav>
       )}
 

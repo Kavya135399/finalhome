@@ -95,103 +95,106 @@ export function ServicesPage() {
   const activeFilters = (priceRange !== null ? 1 : 0) + (minRating > 0 ? 1 : 0);
 
   return (
-    <div className="flex flex-col flex-1 bg-gray-50 dark:bg-slate-950 px-4 py-4 select-none">
-      
-      {/* Header Search & Filter Bar */}
-      <div className="flex flex-col gap-3.5 mb-4">
-        {/* Search bar */}
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-gray-400" />
-          <input
-            value={query}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Search services..."
-            className="w-full h-11 pl-10 pr-4 rounded-xl bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 text-gray-900 dark:text-white"
-          />
-        </div>
+    <div className="flex flex-col flex-1 bg-gray-50 dark:bg-slate-950 select-none">
+      <div className="max-w-7xl mx-auto w-full px-4 py-4 flex flex-col flex-1">
+        {/* Header Search & Filter Bar */}
+        <div className="flex flex-col gap-3.5 mb-4">
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-gray-400" />
+            <input
+              value={query}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Search services..."
+              className="w-full h-11 pl-10 pr-4 rounded-xl bg-white dark:bg-slate-900 border border-gray-155 dark:border-slate-800 text-sm outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 text-gray-900 dark:text-white"
+            />
+          </div>
 
-        {/* Categories Horizontal Scrolling Pills Row */}
-        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar select-none">
-          <button
-            onClick={() => setCategory('')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition border ${
-              !categorySlug
-                ? 'bg-brand-600 text-white border-brand-600 shadow-soft'
-                : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-400 border-gray-150 dark:border-slate-800'
-            }`}
-          >
-            All Services
-          </button>
-          {categories.map((c) => (
+          {/* Categories Horizontal Scrolling Pills Row */}
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar select-none">
             <button
-              key={c.id}
-              onClick={() => setCategory(c.slug)}
+              onClick={() => setCategory('')}
               className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition border ${
-                categorySlug === c.slug
+                !categorySlug
                   ? 'bg-brand-600 text-white border-brand-600 shadow-soft'
-                  : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-400 border-gray-150 dark:border-slate-800'
+                  : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-400 border-gray-155 dark:border-slate-800'
               }`}
             >
-              {c.name}
+              All Services
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Control Actions Row (Filter Pill, Sorting Dropdown) */}
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={() => setShowFiltersSheet(true)}
-          className={`h-9 px-4 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active-scale ${
-            activeFilters > 0
-              ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border-brand-200'
-              : 'bg-white dark:bg-slate-900 text-gray-700 dark:text-gray-300 border-gray-150 dark:border-slate-800'
-          }`}
-        >
-          <SlidersHorizontal className="w-3.5 h-3.5" />
-          Filters {activeFilters > 0 && `(${activeFilters})`}
-        </button>
-
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400 font-medium">Sort</span>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="h-9 px-3.5 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 text-gray-700 dark:text-gray-300 outline-none cursor-pointer"
-          >
-            {sortOptions.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+            {categories.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setCategory(c.slug)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition border ${
+                  categorySlug === c.slug
+                    ? 'bg-brand-600 text-white border-brand-600 shadow-soft'
+                    : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-400 border-gray-155 dark:border-slate-800'
+                }`}
+              >
+                {c.name}
+              </button>
             ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Services Results List */}
-      <div className="flex-1">
-        {loading ? (
-          <ListSkeleton count={4} />
-        ) : paged.length === 0 ? (
-          <EmptyState
-            icon={<Search className="w-8 h-8" />}
-            title="No services found"
-            description="Try adjusting your filters or search query."
-            action={<Button onClick={clearAll}>Clear filters</Button>}
-          />
-        ) : (
-          <div className="space-y-3">
-            {paged.map((s, i) => (
-              <ServiceCard key={s.id} service={s} index={i} />
-            ))}
-
-            {page < totalPages && (
-              <div className="flex justify-center mt-6">
-                <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} className="w-full h-11 rounded-xl">
-                  Load more services
-                </Button>
-              </div>
-            )}
           </div>
-        )}
+        </div>
+
+        {/* Control Actions Row (Filter Pill, Sorting Dropdown) */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => setShowFiltersSheet(true)}
+            className={`h-9 px-4 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active-scale ${
+              activeFilters > 0
+                ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border-brand-200'
+                : 'bg-white dark:bg-slate-900 text-gray-700 dark:text-gray-300 border-gray-155 dark:border-slate-800'
+            }`}
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            Filters {activeFilters > 0 && `(${activeFilters})`}
+          </button>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400 font-medium">Sort</span>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              className="h-9 px-3.5 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 border border-gray-155 dark:border-slate-800 text-gray-700 dark:text-gray-300 outline-none cursor-pointer"
+            >
+              {sortOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Services Results List */}
+        <div className="flex-1">
+          {loading ? (
+            <ListSkeleton count={4} />
+          ) : paged.length === 0 ? (
+            <EmptyState
+              icon={<Search className="w-8 h-8" />}
+              title="No services found"
+              description="Try adjusting your filters or search query."
+              action={<Button onClick={clearAll}>Clear filters</Button>}
+            />
+          ) : (
+            <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {paged.map((s, i) => (
+                  <ServiceCard key={s.id} service={s} index={i} />
+                ))}
+              </div>
+
+              {page < totalPages && (
+                <div className="flex justify-center mt-6">
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} className="w-full h-11 rounded-xl">
+                    Load more services
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <BottomSheet
