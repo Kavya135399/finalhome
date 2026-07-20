@@ -5,13 +5,15 @@ import {
   Users, Calendar, DollarSign, Star,
   Wrench, Search, Download, ChevronLeft,
   Plus, Edit, Trash2, Check, XCircle, Inbox, Settings, FileText,
-  ShieldAlert, Activity, RefreshCw, Send, Database, Menu, X, Clock
+  ShieldAlert, Activity, RefreshCw, Send, Database, Menu, X, Clock,
+  CarTaxiFront, Camera, LogOut, ShoppingBag, Package, Eye, AlertTriangle, Tag
 } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import {
   services as mockServices,
@@ -50,11 +52,581 @@ const mockSettings = {
   currency: 'INR'
 };
 
-type AdminTab = 'overview' | 'users' | 'services' | 'bookings' | 'orders' | 'messages' | 'reviews' | 'reports' | 'settings';
+const fleetData = [
+  {
+    id: 't_suv',
+    name: 'Compact SUV (Brezza / Creta)',
+    type: 'SUV',
+    passengers: 5,
+    luggage: 3,
+    rate: 15,
+    image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=400'
+  },
+  {
+    id: 't_luxury',
+    name: 'Elite Luxury Cruiser (Mustang / BMW)',
+    type: 'Luxury Cruiser',
+    passengers: 4,
+    luggage: 3,
+    rate: 25,
+    image: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&q=80&w=400'
+  },
+  {
+    id: 't_muv',
+    name: 'Luxury MUV (Toyota Innova Crysta)',
+    type: 'MUV',
+    passengers: 7,
+    luggage: 5,
+    rate: 18,
+    image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=400'
+  },
+  {
+    id: 't_hatch',
+    name: 'Economy Hatchback (Alto / Swift)',
+    type: 'Hatchback',
+    passengers: 4,
+    luggage: 2,
+    rate: 11,
+    image: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&q=80&w=400'
+  }
+];
 
+const packagesData = [
+  { 
+    id: 'p_drop', 
+    name: 'Ahmedabad Airport [Drop]', 
+    desc: 'One-way stress-free private professional driver, direct highway transit included.', 
+    price: 3500, 
+    distance: '130 km', 
+    duration: '2.5 hours', 
+    image: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&q=80&w=400' 
+  },
+  { 
+    id: 'p_local', 
+    name: 'Local City Ride', 
+    desc: 'Dedicated vehicle and driver on-call for sightseeing in Patan (Rani ki Vav, Sahastralinga Talav, Patola weavers house).', 
+    price: 1500, 
+    distance: '80 km', 
+    duration: '8 hours', 
+    image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=400' 
+  },
+  { 
+    id: 'p_out', 
+    name: 'Outstation Travel', 
+    desc: 'Full day excursion from Patan to the Modhera Sun Temple and traditional Sidhpur havelis. Includes waiting charges.', 
+    price: 5000, 
+    distance: '180 km', 
+    duration: '10 hours', 
+    image: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&q=80&w=400' 
+  }
+];
+
+type AdminTab = 'overview' | 'services' | 'store_orders' | 'meal_orders' | 'plumbing_orders' | 'taxi' | 'premium_orders' | 'deep_clean_orders' | 'catering_orders' | 'electrical_orders';
+
+
+
+const Pagination = ({ total, limit, current, onChange }: any) => {
+  const pages = Math.ceil(total / limit);
+  if (pages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between p-4 border-t border-gray-100 dark:border-slate-800 flex-wrap gap-2">
+      <span className="text-xs text-gray-500">Page {current} of {pages} ({total} items)</span>
+      <div className="flex gap-2">
+        <button onClick={() => onChange(current - 1)} disabled={current === 1} className="px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-200 dark:border-slate-700 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-slate-800 transition">Prev</button>
+        <button onClick={() => onChange(current + 1)} disabled={current === pages} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-100 dark:bg-slate-800 disabled:opacity-50 hover:bg-gray-200 dark:hover:bg-slate-700 transition">Next</button>
+      </div>
+    </div>
+  );
+};
+
+function CategoryBookingsTab({ 
+  categorySlug, 
+  categoryName,
+  bookings, 
+  users, 
+  services,
+  onTrack,
+  onVerify,
+  onAccept,
+  onCancel
+}: any) {
+  const [searchBooking, setSearchBooking] = useState('');
+  const [filterBookingStatus, setFilterBookingStatus] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const limit = 10;
+
+  // Find the category ID from services if matching by categoryName, or just filter bookings by serviceName
+  const filtered = bookings.filter((b: any) => {
+    let matchesCategory = false;
+    
+    // We try to find the service to get its category
+    const svc = services.find((s: any) => s.id === b.serviceId || s.name === b.serviceName);
+    const catName = svc?.categoryName?.toLowerCase() || '';
+    const bSvcName = (b.serviceName || '').toLowerCase();
+
+    if (categorySlug === 'meal_orders') {
+      matchesCategory = catName.includes('meal') || catName.includes('catering') || bSvcName.includes('meal') || bSvcName.includes('cater');
+    } else if (categorySlug === 'plumbing_orders') {
+      matchesCategory = catName.includes('plumb') || bSvcName.includes('plumb');
+    } else if (categorySlug === 'premium_orders') {
+      matchesCategory = catName.includes('premium') || catName.includes('luxury') || bSvcName.includes('premium') || bSvcName.includes('luxury');
+    } else if (categorySlug === 'deep_clean_orders') {
+      matchesCategory = catName.includes('clean') || bSvcName.includes('clean');
+    } else if (categorySlug === 'catering_orders') {
+      matchesCategory = catName.includes('cater') || bSvcName.includes('cater');
+    } else if (categorySlug === 'electrical_orders') {
+      matchesCategory = catName.includes('electric') || bSvcName.includes('electric') || catName.includes('ac ') || bSvcName.includes('ac ');
+    }
+
+    const q = searchBooking.toLowerCase();
+    const matchSearch = bSvcName.includes(q) || (b.id || '').toLowerCase().includes(q) || (b.utr || '').toLowerCase().includes(q);
+    const matchStatus = filterBookingStatus === 'all' || b.status === filterBookingStatus;
+    
+    return matchesCategory && matchSearch && matchStatus;
+  });
+
+  const paginated = filtered.slice((currentPage - 1) * limit, currentPage * limit);
+
+  return (
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="flex justify-between items-center border-b border-gray-150 dark:border-slate-800 pb-3">
+        <h3 className="font-extrabold text-xs uppercase text-gray-450 tracking-wider">{categoryName} & Timelines</h3>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-2 select-none">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            value={searchBooking}
+            onChange={(e) => setSearchBooking(e.target.value)}
+            placeholder="Search booking ID, service, UTR..."
+            className="w-full h-10 pl-9 pr-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 text-xs text-gray-900 dark:text-white placeholder-gray-400"
+          />
+        </div>
+        <select
+          value={filterBookingStatus}
+          onChange={(e) => setFilterBookingStatus(e.target.value)}
+          className="h-10 px-3 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 text-gray-700 dark:text-gray-300 outline-none"
+        >
+          <option value="all">All Bookings</option>
+          <option value="pending">Pending Requests</option>
+          <option value="upcoming">Confirmed</option>
+          <option value="in-progress">In-Progress</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+
+      <div className="card p-0 bg-white dark:bg-slate-900 overflow-hidden border border-gray-100 dark:border-slate-800">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-slate-850/60 border-b border-gray-100 dark:border-slate-800 font-extrabold text-gray-450 uppercase tracking-wider select-none">
+                <th className="p-3.5 pl-4 whitespace-nowrap">BookingID / UTR</th>
+                <th className="p-3.5 whitespace-nowrap">Customer Info</th>
+                <th className="p-3.5 whitespace-nowrap">Service</th>
+                <th className="p-3.5 whitespace-nowrap">Status</th>
+                <th className="p-3.5 text-right pr-4 whitespace-nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-105 dark:divide-slate-800">
+              {paginated.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-gray-500 font-medium">
+                    No orders found in this category.
+                  </td>
+                </tr>
+              ) : paginated.map((b: any) => {
+                const customer = users.find((u: any) => u.id === b.userId);
+                return (
+                  <tr key={b.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-850/20 text-gray-700 dark:text-gray-350">
+                    <td className="p-3.5 pl-4 font-bold text-gray-900 dark:text-white uppercase whitespace-nowrap">
+                      {b.id.slice(0,8)}
+                      {b.paymentMethod === 'upi' && (
+                        <span className="block text-[8px] bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-black tracking-wider uppercase px-1 rounded w-max mt-1">UPI Pay</span>
+                      )}
+                      {b.utr && (
+                        <span className="block text-[9px] text-gray-450 font-mono mt-1 select-all bg-gray-50 dark:bg-slate-850 px-1 py-0.5 rounded w-max">UTR: {b.utr}</span>
+                      )}
+                    </td>
+                    <td className="p-3.5 whitespace-nowrap">
+                      <div className="font-bold text-gray-900 dark:text-white">{customer?.name || b.userId}</div>
+                      <div className="text-[10px] text-gray-500">{customer?.email || 'No email'}</div>
+                    </td>
+                    <td className="p-3.5 font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">
+                      {b.serviceName}
+                      <div className="text-[10px] font-normal text-gray-450 leading-relaxed mt-1">{new Date(b.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} • {b.timeSlot}</div>
+                    </td>
+                    <td className="p-3.5 whitespace-nowrap">
+                      <Badge tone={b.status === 'completed' ? 'green' : b.status === 'cancelled' ? 'red' : b.status === 'pending' && b.paymentMethod === 'upi' && !b.paid ? 'amber' : 'amber'} className="capitalize text-[7.5px] font-bold">
+                        {b.status === 'pending' && b.paymentMethod === 'upi' && !b.paid ? 'Pending Pay Verify' : b.status}
+                      </Badge>
+                    </td>
+                    <td className="p-3.5 text-right pr-4 whitespace-nowrap">
+                      <div className="flex justify-end gap-1.5">
+                        <button
+                          onClick={() => onTrack(b)}
+                          className="px-2.5 py-1.5 rounded-lg bg-gray-50 dark:bg-slate-800 text-[10px] text-brand-650 dark:text-brand-400 font-extrabold uppercase hover:bg-brand-50 dark:hover:bg-slate-850 transition active-scale"
+                        >
+                          Track Details
+                        </button>
+                        {b.status === 'pending' && (
+                          <button
+                            onClick={() => {
+                              if (b.paymentMethod === 'upi') {
+                                onVerify(b);
+                              } else {
+                                onAccept(b.id);
+                              }
+                            }}
+                            className="p-1.5 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition active-scale"
+                            title={b.paymentMethod === 'upi' ? "Verify UPI Payment & Confirm" : "Accept & Confirm Job"}
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                        )}
+                        {(b.status === 'upcoming' || b.status === 'pending') && (
+                          <button
+                            onClick={() => {
+                              if (b.status === 'pending' && b.paymentMethod === 'upi') {
+                                onVerify(b);
+                              } else {
+                                onCancel(b.id);
+                              }
+                            }}
+                            className="p-1.5 rounded bg-rose-50 text-red-500 hover:bg-rose-100 transition active-scale"
+                            title={b.status === 'pending' && b.paymentMethod === 'upi' ? "Inspect / Reject Payment" : "Cancel Booking"}
+                          >
+                            {b.status === 'pending' && b.paymentMethod === 'upi' ? <Search className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <Pagination total={filtered.length} limit={limit} current={currentPage} onChange={setCurrentPage} />
+      </div>
+    </div>
+  );
+}
+
+
+
+function CatalogManagerTab({ services, fetchServices }: any) {
+  const [viewType, setViewType] = useState<'service' | 'store_product'>('service');
+  const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const limit = 10;
+  
+  const [storeProducts, setStoreProducts] = useState<any[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  
+  const [formOpen, setFormOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  // Unified form data
+  const [formData, setFormData] = useState({ 
+    id: '', name: '', slug: '', categoryId: '', categoryName: '', 
+    description: '', price: '', originalPrice: '', image: '', 
+    duration: '', features: '', stock: '' 
+  });
+
+  const fetchStoreProducts = async () => {
+    setLoadingProducts(true);
+    try {
+      const data = await apiClient.getAdminStoreProducts();
+      setStoreProducts(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  useEffect(() => {
+    if (viewType === 'store_product') fetchStoreProducts();
+  }, [viewType]);
+
+  const activeList = viewType === 'service' ? services : storeProducts;
+  const filtered = activeList.filter((item: any) => 
+    item.name?.toLowerCase().includes(search.toLowerCase()) || 
+    (item.categoryName || item.category)?.toLowerCase().includes(search.toLowerCase())
+  );
+  const paginated = filtered.slice((currentPage - 1) * limit, currentPage * limit);
+
+  const handleEdit = (item: any) => {
+    if (viewType === 'service') {
+      setFormData({ ...item, categoryName: item.categoryName, features: item.features?.join('\n') || '' });
+    } else {
+      setFormData({ ...item, categoryName: item.category, stock: String(item.stock || 0) });
+    }
+    setFormOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+    try {
+      if (viewType === 'service') {
+        await apiClient.deleteService(id);
+        fetchServices();
+      } else {
+        await apiClient.deleteStoreProduct(id);
+        fetchStoreProducts();
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const handleUploadImage = async (e: any) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const data = await apiClient.uploadImage(file);
+      if (data.url) setFormData(prev => ({ ...prev, image: data.url }));
+    } catch (e) { console.error(e); }
+  };
+
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      if (viewType === 'service') {
+        const payload = {
+          ...formData,
+          price: Number(formData.price),
+          originalPrice: Number(formData.originalPrice),
+          features: formData.features ? formData.features.split('\n').filter((f:string) => f.trim()) : []
+        };
+        if (formData.id) {
+          await apiClient.updateService(formData.id, payload);
+        } else {
+          await apiClient.addService(payload as any);
+        }
+        fetchServices();
+      } else {
+        const payload = {
+          name: formData.name,
+          category: formData.categoryName,
+          description: formData.description,
+          price: Number(formData.price),
+          stock: Number(formData.stock),
+          image: formData.image,
+          is_active: true,
+          is_featured: false,
+          is_popular: false
+        };
+        if (formData.id) {
+          await apiClient.updateStoreProduct(formData.id, payload);
+        } else {
+          await apiClient.addStoreProduct(payload);
+        }
+        fetchStoreProducts();
+      }
+      
+      setFormOpen(false);
+      setFormData({ id: '', name: '', slug: '', categoryId: '', categoryName: '', description: '', price: '', originalPrice: '', image: '', duration: '', features: '', stock: '' });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (formOpen) {
+    return (
+      <div className="space-y-4 animate-in fade-in duration-300">
+        <div className="flex justify-between items-center border-b border-gray-150 dark:border-slate-800 pb-3">
+          <h3 className="font-extrabold text-sm uppercase text-gray-900 dark:text-white">
+            {formData.id ? 'Edit' : 'Add New'} {viewType === 'service' ? 'Service' : 'Store Product'}
+          </h3>
+          <button onClick={() => setFormOpen(false)} className="text-gray-500 hover:text-gray-700">Cancel</button>
+        </div>
+        
+        {/* Toggle Type if adding new */}
+        {!formData.id && (
+          <div className="flex gap-4 mb-4">
+            <button onClick={() => setViewType('service')} className={`px-4 py-2 rounded-xl text-xs font-bold ${viewType === 'service' ? 'bg-brand-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500'}`}>Service Item</button>
+            <button onClick={() => setViewType('store_product')} className={`px-4 py-2 rounded-xl text-xs font-bold ${viewType === 'store_product' ? 'bg-brand-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500'}`}>Store Product</button>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="card p-5 bg-white dark:bg-slate-900 space-y-4 border border-gray-100 dark:border-slate-800">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Name</label>
+              <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-')})} className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-xs" />
+            </div>
+            {viewType === 'service' && (
+              <div>
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">URL Slug</label>
+                <input required value={formData.slug} onChange={e => setFormData({...formData, slug: e.target.value})} className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-xs" />
+              </div>
+            )}
+            <div>
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Category</label>
+              <select required value={formData.categoryName} onChange={e => setFormData({...formData, categoryName: e.target.value, categoryId: e.target.value.toLowerCase().replace(/\s+/g, '-')})} className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-xs">
+                <option value="">Select Category...</option>
+                {viewType === 'service' ? (
+                  <>
+                    <option value="Plumbing">Plumbing</option>
+                    <option value="Electrical">Electrical</option>
+                    <option value="Deep Clean">Deep Clean</option>
+                    <option value="Premium Service">Premium Service</option>
+                    <option value="Catering">Catering</option>
+                    <option value="Meal Order">Meal Order</option>
+                    <option value="Taxi">Taxi</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="Snacks">Snacks</option>
+                    <option value="Beverages">Beverages</option>
+                    <option value="Breakfast Items">Breakfast Items</option>
+                    <option value="Fruits">Fruits</option>
+                    <option value="Groceries">Groceries</option>
+                    <option value="Daily Essentials">Daily Essentials</option>
+                    <option value="Emergency Supplies">Emergency Supplies</option>
+                  </>
+                )}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Price (₹)</label>
+              <input required type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-xs" />
+            </div>
+            
+            {viewType === 'store_product' && (
+              <div>
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Stock / Quantity</label>
+                <input required type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-xs" />
+              </div>
+            )}
+
+            <div className="md:col-span-2">
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Description</label>
+              <textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-xs min-h-[80px]" />
+            </div>
+            
+            {viewType === 'service' && (
+              <div className="md:col-span-2">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Features (One per line)</label>
+                <textarea value={formData.features} onChange={e => setFormData({...formData, features: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-xs min-h-[80px]" />
+              </div>
+            )}
+            
+            <div className="md:col-span-2">
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Image Upload</label>
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                {formData.image && <img src={formData.image} alt="preview" className="w-20 h-20 object-cover rounded-xl border border-gray-200 dark:border-slate-700" />}
+                <input type="file" accept="image/*" onChange={handleUploadImage} className="text-xs file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-brand-700 hover:file:bg-gray-200 cursor-pointer" />
+              </div>
+            </div>
+          </div>
+          <button type="submit" disabled={loading} className="w-full h-10 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition disabled:opacity-50">
+            {loading ? 'Saving...' : 'Save Item'}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 animate-in fade-in duration-300">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-150 dark:border-slate-800 pb-3 gap-3">
+        <h3 className="font-extrabold text-sm uppercase text-gray-900 dark:text-white">Catalog Manager</h3>
+        <button onClick={() => {
+          setFormData({ id: '', name: '', slug: '', categoryId: '', categoryName: '', description: '', price: '', originalPrice: '', image: '', duration: '', features: '', stock: '50' });
+          setFormOpen(true);
+        }} className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition shadow-lg shadow-brand-500/20">
+          + Add New Item
+        </button>
+      </div>
+
+      <div className="flex gap-2 border-b border-gray-150 dark:border-slate-800 pb-4">
+        <button onClick={() => { setViewType('service'); setCurrentPage(1); }} className={`px-5 py-2 rounded-full text-xs font-bold transition ${viewType === 'service' ? 'bg-brand-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-slate-700'}`}>
+          Services
+        </button>
+        <button onClick={() => { setViewType('store_product'); setCurrentPage(1); }} className={`px-5 py-2 rounded-full text-xs font-bold transition ${viewType === 'store_product' ? 'bg-brand-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-slate-700'}`}>
+          Store Products
+        </button>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          value={search}
+          onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+          placeholder={`Search ${viewType === 'service' ? 'services' : 'store products'}...`}
+          className="w-full h-11 pl-10 pr-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 text-xs shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition"
+        />
+      </div>
+
+      <div className="card p-0 overflow-hidden border border-gray-100 dark:border-slate-800 shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="bg-gray-50 dark:bg-slate-850/60 border-b border-gray-100 dark:border-slate-800">
+              <tr>
+                <th className="p-3 pl-4 whitespace-nowrap">Item</th>
+                <th className="p-3 whitespace-nowrap">Category</th>
+                <th className="p-3 whitespace-nowrap">Price</th>
+                {viewType === 'store_product' && <th className="p-3 whitespace-nowrap">Stock</th>}
+                <th className="p-3 text-right pr-4 whitespace-nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-105 dark:divide-slate-800">
+              {loadingProducts && viewType === 'store_product' ? (
+                <tr><td colSpan={5} className="p-6 text-center text-gray-400 font-bold">Loading...</td></tr>
+              ) : paginated.length === 0 ? (
+                <tr><td colSpan={5} className="p-6 text-center text-gray-400 font-bold">No items found.</td></tr>
+              ) : (
+                paginated.map((item: any) => (
+                  <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-slate-850/20 transition">
+                    <td className="p-3 pl-4 flex items-center gap-3 min-w-[200px]">
+                      <img src={item.image} alt="" className="w-10 h-10 rounded-lg object-cover bg-gray-200 border border-gray-100 dark:border-slate-700" />
+                      <div>
+                        <p className="font-bold text-gray-900 dark:text-white line-clamp-1">{item.name}</p>
+                        <p className="text-[10px] text-gray-500 line-clamp-1 w-48">{item.description}</p>
+                      </div>
+                    </td>
+                    <td className="p-3 whitespace-nowrap font-semibold text-gray-700 dark:text-gray-300">
+                      <span className="px-2 py-1 bg-gray-100 dark:bg-slate-800 rounded-lg">{item.categoryName || item.category}</span>
+                    </td>
+                    <td className="p-3 whitespace-nowrap font-black text-brand-600">₹{item.price}</td>
+                    {viewType === 'store_product' && (
+                      <td className="p-3 whitespace-nowrap font-bold text-gray-700 dark:text-gray-300">{item.stock} units</td>
+                    )}
+                    <td className="p-3 text-right pr-4 whitespace-nowrap">
+                      <button onClick={() => handleEdit(item)} className="text-brand-600 hover:text-brand-700 hover:underline font-bold mr-3 transition">Edit</button>
+                      <button onClick={() => handleDelete(item.id)} className="text-red-500 hover:text-red-600 hover:underline font-bold transition">Delete</button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        <Pagination total={filtered.length} limit={limit} current={currentPage} onChange={setCurrentPage} />
+      </div>
+    </div>
+  );
+}
 export function AdminDashboardPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast('Successfully signed out', 'success');
+      navigate('/');
+    } catch (err: any) {
+      toast(err.message || 'Failed to sign out', 'error');
+    }
+  };
 
   // App States
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
@@ -70,6 +642,33 @@ export function AdminDashboardPage() {
   const [reviewsList, setReviewsList] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [appSettings, setAppSettings] = useState<any>({});
+  const [vehiclesList, setVehiclesList] = useState<any[]>([]);
+  const [storeProductsList, setStoreProductsList] = useState<any[]>([]);
+
+  // Store Products States
+  const [storeSearch, setStoreSearch] = useState('');
+  const [storePage, setStorePage] = useState(1);
+  const storePageSize = 8;
+  const [storeModal, setStoreModal] = useState<{ open: boolean; mode: 'add' | 'edit'; data?: any }>({ open: false, mode: 'add' });
+  const [storeForm, setStoreForm] = useState({ name: '', category: 'Daily Essentials', description: '', price: '', stock: '50', image: '', is_active: true, is_featured: false, is_popular: false });
+  const [storeSaving, setStoreSaving] = useState(false);
+  
+  // Store Orders States
+  const [storeOrders, setStoreOrders] = useState<any[]>([]);
+  const [storeOrdersSearch, setStoreOrdersSearch] = useState('');
+  const [storeOrdersFilter, setStoreOrdersFilter] = useState('');
+  const [storeOrdersPayFilter, setStoreOrdersPayFilter] = useState('');
+  const [selectedStoreOrder, setSelectedStoreOrder] = useState<any | null>(null);
+  const [storeOrdersPage, setStoreOrdersPage] = useState(1);
+  const [verifyingStorePayment, setVerifyingStorePayment] = useState(false);
+  const [storeOrderRejReason, setStoreOrderRejReason] = useState('');
+  const [assignWorkerForm, setAssignWorkerForm] = useState({ worker_name: '', worker_phone: '' });
+  const [assigningWorker, setAssigningWorker] = useState(false);
+  const [trackingStageForm, setTrackingStageForm] = useState('');
+  const [updatingTracking, setUpdatingTracking] = useState(false);
+  
+  const [storeSettings, setStoreSettings] = useState({ delivery_fee: 0, platform_fee: 0, delivery_threshold: 0 });
+  const [storeSettingsSaving, setStoreSettingsSaving] = useState(false);
 
   // Filter States
   const [searchUser, setSearchUser] = useState('');
@@ -78,6 +677,16 @@ export function AdminDashboardPage() {
   const [filterServiceCat, setFilterServiceCat] = useState('all');
   const [searchBooking, setSearchBooking] = useState('');
   const [filterBookingStatus, setFilterBookingStatus] = useState('all');
+  const [searchVehicle, setSearchVehicle] = useState('');
+  const [vehiclePage, setVehiclePage] = useState(1);
+  const vehiclePageSize = 5;
+
+  // Vehicle CRUD Modal
+  const [vehicleModal, setVehicleModal] = useState<{ open: boolean; mode: 'add' | 'edit'; data?: any }>({ open: false, mode: 'add' });
+  const [vehicleForm, setVehicleForm] = useState({ name: '', type: 'Sedan', passengers: 4, luggage: 2, rate: '', image: '', status: 'Available' });
+  const [vehicleImageFile, setVehicleImageFile] = useState<File | null>(null);
+  const [vehicleImagePreview, setVehicleImagePreview] = useState<string>('');
+  const [vehicleDragOver, setVehicleDragOver] = useState(false);
 
   // Modals & Forms
   const [userModal, setUserModal] = useState<{ open: boolean; mode: 'add' | 'edit'; data?: any }>({ open: false, mode: 'add' });
@@ -104,11 +713,21 @@ export function AdminDashboardPage() {
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [rejectingPayment, setRejectingPayment] = useState(false);
 
+  // Taxi Booking States
+  const [taxiTabFilter, setTaxiTabFilter] = useState<'bookings' | 'vehicles' | 'packages' | 'gallery'>('bookings');
+  const [taxiStatusFilter, setTaxiStatusFilter] = useState<'all' | 'pending' | 'active' | 'completed'>('all');
+  const [manageTaxiModal, setManageTaxiModal] = useState<{ open: boolean; booking?: any }>({ open: false });
+  const [taxiDriverInput, setTaxiDriverInput] = useState('');
+  const [taxiDriverPhoneInput, setTaxiDriverPhoneInput] = useState('');
+  const [taxiLicensePlateInput, setTaxiLicensePlateInput] = useState('');
+  const [taxiStatusInput, setTaxiStatusInput] = useState('');
+  const [taxiTimelineNoteInput, setTaxiTimelineNoteInput] = useState('');
+
   // Fetch all db parameters
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [u, s, b, o, m, r, l, sett] = await Promise.all([
+      const [u, s, b, o, m, r, l, sett, v, storeSett] = await Promise.all([
         apiClient.getUsers(),
         apiClient.getServices(),
         apiClient.getBookings({}),
@@ -116,7 +735,9 @@ export function AdminDashboardPage() {
         apiClient.getMessages(),
         apiClient.getReviews(),
         apiClient.getLogs(),
-        apiClient.getSettings()
+        apiClient.getSettings(),
+        apiClient.getVehicles(),
+        apiClient.getStoreSettings()
       ]);
       setUsersList(u);
       setServicesList(s);
@@ -126,6 +747,13 @@ export function AdminDashboardPage() {
       setReviewsList(r);
       setAuditLogs(l);
       setAppSettings(sett);
+      setVehiclesList(v);
+      setStoreSettings(storeSett);
+      // Fetch store products
+      try {
+        const sp = await apiClient.getAdminStoreProducts();
+        setStoreProductsList(Array.isArray(sp) ? sp : []);
+      } catch { setStoreProductsList([]); }
     } catch (err: any) {
       console.warn('Backend API connection failed, falling back to local mock data:', err);
       toast('Backend offline: loaded local mock data', 'info');
@@ -137,14 +765,117 @@ export function AdminDashboardPage() {
       setReviewsList(mockReviews);
       setAuditLogs(mockLogs);
       setAppSettings(mockSettings);
+      setVehiclesList(fleetData);
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchServicesData = async () => {
+    try {
+      const data = await apiClient.getServices();
+      setServicesList(data);
+    } catch {}
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  // ==========================================
+  // Actions: Vehicles Management
+  // ==========================================
+  const openAddVehicle = () => {
+    setVehicleForm({
+      name: '',
+      type: 'Sedan',
+      passengers: 4,
+      luggage: 2,
+      rate: '',
+      image: '',
+      status: 'Available'
+    });
+    setVehicleImagePreview('');
+    setVehicleImageFile(null);
+    setVehicleModal({ open: true, mode: 'add' });
+  };
+
+  const openEditVehicle = (car: any) => {
+    setVehicleForm({
+      name: car.name,
+      type: car.type,
+      passengers: car.passengers,
+      luggage: car.luggage,
+      rate: car.rate.toString(),
+      image: car.image || '',
+      status: car.status || 'Available'
+    });
+    setVehicleImagePreview(car.image || '');
+    setVehicleImageFile(null);
+    setVehicleModal({ open: true, mode: 'edit', data: car });
+  };
+  const handleVehicleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vehicleForm.name.trim()) {
+      toast('Vehicle name is required', 'error');
+      return;
+    }
+    if (!vehicleForm.rate) {
+      toast('Rate per km is required', 'error');
+      return;
+    }
+
+    try {
+      let finalImageUrl = vehicleForm.image;
+
+      if (vehicleImageFile) {
+        try {
+          const uploaded = await apiClient.uploadImage(vehicleImageFile);
+          finalImageUrl = `http://localhost:5000/uploads/${uploaded.filename}`;
+        } catch (uploadErr) {
+          console.error('File upload failed, falling back to base64 preview:', uploadErr);
+          finalImageUrl = vehicleImagePreview || 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&q=80&w=400';
+        }
+      }
+
+      const payload = {
+        name: vehicleForm.name,
+        type: vehicleForm.type,
+        passengers: Number(vehicleForm.passengers),
+        luggage: Number(vehicleForm.luggage),
+        rate: Number(vehicleForm.rate),
+        image: finalImageUrl || 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&q=80&w=400',
+        status: vehicleForm.status
+      };
+
+      if (vehicleModal.mode === 'add') {
+        await apiClient.addVehicle(payload);
+        toast('Vehicle added to fleet successfully!', 'success');
+      } else {
+        await apiClient.updateVehicle(vehicleModal.data.id, payload);
+        toast('Vehicle details updated successfully!', 'success');
+      }
+
+      setVehicleModal({ open: false, mode: 'add' });
+      setVehicleForm({ name: '', type: 'Sedan', passengers: 4, luggage: 2, rate: '', image: '', status: 'Available' });
+      setVehicleImageFile(null);
+      setVehicleImagePreview('');
+      fetchData();
+    } catch (err: any) {
+      toast(err.message || 'Failed to save vehicle details', 'error');
+    }
+  };
+
+  const handleDeleteVehicle = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this vehicle from active fleet?')) return;
+    try {
+      await apiClient.deleteVehicle(id);
+      toast('Vehicle deleted from fleet.', 'success');
+      fetchData();
+    } catch (err: any) {
+      toast(err.message || 'Failed to delete vehicle', 'error');
+    }
+  };
 
   // ==========================================
   // Actions: User Management
@@ -465,10 +1196,10 @@ export function AdminDashboardPage() {
       rows = usersList.map((u) => `${u.id},${u.name},${u.email},${u.role},${u.status || 'active'}`);
     } else if (type === 'bookings') {
       headers = 'BookingID,Service,Date,Slot,Helper,Price,Status\n';
-      rows = bookingsList.map((b) => `${b.id},${b.serviceName},${b.date},${b.timeSlot},${b.professionalName},₹${b.price},${b.status}`);
+      rows = bookingsList.map((b) => `${b.id},${b.serviceName},${b.date},${b.timeSlot},${b.professionalName},â‚¹${b.price},${b.status}`);
     } else {
       headers = 'OrderID,Customer,Service,Amount,Method,Status,Date\n';
-      rows = ordersList.map((o) => `${o.id},${o.customerName},${o.serviceName},₹${o.amount},${o.paymentMethod},${o.status},${o.date}`);
+      rows = ordersList.map((o) => `${o.id},${o.customerName},${o.serviceName},â‚¹${o.amount},${o.paymentMethod},${o.status},${o.date}`);
     }
 
     const csvContent = `data:text/csv;charset=utf-8,${encodeURIComponent(headers + rows.join('\n'))}`;
@@ -551,14 +1282,15 @@ export function AdminDashboardPage() {
           <nav className="space-y-1 select-none">
             {[
               { id: 'overview', label: 'Dashboard Overview', icon: Activity },
-              { id: 'users', label: 'User Control', icon: Users },
               { id: 'services', label: 'Service Catalog', icon: Wrench },
-              { id: 'bookings', label: 'Work Orders', icon: Calendar },
-              { id: 'orders', label: 'Payments & Revenue', icon: DollarSign },
-              { id: 'messages', label: 'Inbox Support', icon: Inbox },
-              { id: 'reviews', label: 'User Feedback', icon: Star },
-              { id: 'reports', label: 'Analytical Reports', icon: FileText },
-              { id: 'settings', label: 'System Settings', icon: Settings },
+              { id: 'store_orders', label: 'Store Orders', icon: ShoppingBag },
+              { id: 'meal_orders', label: 'Meal Orders', icon: Calendar },
+              { id: 'plumbing_orders', label: 'Plumbing Orders', icon: Wrench },
+              { id: 'taxi', label: 'Taxi Orders', icon: CarTaxiFront },
+              { id: 'premium_orders', label: 'Premium Orders', icon: Star },
+              { id: 'deep_clean_orders', label: 'Deep Clean Orders', icon: Star },
+              { id: 'catering_orders', label: 'Catering Orders', icon: Calendar },
+              { id: 'electrical_orders', label: 'Electrical Orders', icon: Wrench },
             ].map((navTab) => {
               const isActive = activeTab === navTab.id;
               return (
@@ -582,12 +1314,19 @@ export function AdminDashboardPage() {
           </nav>
         </div>
 
-        <div className="p-4 border-t border-gray-100 dark:border-slate-800/50">
+        <div className="p-4 border-t border-gray-100 dark:border-slate-800/50 space-y-2">
           <button
             onClick={() => navigate('/dashboard?tab=profile')}
             className="w-full flex items-center justify-between text-xs font-bold text-brand-650 hover:underline px-2 py-1.5"
           >
             <span className="flex items-center gap-1.5"><ChevronLeft className="w-4.5 h-4.5" /> Return Dashboard</span>
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all duration-200 text-left active-scale"
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            Sign Out
           </button>
         </div>
       </aside>
@@ -614,7 +1353,7 @@ export function AdminDashboardPage() {
                 {/* KPI Metrics Dashboard Grid */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 select-none">
                   {[
-                    { label: 'Total Revenue', value: `₹${totalRevenue}`, change: '+18.2%', icon: DollarSign, tone: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20' },
+                    { label: 'Total Revenue', value: `â‚¹${totalRevenue}`, change: '+18.2%', icon: DollarSign, tone: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20' },
                     { label: 'Total Users', value: usersList.length.toString(), change: '+12.4%', icon: Users, tone: 'bg-blue-50 text-blue-600 dark:bg-blue-950/20' },
                     { label: 'Pending Bookings', value: pendingBookings.toString(), change: 'Urgent', icon: Clock, tone: 'bg-rose-50 text-rose-600 dark:bg-rose-950/20' },
                     { label: 'Ongoing Services', value: inProgressBookings.toString(), change: 'Live', icon: Activity, tone: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/20' },
@@ -638,7 +1377,7 @@ export function AdminDashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Revenue Growth chart wrapper */}
                   <div className="card p-4 bg-white dark:bg-slate-900 select-none">
-                    <h3 className="font-extrabold text-xs text-gray-950 dark:text-white mb-4">Revenue Trend (₹)</h3>
+                    <h3 className="font-extrabold text-xs text-gray-950 dark:text-white mb-4">Revenue Trend (â‚¹)</h3>
                     <div className="flex items-end justify-between h-36 gap-2">
                       {[15, 28, 42, 38, 48, 55, 62].map((val, idx) => (
                         <div key={idx} className="flex-1 flex flex-col items-center gap-1 group">
@@ -647,7 +1386,7 @@ export function AdminDashboardPage() {
                             style={{ height: `${(val / 62) * 100}%` }}
                           >
                             <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] font-bold text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                              ₹{val}k
+                              â‚¹{val}k
                             </span>
                           </div>
                           <span className="text-[8px] text-gray-400 font-extrabold">W{idx + 1}</span>
@@ -699,688 +1438,783 @@ export function AdminDashboardPage() {
             )}
 
             {/* 2. USER MANAGEMENT TAB */}
-            {activeTab === 'users' && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-gray-150 dark:border-slate-800 pb-3">
-                  <h3 className="font-extrabold text-xs uppercase text-gray-450 tracking-wider">User Account Control</h3>
-                  <div className="flex gap-2">
-                    <Button onClick={() => exportCSV('users')} size="sm" variant="outline" leftIcon={<Download className="w-4 h-4" />}>
-                      Export CSV
-                    </Button>
-                    <Button onClick={() => {
-                      setUserForm({ name: '', email: '', password: '', role: 'customer' });
-                      setUserModal({ open: true, mode: 'add' });
-                    }} size="sm" leftIcon={<Plus className="w-4 h-4" />}>
-                      Add User
-                    </Button>
-                  </div>
+            {activeTab === 'taxi' && (
+              <div className="space-y-5">
+                <div className="card p-5 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 rounded-3xl relative select-none text-left">
+                  <span className="text-[9px] uppercase tracking-wider text-brand-600 font-extrabold flex items-center gap-1">
+                    <CarTaxiFront className="w-3.5 h-3.5" /> ADMIN PORTAL
+                  </span>
+                  <h2 className="text-lg font-black text-gray-900 dark:text-white mt-1">Taxi Booking Services</h2>
+                  <p className="text-[11px] text-gray-400 leading-relaxed mt-0.5 max-w-2xl">
+                    Manage driver assignments, active vehicles list, travel packages, and logs for transport concierge rides.
+                  </p>
                 </div>
 
-                {/* Filter Controls Row */}
-                <div className="flex flex-col sm:flex-row gap-2 select-none">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      value={searchUser}
-                      onChange={(e) => setSearchUser(e.target.value)}
-                      placeholder="Search accounts name or email..."
-                      className="w-full h-10 pl-9 pr-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 text-xs text-gray-900 dark:text-white placeholder-gray-400"
-                    />
-                  </div>
-                  <select
-                    value={filterUserRole}
-                    onChange={(e) => setFilterUserRole(e.target.value)}
-                    className="h-10 px-3 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 text-gray-700 dark:text-gray-300 outline-none"
-                  >
-                    <option value="all">All Roles</option>
-                    <option value="customer">Customer</option>
-                    <option value="professional">Professional</option>
-                    <option value="staff">Staff</option>
-                    <option value="manager">Manager</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-
-                {/* Accounts CRUD list table */}
-                <div className="card p-0 bg-white dark:bg-slate-900 overflow-hidden border border-gray-100 dark:border-slate-800">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="bg-gray-50 dark:bg-slate-850/60 border-b border-gray-100 dark:border-slate-800 font-extrabold text-gray-450 uppercase tracking-wider select-none">
-                          <th className="p-3.5 pl-4">Name</th>
-                          <th className="p-3.5">Email</th>
-                          <th className="p-3.5">Role</th>
-                          <th className="p-3.5">Status</th>
-                          <th className="p-3.5 text-right pr-4">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                        {filteredUsers.map((u) => (
-                          <tr key={u.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-850/20 text-gray-700 dark:text-gray-350">
-                            <td className="p-3.5 pl-4 font-bold text-gray-900 dark:text-white">{u.name}</td>
-                            <td className="p-3.5">{u.email}</td>
-                            <td className="p-3.5 font-semibold capitalize">{u.role}</td>
-                            <td className="p-3.5">
-                              <Badge tone={u.status === 'suspended' ? 'red' : 'green'} className="text-[7.5px] uppercase tracking-wider font-extrabold px-1.5 py-0.5">
-                                {u.status || 'active'}
-                              </Badge>
-                            </td>
-                            <td className="p-3.5 text-right pr-4">
-                              <div className="flex justify-end gap-2">
-                                <button
-                                  onClick={() => {
-                                    setUserForm({ name: u.name, email: u.email, password: u.password, role: u.role });
-                                    setUserModal({ open: true, mode: 'edit', data: u });
-                                  }}
-                                  className="p-1 rounded bg-gray-50 dark:bg-slate-800 text-gray-500 hover:text-brand-600 transition"
-                                  title="Edit user details"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => toggleUserStatus(u.id, u.status || 'active')}
-                                  className={`p-1 rounded text-white transition ${
-                                    u.status === 'suspended' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-amber-500 hover:bg-amber-600'
-                                  }`}
-                                  title={u.status === 'suspended' ? 'Unsuspend User' : 'Suspend User'}
-                                >
-                                  <ShieldAlert className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => deleteUser(u.id)}
-                                  disabled={u.role === 'admin'}
-                                  className={`p-1 rounded bg-gray-50 dark:bg-slate-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition ${
-                                    u.role === 'admin' ? 'opacity-30 cursor-not-allowed' : ''
-                                  }`}
-                                  title="Delete user account"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 3. SERVICE CATALOG TAB */}
-            {activeTab === 'services' && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-gray-150 dark:border-slate-800 pb-3">
-                  <h3 className="font-extrabold text-xs uppercase text-gray-450 tracking-wider">Service Catalog Catalog Management</h3>
-                  <Button onClick={() => {
-                    setServiceForm({ name: '', categoryName: 'Electrical', price: '', description: '', duration: '60 min', featuresText: '', image: '', longDescription: '', popular: false });
-                    setImageFile(null);
-                    setImagePreview('');
-                    setServiceModal({ open: true, mode: 'add' });
-                  }} size="sm" leftIcon={<Plus className="w-4 h-4" />}>
-                    Add New Service
-                  </Button>
-                </div>
-
-                {/* Filter Row */}
-                <div className="flex flex-col sm:flex-row gap-2 select-none">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      value={searchService}
-                      onChange={(e) => setSearchService(e.target.value)}
-                      placeholder="Search services name or description..."
-                      className="w-full h-10 pl-9 pr-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 text-xs text-gray-900 dark:text-white placeholder-gray-400"
-                    />
-                  </div>
-                  <select
-                    value={filterServiceCat}
-                    onChange={(e) => setFilterServiceCat(e.target.value)}
-                    className="h-10 px-3 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 text-gray-700 dark:text-gray-300 outline-none"
-                  >
-                    <option value="all">All Categories</option>
-                    <option value="Electrical">Electrical</option>
-                    <option value="Plumbing">Plumbing</option>
-                    <option value="Carpenter">Carpenter</option>
-                    <option value="AC Repair">AC Repair</option>
-                    <option value="Home Cleaning">Home Cleaning</option>
-                  </select>
-                </div>
-
-                {/* Service Cards Grid Layout */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredServices.map((s) => (
-                    <div key={s.id} className="card p-3.5 flex gap-3.5 bg-white dark:bg-slate-900 relative">
-                      <img src={s.image} alt={s.name} className="w-24 h-24 object-cover rounded-2xl shrink-0" />
-                      <div className="flex-1 min-w-0 flex flex-col justify-between text-left">
-                        <div>
-                          <div className="flex justify-between items-start gap-1">
-                            <h4 className="font-extrabold text-sm truncate pr-1">{s.name}</h4>
-                            <span className="text-[10px] bg-brand-50 text-brand-650 dark:bg-brand-950/20 dark:text-brand-400 font-black px-2 py-0.5 rounded shrink-0 leading-none">
-                              {s.categoryName}
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-gray-400 mt-1.5 line-clamp-2 leading-relaxed">{s.description}</p>
-                        </div>
-                        <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-800/40 pt-2.5 mt-2">
-                          <span className="font-black text-xs text-gray-900 dark:text-white">₹{s.price} <span className="text-[9px] text-gray-400 font-bold block mt-0.5">{s.duration}</span></span>
-                          
-                          <div className="flex gap-1.5">
-                            <button
-                              onClick={() => {
-                                setServiceForm({
-                                  name: s.name,
-                                  categoryName: s.categoryName || '',
-                                  price: s.price.toString(),
-                                  description: s.description,
-                                  longDescription: s.long_description || '',
-                                  duration: s.duration,
-                                  image: s.image,
-                                  featuresText: Array.isArray(s.features) ? s.features.join(', ') : '',
-                                  popular: s.popular === true || s.popular === 1,
-                                });
-                                setImageFile(null);
-                                setImagePreview(s.image || '');
-                                setServiceModal({ open: true, mode: 'edit', data: s });
-                              }}
-                              className="p-2 rounded-lg bg-gray-50 dark:bg-slate-850 hover:bg-brand-50 dark:hover:bg-slate-800 text-gray-500 hover:text-brand-650 transition active-scale"
-                              title="Edit service details"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => duplicateService(s.id)}
-                              className="p-2 rounded-lg bg-gray-50 dark:bg-slate-850 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800 transition active-scale"
-                              title="Duplicate catalog service"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => deleteService(s.id)}
-                              className="p-2 rounded-lg bg-gray-50 dark:bg-slate-850 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition active-scale"
-                              title="Remove service from catalog"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 4. WORK BOOKINGS & TRACKING TAB */}
-            {activeTab === 'bookings' && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-gray-150 dark:border-slate-800 pb-3">
-                  <h3 className="font-extrabold text-xs uppercase text-gray-450 tracking-wider">Helper Bookings & Timelines</h3>
-                  <Button onClick={() => exportCSV('bookings')} size="sm" variant="outline" leftIcon={<Download className="w-4 h-4" />}>
-                    Export Booking Logs
-                  </Button>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-2 select-none">
-                  <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      value={searchBooking}
-                      onChange={(e) => setSearchBooking(e.target.value)}
-                      placeholder="Search booking ID, service, helper..."
-                      className="w-full h-10 pl-9 pr-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 text-xs text-gray-900 dark:text-white placeholder-gray-400"
-                    />
-                  </div>
-                  <select
-                    value={filterBookingStatus}
-                    onChange={(e) => setFilterBookingStatus(e.target.value)}
-                    className="h-10 px-3 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 text-gray-700 dark:text-gray-300 outline-none"
-                  >
-                    <option value="all">All Bookings</option>
-                    <option value="pending">Pending Requests</option>
-                    <option value="upcoming">Confirmed</option>
-                    <option value="in-progress">In-Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
-
-                {/* Bookings & Timelines list table */}
-                <div className="card p-0 bg-white dark:bg-slate-900 overflow-hidden border border-gray-100 dark:border-slate-800">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="bg-gray-50 dark:bg-slate-850/60 border-b border-gray-100 dark:border-slate-800 font-extrabold text-gray-450 uppercase tracking-wider select-none">
-                          <th className="p-3.5 pl-4">BookingID</th>
-                          <th className="p-3.5">Service</th>
-                          <th className="p-3.5">Date & Slot</th>
-                          <th className="p-3.5">Assigned Helper</th>
-                          <th className="p-3.5">Status</th>
-                          <th className="p-3.5 text-right pr-4">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-105 dark:divide-slate-800">
-                        {filteredBookings.map((b) => (
-                          <tr key={b.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-850/20 text-gray-700 dark:text-gray-350">
-                            <td className="p-3.5 pl-4 font-bold text-gray-900 dark:text-white uppercase">
-                              {b.id.slice(0,8)}
-                              {b.paymentMethod === 'upi' && (
-                                <span className="block text-[8px] bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-black tracking-wider uppercase px-1 rounded w-max mt-1">UPI Pay</span>
-                              )}
-                            </td>
-                            <td className="p-3.5 font-semibold text-gray-800 dark:text-gray-200">
-                              {b.serviceName}
-                              {b.utr && (
-                                <span className="block text-[9px] text-gray-450 font-mono mt-1 select-all bg-gray-50 dark:bg-slate-850 px-1 py-0.5 rounded w-max">UTR: {b.utr}</span>
-                              )}
-                            </td>
-                            <td className="p-3.5 leading-relaxed">{new Date(b.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}<br/><span className="text-[10px] text-gray-450">{b.timeSlot}</span></td>
-                            <td className="p-3.5">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-bold">{b.professionalName}</span>
-                                <button
-                                  onClick={() => {
-                                    setAssignHelperName(b.professionalName);
-                                    setAssignModal({ open: true, bookingId: b.id });
-                                  }}
-                                  className="text-[10px] text-brand-650 hover:underline font-extrabold uppercase"
-                                >
-                                  (Reassign)
-                                </button>
-                              </div>
-                            </td>
-                            <td className="p-3.5">
-                              <Badge tone={b.status === 'completed' ? 'green' : b.status === 'cancelled' ? 'red' : b.status === 'pending' && b.paymentMethod === 'upi' && !b.paid ? 'amber' : 'amber'} className="capitalize text-[7.5px] font-bold">
-                                {b.status === 'pending' && b.paymentMethod === 'upi' && !b.paid ? 'Pending Pay Verify' : b.status}
-                              </Badge>
-                            </td>
-                            <td className="p-3.5 text-right pr-4">
-                              <div className="flex justify-end gap-1.5">
-                                <button
-                                  onClick={() => {
-                                    setTrackModal({ open: true, booking: b });
-                                    setCustomNote('');
-                                  }}
-                                  className="px-2.5 py-1.5 rounded-lg bg-gray-50 dark:bg-slate-800 text-[10px] text-brand-650 dark:text-brand-400 font-extrabold uppercase hover:bg-brand-50 dark:hover:bg-slate-850 transition active-scale"
-                                >
-                                  Track Details
-                                </button>
-                                {b.status === 'pending' && (
-                                  <button
-                                    onClick={() => {
-                                      if (b.paymentMethod === 'upi') {
-                                        setVerifyUtrInput(b.utr || '');
-                                        setVerifyModal({ open: true, booking: b });
-                                      } else {
-                                        updateBookingStatus(b.id, 'upcoming');
-                                      }
-                                    }}
-                                    className="p-1.5 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition active-scale"
-                                    title={b.paymentMethod === 'upi' ? "Verify UPI Payment & Confirm" : "Accept & Confirm Job"}
-                                  >
-                                    <Check className="w-4 h-4" />
-                                  </button>
-                                )}
-                                {(b.status === 'upcoming' || b.status === 'pending') && (
-                                  <button
-                                    onClick={() => {
-                                      if (b.status === 'pending' && b.paymentMethod === 'upi') {
-                                        setVerifyModal({ open: true, booking: b });
-                                      } else {
-                                        updateBookingStatus(b.id, 'cancelled');
-                                      }
-                                    }}
-                                    className="p-1.5 rounded bg-rose-50 text-red-500 hover:bg-rose-100 transition active-scale"
-                                    title={b.status === 'pending' && b.paymentMethod === 'upi' ? "Inspect / Reject Payment" : "Cancel Booking"}
-                                  >
-                                    <XCircle className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 5. ORDERS & REVENUE TAB */}
-            {activeTab === 'orders' && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-gray-150 dark:border-slate-800 pb-3">
-                  <h3 className="font-extrabold text-xs uppercase text-gray-450 tracking-wider">Payments & Revenue Orders</h3>
-                  <Button onClick={() => exportCSV('orders')} size="sm" variant="outline" leftIcon={<Download className="w-4 h-4" />}>
-                    Export Payments Ledger
-                  </Button>
-                </div>
-
-                <div className="card p-0 bg-white dark:bg-slate-900 overflow-hidden border border-gray-100 dark:border-slate-800">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="bg-gray-50 dark:bg-slate-850/60 border-b border-gray-100 dark:border-slate-800 font-extrabold text-gray-450 uppercase tracking-wider select-none">
-                          <th className="p-3.5 pl-4">OrderID</th>
-                          <th className="p-3.5">Customer Name</th>
-                          <th className="p-3.5">Purchased Service</th>
-                          <th className="p-3.5">Amount</th>
-                          <th className="p-3.5">Method</th>
-                          <th className="p-3.5">Status</th>
-                          <th className="p-3.5 text-right pr-4">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                        {ordersList.map((o) => (
-                          <tr key={o.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-850/20 text-gray-700 dark:text-gray-355">
-                            <td className="p-3.5 pl-4 font-extrabold uppercase text-gray-900 dark:text-white">{o.id.slice(0, 10)}</td>
-                            <td className="p-3.5 font-bold text-gray-800 dark:text-gray-250">{o.customerName}</td>
-                            <td className="p-3.5 truncate max-w-[150px]">{o.serviceName}</td>
-                            <td className="p-3.5 font-black">₹{o.amount}</td>
-                            <td className="p-3.5 uppercase tracking-tight">{o.paymentMethod}</td>
-                            <td className="p-3.5">
-                              <Badge tone={o.status === 'paid' ? 'green' : o.status === 'refunded' ? 'amber' : 'red'} className="uppercase text-[8px] font-bold">
-                                {o.status}
-                              </Badge>
-                            </td>
-                            <td className="p-3.5 text-right pr-4">
-                              {o.status === 'paid' && (
-                                <div className="flex justify-end gap-1.5">
-                                  <button
-                                    onClick={() => handleOrderRefund(o.id, 'refunded')}
-                                    className="px-2 py-1 rounded bg-amber-50 text-amber-600 hover:bg-amber-100 text-[10px] font-extrabold uppercase transition active-scale"
-                                  >
-                                    Refund
-                                  </button>
-                                  <button
-                                    onClick={() => handleOrderRefund(o.id, 'cancelled')}
-                                    className="px-2 py-1 rounded bg-rose-50 text-red-500 hover:bg-rose-100 text-[10px] font-extrabold uppercase transition active-scale"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 6. SUPPORT INBOX TAB */}
-            {activeTab === 'messages' && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-gray-150 dark:border-slate-800 pb-3">
-                  <h3 className="font-extrabold text-xs uppercase text-gray-450 tracking-wider">Support Inbox Messages</h3>
-                </div>
-
-                <div className="space-y-3">
-                  {messagesList.length > 0 ? (
-                    messagesList.map((m) => (
-                      <div key={m.id} className="card p-4 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 flex flex-col gap-3 relative">
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h4 className="font-extrabold text-xs text-gray-900 dark:text-white">{m.name}</h4>
-                              <span className="text-[10px] text-gray-400">({m.email})</span>
-                              <Badge tone={m.status === 'unread' ? 'red' : m.status === 'replied' ? 'green' : 'amber'} className="text-[7.5px] font-bold uppercase leading-none">
-                                {m.status}
-                              </Badge>
-                            </div>
-                            <p className="text-[10px] text-brand-650 dark:text-brand-350 font-bold mt-1">Subj: {m.subject}</p>
-                          </div>
-                          <span className="text-[9px] text-gray-400 font-semibold">{new Date(m.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
-                        </div>
-                        
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed bg-gray-50 dark:bg-slate-950/40 p-3 rounded-2xl border border-gray-100/50 dark:border-slate-850/50">
-                          {m.message}
-                        </p>
-
-                        <div className="flex justify-end gap-2 border-t border-gray-100 dark:border-slate-800/40 pt-2.5">
-                          {m.status !== 'replied' && (
-                            <Button
-                              onClick={() => {
-                                setReplyModal({ open: true, messageId: m.id, customerEmail: m.email });
-                                setReplyText('');
-                              }}
-                              size="sm"
-                              className="h-8 text-[10px] font-bold rounded-lg"
-                              leftIcon={<Send className="w-3.5 h-3.5" />}
-                            >
-                              Compose Reply
-                            </Button>
-                          )}
-                          {m.status !== 'archived' && (
-                            <button
-                              onClick={() => archiveInboxMessage(m.id)}
-                              className="px-3 py-1.5 rounded-lg border border-gray-150 dark:border-slate-800 text-[10px] font-extrabold text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-850 transition"
-                              title="Archive query"
-                            >
-                              Archive
-                            </button>
-                          )}
-                          <button
-                            onClick={() => deleteInboxMessage(m.id)}
-                            className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition"
-                            title="Delete query"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <EmptyState icon={<Inbox className="w-10 h-10 text-gray-400" />} title="No messages found" description="Customer support requests will show up here." />
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* 7. CUSTOMER REVIEWS TAB */}
-            {activeTab === 'reviews' && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-gray-150 dark:border-slate-800 pb-3">
-                  <h3 className="font-extrabold text-xs uppercase text-gray-450 tracking-wider">Reviews & Ratings Moderation</h3>
-                </div>
-
-                <div className="card p-0 bg-white dark:bg-slate-900 overflow-hidden border border-gray-100 dark:border-slate-800">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="bg-gray-50 dark:bg-slate-850/60 border-b border-gray-100 dark:border-slate-800 font-extrabold text-gray-450 uppercase tracking-wider select-none">
-                          <th className="p-3.5 pl-4">Service</th>
-                          <th className="p-3.5">Reviewer</th>
-                          <th className="p-3.5">Rating</th>
-                          <th className="p-3.5">Comment</th>
-                          <th className="p-3.5">Status</th>
-                          <th className="p-3.5 text-right pr-4">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                        {reviewsList.map((r) => (
-                          <tr key={r.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-850/20 text-gray-700 dark:text-gray-350">
-                            <td className="p-3.5 pl-4 font-bold text-gray-900 dark:text-white truncate max-w-[150px]">{r.serviceTitle}</td>
-                            <td className="p-3.5 font-bold text-gray-650 dark:text-gray-300">{r.author}</td>
-                            <td className="p-3.5 font-black text-amber-500">{r.rating} ★</td>
-                            <td className="p-3.5 max-w-[200px] truncate">{r.comment}</td>
-                            <td className="p-3.5">
-                              <Badge tone={r.status === 'approved' ? 'green' : r.status === 'rejected' ? 'red' : 'amber'} className="text-[7px] uppercase font-bold px-1.5 py-0.5">
-                                {r.status || 'pending'}
-                              </Badge>
-                            </td>
-                            <td className="p-3.5 text-right pr-4">
-                              <div className="flex justify-end gap-1.5">
-                                {r.status !== 'approved' && (
-                                  <button
-                                    onClick={() => updateReviewApproveStatus(r.id, 'approved')}
-                                    className="p-1 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition"
-                                    title="Approve Review"
-                                  >
-                                    <Check className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                                {r.status !== 'rejected' && (
-                                  <button
-                                    onClick={() => updateReviewApproveStatus(r.id, 'rejected')}
-                                    className="p-1 rounded bg-rose-50 text-red-500 hover:bg-rose-100 transition"
-                                    title="Decline / Hide Review"
-                                  >
-                                    <XCircle className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => deleteReviewLog(r.id)}
-                                  className="p-1 rounded bg-gray-50 dark:bg-slate-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition"
-                                  title="Delete Review"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 8. BUSINESS REPORTS TAB */}
-            {activeTab === 'reports' && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b border-gray-150 dark:border-slate-800 pb-3">
-                  <h3 className="font-extrabold text-xs uppercase text-gray-450 tracking-wider">Analytical Business Reports</h3>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 select-none">
+                {/* Sub Tab Pills */}
+                <div className="flex bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 p-1 rounded-2xl w-max gap-1 select-none">
                   {[
-                    { title: 'Sales Summary Ledger', desc: 'Detailed transactions list of all payments and orders.', type: 'orders' },
-                    { title: 'User Registrations List', desc: 'Registered customer emails, user roles, and login statuses.', type: 'users' },
-                    { title: 'Bookings Timeline Logs', desc: 'Bookings dates, technicians, payouts, and progress statuses.', type: 'bookings' },
-                  ].map((rep) => (
-                    <div key={rep.title} className="card p-4 flex flex-col justify-between h-40 bg-white dark:bg-slate-900">
-                      <div>
-                        <FileText className="w-7 h-7 text-brand-650 mb-2.5" />
-                        <h4 className="font-extrabold text-xs text-gray-900 dark:text-white leading-normal">{rep.title}</h4>
-                        <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">{rep.desc}</p>
-                      </div>
-                      <Button
-                        onClick={() => exportCSV(rep.type as any)}
-                        size="sm"
-                        variant="outline"
-                        leftIcon={<Download className="w-3.5 h-3.5" />}
-                        className="h-9 text-[10px] font-bold"
-                      >
-                        Generate CSV Report
-                      </Button>
-                    </div>
+                    { id: 'bookings', label: 'BOOKINGS' },
+                    { id: 'vehicles', label: 'VEHICLES' },
+                    { id: 'packages', label: 'TAXI PACKAGES' },
+                    { id: 'gallery', label: 'GALLERY' }
+                  ].map((subT) => (
+                    <button
+                      key={subT.id}
+                      onClick={() => setTaxiTabFilter(subT.id as any)}
+                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition ${
+                        taxiTabFilter === subT.id
+                          ? 'bg-slate-950 dark:bg-white text-white dark:text-slate-950 shadow'
+                          : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                      }`}
+                    >
+                      {subT.label}
+                    </button>
                   ))}
                 </div>
-              </div>
-            )}
 
-            {/* 9. GLOBAL SETTINGS & LOGS TAB */}
-            {activeTab === 'settings' && (
-              <div className="space-y-6">
-                
-                {/* Global website configurations */}
-                <div className="card p-5 bg-white dark:bg-slate-900">
-                  <div className="flex items-center justify-between gap-3 mb-4 border-b border-gray-105 dark:border-slate-800 pb-3">
-                    <div className="flex items-center gap-2">
-                      <Settings className="w-4.5 h-4.5 text-brand-650" />
-                      <h3 className="font-extrabold text-xs uppercase tracking-wider">Global App Configuration</h3>
+                {/* BOOKINGS TABLE SECTION */}
+                {taxiTabFilter === 'bookings' && (
+                  <div className="space-y-4">
+                    {/* Status filter buttons */}
+                    <div className="flex gap-2 select-none">
+                      {[
+                        { id: 'all', label: 'ALL' },
+                        { id: 'pending', label: 'PENDING' },
+                        { id: 'active', label: 'ACTIVE' },
+                        { id: 'completed', label: 'COMPLETED' }
+                      ].map((st) => (
+                        <button
+                          key={st.id}
+                          onClick={() => setTaxiStatusFilter(st.id as any)}
+                          className={`px-3 py-1.5 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition ${
+                            taxiStatusFilter === st.id
+                              ? 'bg-brand-600 text-white'
+                              : 'bg-gray-100 dark:bg-slate-850/60 text-gray-550 border border-transparent dark:border-slate-800'
+                          }`}
+                        >
+                          {st.label}
+                        </button>
+                      ))}
                     </div>
-                    <Button onClick={downloadDatabaseBackup} variant="outline" size="sm" leftIcon={<Database className="w-4 h-4" />} className="h-9 text-[10px] font-bold">
-                      Backup db.json
-                    </Button>
-                  </div>
 
-                  <form onSubmit={handleSettingsUpdate} className="space-y-4 text-left">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Input
-                        label="Application Display Name"
-                        value={appSettings.appName || ''}
-                        onChange={(e) => setAppSettings({ ...appSettings, appName: e.target.value })}
-                        required
-                      />
-                      <Input
-                        label="Support Email Address"
-                        value={appSettings.contactEmail || ''}
-                        onChange={(e) => setAppSettings({ ...appSettings, contactEmail: e.target.value })}
-                        required
-                      />
-                      <Input
-                        label="Support Helpline Phone"
-                        value={appSettings.contactPhone || ''}
-                        onChange={(e) => setAppSettings({ ...appSettings, contactPhone: e.target.value })}
-                        required
-                      />
-                      <Input
-                        label="Currency Unit Symbol"
-                        value={appSettings.currency || 'INR'}
-                        onChange={(e) => setAppSettings({ ...appSettings, currency: e.target.value })}
-                        required
-                      />
+                    {/* Table of taxi bookings */}
+                    <div className="card p-0 bg-white dark:bg-slate-900 overflow-hidden border border-gray-100 dark:border-slate-800 shadow-sm">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="bg-gray-50 dark:bg-slate-850/60 border-b border-gray-100 dark:border-slate-800 font-extrabold text-gray-400 uppercase tracking-wider select-none text-[10px]">
+                              <th className="p-3.5 pl-4">CUSTOMER</th>
+                              <th className="p-3.5">TRIP DETAILS</th>
+                              <th className="p-3.5">PASSENGER INFO</th>
+                              <th className="p-3.5">STATUS</th>
+                              <th className="p-3.5">ASSIGNED DRIVER</th>
+                              <th className="p-3.5 text-right pr-4">ACTIONS</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 dark:divide-slate-800/80 text-gray-650 dark:text-gray-400">
+                            {bookingsList
+                              .filter((b) => {
+                                const isTaxi =
+                                  b.serviceId?.startsWith('t_') ||
+                                  b.serviceId?.startsWith('p_') ||
+                                  b.serviceName?.toLowerCase().includes('taxi') ||
+                                  b.serviceName?.toLowerCase().includes('cab');
+                                if (!isTaxi) return false;
+                                
+                                if (taxiStatusFilter === 'pending') return b.status === 'pending';
+                                if (taxiStatusFilter === 'active') return b.status === 'in-progress';
+                                if (taxiStatusFilter === 'completed') return b.status === 'completed';
+                                return true;
+                              })
+                              .map((b) => {
+                                const addressStr = b.address || '';
+                                const notesStr = b.notes || '';
+                                
+                                const pickupLoc = addressStr.includes('Pickup: ')
+                                  ? addressStr.split(' | ')[0].replace('Pickup: ', '')
+                                  : 'abc';
+                                const dropLoc = addressStr.includes('Drop: ')
+                                  ? addressStr.split(' | ')[1].replace('Drop: ', '')
+                                  : 'behwi';
+                                  
+                                const passengersVal = notesStr.includes('Pax: ')
+                                  ? notesStr.split(' | ')[0].replace('Pax: ', '')
+                                  : '1';
+                                const carVal = notesStr.includes('Car: ')
+                                  ? notesStr.split(' | ')[1].replace('Car: ', '')
+                                  : 'SUV';
+                                const luggageVal = notesStr.includes('Luggage: ')
+                                  ? notesStr.split(' | ')[2].replace('Luggage: ', '')
+                                  : 'up to 3 bags';
+
+                                const showUtrVerification = b.status === 'pending' && !b.paid;
+
+                                return (
+                                  <tr key={b.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-850/10">
+                                    <td className="p-3.5 pl-4">
+                                      <div className="font-bold text-gray-900 dark:text-white capitalize">{b.userName || 'trupti'}</div>
+                                      <div className="text-[10px] text-gray-450 mt-0.5">{b.userEmail || 'ridhiparmar07@gmail.com'}</div>
+                                    </td>
+                                    <td className="p-3.5">
+                                      <div className="font-bold text-gray-900 dark:text-white">{b.serviceName}</div>
+                                      <div className="text-[10px] text-gray-500 mt-0.5 font-semibold">
+                                        From: {pickupLoc} <span className="text-gray-400">â†’</span> To: {dropLoc}
+                                      </div>
+                                      <div className="text-[9px] text-gray-400 mt-0.5">{b.date} at {b.timeSlot}</div>
+                                    </td>
+                                    <td className="p-3.5">
+                                      <div className="font-semibold text-gray-700 dark:text-gray-300">{passengersVal} Pax</div>
+                                      <div className="text-[10px] text-gray-405 mt-0.5">Car: {carVal}</div>
+                                      <div className="text-[9px] text-gray-450 italic mt-0.5">Luggage: {luggageVal}</div>
+                                    </td>
+                                    <td className="p-3.5">
+                                      {showUtrVerification ? (
+                                        <span className="px-2.5 py-0.5 bg-amber-50 text-amber-600 dark:bg-amber-950/20 border border-amber-200/20 rounded text-[8.5px] font-black uppercase tracking-wider">
+                                          Payment Under Verification
+                                        </span>
+                                      ) : (
+                                        <Badge tone={b.status === 'completed' ? 'green' : b.status === 'cancelled' ? 'red' : 'brand'} className="text-[7.5px] uppercase font-bold px-1.5 py-0.5">
+                                          {b.status}
+                                        </Badge>
+                                      )}
+                                    </td>
+                                    <td className="p-3.5">
+                                      <span className={b.professionalName ? 'font-bold text-gray-805 dark:text-white' : 'italic text-gray-400 font-semibold'}>
+                                        {b.professionalName || 'Unassigned'}
+                                      </span>
+                                    </td>
+                                    <td className="p-3.5 text-right pr-4">
+                                      <button
+                                        onClick={() => {
+                                          setTaxiDriverInput(b.professionalName || '');
+                                          setTaxiDriverPhoneInput(b.driverPhone || '');
+                                          setTaxiLicensePlateInput(b.licensePlate || '');
+                                          setTaxiStatusInput(b.status);
+                                          setTaxiTimelineNoteInput('');
+                                          setManageTaxiModal({ open: true, booking: b });
+                                        }}
+                                        className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-black px-3.5 py-1.5 rounded-lg hover:bg-slate-800 dark:hover:bg-gray-100 transition active-scale shadow-sm"
+                                      >
+                                        Manage
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                    
-                    <Input
-                      label="HQ Office Location Address"
-                      value={appSettings.address || ''}
-                      onChange={(e) => setAppSettings({ ...appSettings, address: e.target.value })}
-                    />
+                  </div>
+                )}
 
-                    <div className="flex justify-end pt-2">
-                      <Button size="sm" type="submit" className="px-6 h-10 font-extrabold">
-                        Save System Settings
-                      </Button>
+                {/* VEHICLES TAB */}
+                {taxiTabFilter === 'vehicles' && (
+                  <div className="space-y-4">
+                    {/* Header toolbar */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 select-none">
+                      <h3 className="font-extrabold text-sm text-gray-900 dark:text-white">Active Fleet Vehicles</h3>
+                      <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                        {/* Search Bar */}
+                        <div className="relative flex-1 sm:w-64">
+                          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                          <input
+                            type="text"
+                            placeholder="Search vehicles..."
+                            value={searchVehicle}
+                            onChange={(e) => {
+                              setSearchVehicle(e.target.value);
+                              setVehiclePage(1); // reset to page 1 on search
+                            }}
+                            className="w-full h-9 pl-9 pr-4 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition"
+                          />
+                        </div>
+
+                        {/* Add Vehicle Button */}
+                        <button
+                          onClick={openAddVehicle}
+                          className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-black px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-soft transition active-scale shrink-0"
+                        >
+                          <Plus className="w-4 h-4" /> Add Vehicle
+                        </button>
+                      </div>
                     </div>
-                  </form>
-                </div>
 
-                {/* Database logs full view */}
-                <div className="card p-4 bg-white dark:bg-slate-900">
-                  <div className="flex items-center gap-2 mb-4 border-b border-gray-100 dark:border-slate-800 pb-3">
-                    <Activity className="w-4.5 h-4.5 text-brand-600" />
-                    <h3 className="font-extrabold text-xs uppercase tracking-wider">System Audit Trail Logs</h3>
-                  </div>
+                    {/* Table of active vehicles */}
+                    <div className="card p-0 bg-white dark:bg-slate-900 overflow-hidden border border-gray-100 dark:border-slate-800 shadow-sm">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="bg-gray-50 dark:bg-slate-850/60 border-b border-gray-100 dark:border-slate-800 font-extrabold text-gray-400 uppercase tracking-wider select-none text-[10px]">
+                              <th className="p-3.5 pl-4">VEHICLE NAME</th>
+                              <th className="p-3.5">TYPE</th>
+                              <th className="p-3.5">CAPACITY (PAX/BAGS)</th>
+                              <th className="p-3.5">BASE RATE / KM</th>
+                              <th className="p-3.5">STATUS</th>
+                              <th className="p-3.5 text-right pr-4">ACTIONS</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 dark:divide-slate-800/80 text-gray-650 dark:text-gray-400">
+                            {(() => {
+                              const filtered = vehiclesList.filter((v) =>
+                                v.name.toLowerCase().includes(searchVehicle.toLowerCase()) ||
+                                v.type.toLowerCase().includes(searchVehicle.toLowerCase())
+                              );
+                              
+                              const totalCount = filtered.length;
+                              const paginated = filtered.slice((vehiclePage - 1) * vehiclePageSize, vehiclePage * vehiclePageSize);
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="bg-gray-50 dark:bg-slate-850/60 border-b border-gray-100 dark:border-slate-800 font-extrabold text-gray-400 uppercase tracking-wider select-none">
-                          <th className="p-3 pl-4">Timestamp</th>
-                          <th className="p-3">Audit Action</th>
-                          <th className="p-3">User</th>
-                          <th className="p-3 pr-4">Details</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 dark:divide-slate-800 text-gray-650 dark:text-gray-400">
-                        {auditLogs.map((log) => (
-                          <tr key={log.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-850/20">
-                            <td className="p-3 pl-4 text-[10px] text-gray-400 font-semibold">{new Date(log.timestamp).toLocaleString()}</td>
-                            <td className="p-3 font-bold text-gray-900 dark:text-white leading-none">{log.action}</td>
-                            <td className="p-3 font-semibold">{log.userName}</td>
-                            <td className="p-3 pr-4">{log.details}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                              if (totalCount === 0) {
+                                return (
+                                  <tr>
+                                    <td colSpan={6} className="p-8 text-center text-gray-400 select-none">
+                                      No vehicles found in fleet.
+                                    </td>
+                                  </tr>
+                                );
+                              }
+
+                              return paginated.map((car) => (
+                                <tr key={car.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-850/10">
+                                  <td className="p-3.5 pl-4">
+                                    <div className="flex items-center gap-3">
+                                      <img
+                                        src={car.image || 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&q=80&w=400'}
+                                        alt={car.name}
+                                        className="w-12 h-9 object-cover rounded-lg border border-gray-100 dark:border-slate-800"
+                                      />
+                                      <span className="font-bold text-gray-900 dark:text-white">{car.name}</span>
+                                    </div>
+                                  </td>
+                                  <td className="p-3.5">
+                                    <span className="font-semibold">{car.type}</span>
+                                  </td>
+                                  <td className="p-3.5 text-gray-500 font-semibold">
+                                    {car.passengers} Pax / {car.luggage} Bags
+                                  </td>
+                                  <td className="p-3.5 font-bold text-gray-900 dark:text-white">
+                                    â‚¹{car.rate}
+                                  </td>
+                                  <td className="p-3.5">
+                                    <Badge
+                                      tone={car.status === 'Available' ? 'green' : car.status === 'Booked' ? 'brand' : 'amber'}
+                                      className="text-[7.5px] uppercase font-bold"
+                                    >
+                                      {car.status || 'Available'}
+                                    </Badge>
+                                  </td>
+                                  <td className="p-3.5 text-right pr-4">
+                                    <div className="flex items-center justify-end gap-2.5">
+                                      <button
+                                        onClick={() => openEditVehicle(car)}
+                                        className="p-1.5 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/20 transition active-scale"
+                                        title="Edit Vehicle"
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteVehicle(car.id)}
+                                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-650 hover:bg-red-50 dark:hover:bg-red-950/20 transition active-scale"
+                                        title="Delete Vehicle"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ));
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Pagination Bar */}
+                      {(() => {
+                        const filtered = vehiclesList.filter((v) =>
+                          v.name.toLowerCase().includes(searchVehicle.toLowerCase()) ||
+                          v.type.toLowerCase().includes(searchVehicle.toLowerCase())
+                        );
+                        const totalCount = filtered.length;
+                        const pages = Math.ceil(totalCount / vehiclePageSize);
+                        if (totalCount === 0 || pages <= 1) return null;
+
+                        const startIdx = (vehiclePage - 1) * vehiclePageSize + 1;
+                        const endIdx = Math.min(vehiclePage * vehiclePageSize, totalCount);
+
+                        return (
+                          <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-800/80 px-4 py-3 bg-gray-50/50 dark:bg-slate-850/20 select-none text-[10px] font-semibold text-gray-500">
+                            <div>
+                              Showing <span className="text-gray-900 dark:text-white font-bold">{startIdx}-{endIdx}</span> of <span className="text-gray-900 dark:text-white font-bold">{totalCount}</span> entries
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setVehiclePage((p) => Math.max(1, p - 1))}
+                                disabled={vehiclePage === 1}
+                                className="px-3 py-1.5 border border-gray-200 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition active-scale"
+                              >
+                                Previous
+                              </button>
+                              <button
+                                onClick={() => setVehiclePage((p) => Math.min(pages, p + 1))}
+                                disabled={vehiclePage === pages}
+                                className="px-3 py-1.5 border border-gray-200 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition active-scale"
+                              >
+                                Next
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* TAXI PACKAGES MOCK TAB */}
+                {taxiTabFilter === 'packages' && (
+                  <div className="space-y-3 select-none text-left">
+                    {packagesData.map((p) => (
+                      <div key={p.id} className="card p-4 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                        <div>
+                          <h4 className="font-extrabold text-xs text-gray-900 dark:text-white">{p.name}</h4>
+                          <p className="text-[10px] text-gray-400 mt-1">{p.desc}</p>
+                        </div>
+                        <span className="font-black text-xs text-brand-650 dark:text-brand-400 ml-4 shrink-0">â‚¹{p.price}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* GALLERY MOCK TAB */}
+                {taxiTabFilter === 'gallery' && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 select-none">
+                    {fleetData.map((car) => (
+                      <div key={car.id} className="card p-1 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 overflow-hidden shadow-sm">
+                        <img src={car.image} alt={car.name} className="w-full h-24 object-cover rounded-xl" />
+                        <p className="text-[9.5px] font-bold text-gray-700 dark:text-gray-300 text-center py-1 truncate">{car.name}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </motion.div>
+        
+            
+            {/* SERVICES TAB */}
+            {activeTab === 'services' && (
+              <CatalogManagerTab services={servicesList} fetchServices={fetchServicesData} />
+            )}
+
+            {/* CATEGORY ORDERS */}
+            {['meal_orders', 'plumbing_orders', 'premium_orders', 'deep_clean_orders', 'catering_orders', 'electrical_orders'].includes(activeTab) && (
+              <CategoryBookingsTab 
+                categorySlug={activeTab}
+                categoryName={activeTab.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                bookings={bookingsList}
+                users={usersList}
+                services={servicesList}
+                onTrack={(b: any) => {
+                  setTrackModal({ open: true, booking: b });
+                  setCustomNote('');
+                }}
+                onVerify={(b: any) => {
+                  setVerifyUtrInput(b.utr || '');
+                  setVerifyModal({ open: true, booking: b });
+                }}
+                onAccept={(id: string) => updateBookingStatus(id, 'upcoming')}
+                onCancel={(id: string) => updateBookingStatus(id, 'cancelled')}
+              />
+            )}
+
         </AnimatePresence>
       </main>
 
       {/* ========================================================================= */}
       {/* DIALOG PORTALS / MODAL OVERLAYS */}
       {/* ========================================================================= */}
+
+      {/* Manage Taxi Booking Modal */}
+      {manageTaxiModal.open && manageTaxiModal.booking && (() => {
+        const addressStr = manageTaxiModal.booking.address || '';
+        const notesStr = manageTaxiModal.booking.notes || '';
+
+        const pickupLoc = addressStr.includes('Pickup: ')
+          ? addressStr.split(' | ')[0].replace('Pickup: ', '')
+          : 'abc';
+        const dropLoc = addressStr.includes('Drop: ')
+          ? addressStr.split(' | ')[1].replace('Drop: ', '')
+          : 'behwi';
+          
+        const passengersVal = notesStr.includes('Pax: ')
+          ? notesStr.split(' | ')[0].replace('Pax: ', '')
+          : '1';
+        const carVal = notesStr.includes('Car: ')
+          ? notesStr.split(' | ')[1].replace('Car: ', '')
+          : 'SUV';
+        const luggageVal = notesStr.includes('Luggage: ')
+          ? notesStr.split(' | ')[2].replace('Luggage: ', '')
+          : 'up to 3 bags';
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-soft-lg text-left"
+            >
+              <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-slate-800 pb-2.5">
+                <h4 className="font-extrabold text-sm text-gray-900 dark:text-white">
+                  Manage Taxi Booking
+                </h4>
+                <button
+                  onClick={() => setManageTaxiModal({ open: false })}
+                  className="p-1 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800"
+                >
+                  <X className="w-4.5 h-4.5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Trip Overview Box */}
+                <div className="bg-gray-50/50 dark:bg-slate-950/40 p-4 rounded-2xl border border-gray-150/60 dark:border-slate-800/80 text-xs space-y-2 select-none">
+                  <span className="text-[8px] uppercase tracking-wider text-gray-400 font-extrabold block mb-1">Trip Overview</span>
+                  <div>
+                    <span className="font-semibold text-gray-500">Customer: </span>
+                    <span className="font-extrabold text-gray-800 dark:text-gray-200 capitalize">{manageTaxiModal.booking.userName || 'trupti'}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-500">Trip Type: </span>
+                    <span className="font-extrabold text-gray-805 dark:text-gray-200">{manageTaxiModal.booking.serviceName}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-500">Route: </span>
+                    <span className="font-extrabold text-gray-805 dark:text-gray-200">{pickupLoc} <span className="text-gray-400">â†’</span> {dropLoc}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-500">Schedule: </span>
+                    <span className="font-extrabold text-gray-805 dark:text-gray-200">{manageTaxiModal.booking.date} at {manageTaxiModal.booking.timeSlot}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-500">Passengers: </span>
+                    <span className="font-extrabold text-gray-805 dark:text-gray-200">{passengersVal} Pax ({carVal})</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-500">Luggage: </span>
+                    <span className="font-extrabold text-gray-805 dark:text-gray-200">Luggage preference: {luggageVal}.</span>
+                  </div>
+                </div>
+
+                {/* Verification indicator if unpaid */}
+                {manageTaxiModal.booking.utr && !manageTaxiModal.booking.paid && (
+                  <div className="bg-amber-50/45 dark:bg-amber-950/10 p-3 rounded-2xl border border-amber-200/20 text-xs">
+                    <span className="text-[8.5px] uppercase font-bold text-amber-600 block">Entered UTR: {manageTaxiModal.booking.utr}</span>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await apiClient.verifyBookingPayment(manageTaxiModal.booking.id, manageTaxiModal.booking.utr);
+                          toast('Payment Verified & Booking Confirmed!', 'success');
+                          setManageTaxiModal({ open: false });
+                          fetchData();
+                        } catch (err: any) {
+                          toast(err.message || 'Verification failed', 'error');
+                        }
+                      }}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black py-2 rounded-xl mt-2 shadow-sm transition active-scale"
+                    >
+                      Confirm Payment & Verify UTR
+                    </button>
+                  </div>
+                )}
+
+                {/* Driver Name & Phone Inputs */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Driver Name</label>
+                    <input
+                      type="text"
+                      value={taxiDriverInput}
+                      onChange={(e) => setTaxiDriverInput(e.target.value)}
+                      placeholder="e.g. Ramesh Patel"
+                      className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Driver Phone</label>
+                    <input
+                      type="text"
+                      value={taxiDriverPhoneInput}
+                      onChange={(e) => setTaxiDriverPhoneInput(e.target.value)}
+                      placeholder="e.g. 9876543210"
+                      className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition font-semibold"
+                    />
+                  </div>
+                </div>
+
+                {/* License Plate Number */}
+                <div>
+                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">License Plate Number</label>
+                  <input
+                    type="text"
+                    value={taxiLicensePlateInput}
+                    onChange={(e) => setTaxiLicensePlateInput(e.target.value)}
+                    placeholder="e.g. GJ24AB1234"
+                    className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition font-semibold"
+                  />
+                </div>
+
+                {/* Ride Stage Status dropdown */}
+                <div>
+                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Ride Stage Status</label>
+                  <select
+                    value={taxiStatusInput}
+                    onChange={(e) => setTaxiStatusInput(e.target.value)}
+                    className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition font-semibold"
+                  >
+                    <option value="pending">Pending Confirmation</option>
+                    <option value="confirmed">Driver Assigned</option>
+                    <option value="on-route">Driver On Route</option>
+                    <option value="started">Trip Started</option>
+                    <option value="completed">Trip Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+
+                {/* Add timeline note */}
+                <div>
+                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Add Timeline Note / Log Update</label>
+                  <textarea
+                    rows={3}
+                    value={taxiTimelineNoteInput}
+                    onChange={(e) => setTaxiTimelineNoteInput(e.target.value)}
+                    placeholder="e.g. Driver Ramesh dispatched for pick up."
+                    className="w-full p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition font-semibold resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-gray-100 dark:border-slate-800/40 pt-4 mt-5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setManageTaxiModal({ open: false })}
+                  className="h-9 text-[10px] font-bold"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await apiClient.manageTaxiBooking(manageTaxiModal.booking.id, {
+                        driverName: taxiDriverInput,
+                        driverPhone: taxiDriverPhoneInput,
+                        licensePlate: taxiLicensePlateInput,
+                        status: taxiStatusInput,
+                        timelineNote: taxiTimelineNoteInput
+                      });
+
+                      toast('Taxi booking updated successfully!', 'success');
+                      setManageTaxiModal({ open: false });
+                      fetchData();
+                    } catch (err: any) {
+                      toast(err.message || 'Failed to save updates', 'error');
+                    }
+                  }}
+                  className="h-9 text-[10px] font-bold px-4 bg-brand-600 text-white"
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        );
+      })()}
+
+      {/* Active Fleet Vehicle CRUD Modal */}
+      {vehicleModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm p-4 overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-soft-lg text-left"
+          >
+            <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-slate-800 pb-2.5">
+              <h4 className="font-extrabold text-sm text-gray-900 dark:text-white">
+                {vehicleModal.mode === 'add' ? 'Add Active Fleet Vehicle' : 'Edit Active Fleet Vehicle'}
+              </h4>
+              <button
+                onClick={() => setVehicleModal({ open: false, mode: 'add' })}
+                className="p-1 rounded-full text-gray-400 hover:text-gray-650 dark:hover:text-gray-200"
+              >
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleVehicleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Vehicle Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={vehicleForm.name}
+                    onChange={(e) => setVehicleForm({ ...vehicleForm, name: e.target.value })}
+                    placeholder="e.g. Toyota Innova Crysta"
+                    className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition"
+                  />
+                </div>
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Vehicle Class / Type</label>
+                  <select
+                    value={vehicleForm.type}
+                    onChange={(e) => setVehicleForm({ ...vehicleForm, type: e.target.value })}
+                    className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition"
+                  >
+                    <option>Sedan</option>
+                    <option>SUV</option>
+                    <option>MUV</option>
+                    <option>Luxury Cruiser</option>
+                    <option>Premium Car</option>
+                    <option>Hatchback</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3.5">
+                <div>
+                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Passenger Cap</label>
+                  <input
+                    type="number"
+                    min={1}
+                    required
+                    value={vehicleForm.passengers}
+                    onChange={(e) => setVehicleForm({ ...vehicleForm, passengers: Number(e.target.value) })}
+                    placeholder="e.g. 7"
+                    className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Luggage Cap</label>
+                  <input
+                    type="number"
+                    min={0}
+                    required
+                    value={vehicleForm.luggage}
+                    onChange={(e) => setVehicleForm({ ...vehicleForm, luggage: Number(e.target.value) })}
+                    placeholder="e.g. 4"
+                    className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Rate / KM (INR)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    required
+                    value={vehicleForm.rate}
+                    onChange={(e) => setVehicleForm({ ...vehicleForm, rate: e.target.value })}
+                    placeholder="e.g. 18"
+                    className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition"
+                  />
+                </div>
+              </div>
+
+              {/* Photo Upload Container */}
+              <div>
+                <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Vehicle Photo File</label>
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setVehicleDragOver(true); }}
+                  onDragLeave={() => setVehicleDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setVehicleDragOver(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                      setVehicleImageFile(file);
+                      const r = new FileReader();
+                      r.onloadend = () => setVehicleImagePreview(r.result as string);
+                      r.readAsDataURL(file);
+                    }
+                  }}
+                  onClick={() => document.getElementById('vehicle-image-picker')?.click()}
+                  className={`border-2 border-dashed rounded-2xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition select-none ${
+                    vehicleDragOver
+                      ? 'border-brand-500 bg-brand-50/20'
+                      : vehicleImagePreview
+                      ? 'border-gray-200 dark:border-slate-800 bg-gray-55/10'
+                      : 'border-gray-200 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/20 hover:border-gray-300 dark:hover:border-slate-700'
+                  }`}
+                >
+                  <input
+                    type="file"
+                    id="vehicle-image-picker"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setVehicleImageFile(file);
+                        const r = new FileReader();
+                        r.onloadend = () => setVehicleImagePreview(r.result as string);
+                        r.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  {vehicleImagePreview ? (
+                    <div className="relative w-full h-28">
+                      <img src={vehicleImagePreview} alt="Preview" className="w-full h-full object-cover rounded-xl" />
+                      <div className="absolute inset-0 bg-black/40 hover:bg-black/60 rounded-xl flex items-center justify-center text-[10px] text-white opacity-0 hover:opacity-100 transition duration-200">
+                        Click to change photo
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 rounded-full bg-brand-50 dark:bg-slate-800 flex items-center justify-center text-brand-600 dark:text-brand-400 mb-2">
+                        <Camera className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold text-gray-800 dark:text-white">Click to upload files</span>
+                      <span className="text-[10px] text-gray-405 mt-1">PNG, JPG, JPEG, PDF up to 5MB</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Status Selector */}
+              <div>
+                <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Fleet Status</label>
+                <select
+                  value={vehicleForm.status}
+                  onChange={(e) => setVehicleForm({ ...vehicleForm, status: e.target.value })}
+                  className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition font-semibold"
+                >
+                  <option>Available</option>
+                  <option>Booked</option>
+                  <option>Out of Service</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-gray-100 dark:border-slate-800/40 pt-4 mt-5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setVehicleModal({ open: false, mode: 'add' })}
+                  className="h-9 text-[10px] font-bold"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="h-9 text-[10px] font-bold px-4 bg-brand-600 text-white"
+                >
+                  Save Vehicle
+                </Button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
 
       {/* User CRUD Modal */}
       {userModal.open && (
@@ -1482,7 +2316,7 @@ export function AdminDashboardPage() {
             {/* Scrollable Form Body */}
             <form onSubmit={handleServiceSubmit} className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
 
-              {/* ── IMAGE UPLOAD ZONE ── */}
+              {/* â”€â”€ IMAGE UPLOAD ZONE â”€â”€ */}
               <div>
                 <label className="block text-xs font-bold text-gray-450 dark:text-gray-400 mb-2">
                   Service Photo <span className="text-gray-400 font-normal">(drag & drop or click)</span>
@@ -1535,7 +2369,7 @@ export function AdminDashboardPage() {
                         <Plus className="w-5 h-5 text-gray-400" />
                       </div>
                       <p className="text-xs text-gray-400 font-bold">Drop photo here or click to browse</p>
-                      <p className="text-[10px] text-gray-300 dark:text-gray-600">JPG, PNG, WebP — max 5 MB</p>
+                      <p className="text-[10px] text-gray-300 dark:text-gray-600">JPG, PNG, WebP â€” max 5 MB</p>
                     </div>
                   )}
                 </div>
@@ -1556,7 +2390,7 @@ export function AdminDashboardPage() {
 
                 {/* URL fallback */}
                 <div className="mt-2">
-                  <p className="text-[10px] text-gray-400 mb-1 font-bold uppercase tracking-wider">— Or paste image URL —</p>
+                  <p className="text-[10px] text-gray-400 mb-1 font-bold uppercase tracking-wider">â€” Or paste image URL â€”</p>
                   <input
                     type="url"
                     placeholder="https://images.pexels.com/..."
@@ -1602,7 +2436,7 @@ export function AdminDashboardPage() {
                   </select>
                 </div>
                 <Input
-                  label="Price (₹)"
+                  label="Price (â‚¹)"
                   type="number"
                   placeholder="e.g. 599"
                   value={serviceForm.price}
@@ -1630,7 +2464,7 @@ export function AdminDashboardPage() {
                         : 'bg-white dark:bg-slate-900 text-gray-500 border-gray-200 dark:border-slate-700 hover:border-brand-400'
                     }`}
                   >
-                    {serviceForm.popular ? '⭐ Featured' : 'Not Featured'}
+                    {serviceForm.popular ? 'â­  Featured' : 'Not Featured'}
                   </button>
                 </div>
               </div>
@@ -1691,7 +2525,7 @@ export function AdminDashboardPage() {
                 >
                   {imageUploading ? (
                     <span className="flex items-center gap-2">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Uploading…
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Uploadingâ€¦
                     </span>
                   ) : (
                     serviceModal.mode === 'add' ? 'Publish to Catalog' : 'Save Changes'
@@ -1817,8 +2651,8 @@ export function AdminDashboardPage() {
             <div className="space-y-4">
               <div>
                 <p className="text-[10px] text-gray-400 font-extrabold uppercase">Service Booked</p>
-                <p className="text-xs font-black mt-0.5">{trackModal.booking.serviceName} • {trackModal.booking.id}</p>
-                <p className="text-[10px] text-gray-500 mt-1">Date: {trackModal.booking.date} • {trackModal.booking.timeSlot}</p>
+                <p className="text-xs font-black mt-0.5">{trackModal.booking.serviceName} â€¢ {trackModal.booking.id}</p>
+                <p className="text-[10px] text-gray-500 mt-1">Date: {trackModal.booking.date} â€¢ {trackModal.booking.timeSlot}</p>
                 <p className="text-[10px] text-gray-500 mt-0.5">Assigned: {trackModal.booking.professionalName}</p>
               </div>
 
@@ -1905,12 +2739,13 @@ export function AdminDashboardPage() {
               <div>
                 <p className="text-[10px] text-gray-400 font-extrabold uppercase">Service Booked</p>
                 <p className="text-xs font-bold text-gray-700 dark:text-gray-200 mt-0.5">{verifyModal.booking.serviceName}</p>
+
               </div>
 
               <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/30 p-3 rounded-2xl">
                 <div className="flex justify-between items-center text-xs">
                   <span className="font-bold text-purple-800 dark:text-purple-300">Bill Amount:</span>
-                  <span className="font-black text-purple-950 dark:text-purple-200">₹{verifyModal.booking.price}</span>
+                  <span className="font-black text-purple-950 dark:text-purple-200">â‚¹{verifyModal.booking.price}</span>
                 </div>
               </div>
 
@@ -1957,6 +2792,280 @@ export function AdminDashboardPage() {
           </motion.div>
         </div>
       )}
-    </div>
+
+      {/* ============================================
+          STORE PRODUCTS TAB
+      ============================================ */}
+      {activeTab === 'store_orders' && (() => {
+        const fetchStoreOrders = async () => {
+          try {
+            const data = await apiClient.getAdminStoreOrders({
+              status: storeOrdersFilter || undefined,
+              payment_status: storeOrdersPayFilter || undefined,
+              search: storeOrdersSearch || undefined,
+            });
+            setStoreOrders(Array.isArray(data) ? data : []);
+          } catch { setStoreOrders([]); }
+        };
+
+        const limit = 10;
+        const paginatedStoreOrders = storeOrders.slice((storeOrdersPage - 1) * limit, storeOrdersPage * limit);
+
+        const handleVerifyStorePayment = async (action: 'approve' | 'reject' | 'reupload') => {
+          if (!selectedStoreOrder) return;
+          if ((action === 'reject' || action === 'reupload') && !storeOrderRejReason) {
+            toast('Enter a reason', 'error'); return;
+          }
+          setVerifyingStorePayment(true);
+          try {
+            const updated = await apiClient.verifyStorePayment(selectedStoreOrder.id, { action, rejection_reason: storeOrderRejReason });
+            setStoreOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+            setSelectedStoreOrder(updated);
+            setStoreOrderRejReason('');
+            toast(action === 'approve' ? 'Payment approved!' : action === 'reject' ? 'Payment rejected' : 'Re-upload requested', action === 'approve' ? 'success' : 'info');
+          } catch { toast('Action failed', 'error'); }
+          finally { setVerifyingStorePayment(false); }
+        };
+
+        const handleAssignWorker = async () => {
+          if (!selectedStoreOrder || !assignWorkerForm.worker_name) { toast('Enter worker name', 'error'); return; }
+          setAssigningWorker(true);
+          try {
+            const updated = await apiClient.assignStoreWorker(selectedStoreOrder.id, assignWorkerForm);
+            setStoreOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+            setSelectedStoreOrder(updated);
+            setAssignWorkerForm({ worker_name: '', worker_phone: '' });
+            toast('Worker assigned!', 'success');
+          } catch { toast('Failed to assign worker', 'error'); }
+          finally { setAssigningWorker(false); }
+        };
+
+        const handleUpdateTracking = async () => {
+          if (!selectedStoreOrder || !trackingStageForm) { toast('Select a stage', 'error'); return; }
+          setUpdatingTracking(true);
+          try {
+            const updated = await apiClient.updateStoreTracking(selectedStoreOrder.id, { tracking_stage: trackingStageForm });
+            setStoreOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+            setSelectedStoreOrder(updated);
+            toast('Tracking updated!', 'success');
+          } catch { toast('Update failed', 'error'); }
+          finally { setUpdatingTracking(false); }
+        };
+
+        const PAY_STATUS_CLS: Record<string, string> = {
+          pending: 'bg-amber-100 text-amber-700',
+          verification_pending: 'bg-blue-100 text-blue-700',
+          verified: 'bg-green-100 text-green-700',
+          rejected: 'bg-red-100 text-red-700',
+          reupload_requested: 'bg-orange-100 text-orange-700',
+          cod_pending: 'bg-amber-100 text-amber-700',
+        };
+        const ORD_STATUS_CLS: Record<string, string> = {
+          placed: 'bg-gray-100 text-gray-700',
+          confirmed: 'bg-green-100 text-green-700',
+          processing: 'bg-blue-100 text-blue-700',
+          delivered: 'bg-green-100 text-green-700',
+          cancelled: 'bg-red-100 text-red-700',
+          payment_failed: 'bg-red-100 text-red-700',
+        };
+        const TRACK_STAGES = ['order_placed','payment_verification','confirmed','worker_assigned','on_the_way','delivered'];
+
+        let selItems: any[] = [], selAddr: any = {};
+        if (selectedStoreOrder) {
+          try { selItems = JSON.parse(selectedStoreOrder.items_json || '[]'); } catch {}
+          try { selAddr = JSON.parse(selectedStoreOrder.address_json || '{}'); } catch {}
+        }
+
+        return (
+          <div className="space-y-5">
+            <div className="card p-5 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800">
+              <p className="text-[9px] font-black uppercase tracking-widest text-green-600 mb-1">ADMIN PANEL</p>
+              <h2 className="text-xl font-black text-gray-900 dark:text-white">Store Orders</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Verify payments, assign workers, track delivery stages.</p>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2">
+              <div className="relative flex-1 min-w-[180px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                <input type="search" placeholder="Search order ID or customer..." value={storeOrdersSearch}
+                  onChange={e => setStoreOrdersSearch(e.target.value)}
+                  className="w-full h-9 pl-9 pr-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-700 text-xs text-gray-800 dark:text-white outline-none focus:border-brand-400" />
+              </div>
+              <select value={storeOrdersFilter} onChange={e => setStoreOrdersFilter(e.target.value)}
+                className="h-9 px-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-700 text-xs text-gray-800 dark:text-white outline-none">
+                <option value="">All Statuses</option>
+                {['placed','confirmed','processing','delivered','cancelled','payment_failed'].map(s => <option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
+              </select>
+              <select value={storeOrdersPayFilter} onChange={e => setStoreOrdersPayFilter(e.target.value)}
+                className="h-9 px-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-700 text-xs text-gray-800 dark:text-white outline-none">
+                <option value="">All Payments</option>
+                {['pending','verification_pending','verified','rejected','reupload_requested','cod_pending'].map(s => <option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
+              </select>
+              <button onClick={fetchStoreOrders} className="h-9 px-4 bg-brand-600 hover:bg-brand-700 text-white text-xs font-black rounded-xl transition flex items-center gap-1.5">
+                <RefreshCw className="w-3 h-3" /> Load
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Orders List */}
+              <div className="lg:col-span-2">
+                <div className="card bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 overflow-hidden">
+                  {storeOrders.length === 0 ? (
+                    <div className="py-16 text-center">
+                      <Package className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                      <p className="text-xs font-bold text-gray-400">No orders yet — click Load to fetch</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-100 dark:border-slate-800">
+                            {['Order ID', 'Customer', 'Amount', 'Payment', 'Status', 'Date', ''].map(h => (
+                              <th key={h} className="text-[8px] uppercase tracking-widest text-gray-400 font-extrabold px-4 py-3 text-left whitespace-nowrap">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50 dark:divide-slate-800/60">
+                          {paginatedStoreOrders.map(order => (
+                            <tr key={order.id} onClick={() => { setSelectedStoreOrder(order); setTrackingStageForm(order.tracking_stage); }}
+                              className={`cursor-pointer hover:bg-gray-50/50 dark:hover:bg-slate-800/20 transition ${selectedStoreOrder?.id === order.id ? 'bg-green-50/50 dark:bg-green-950/10' : ''}`}>
+                              <td className="px-4 py-3"><p className="text-[10px] font-black text-gray-900 dark:text-white font-mono">{order.id}</p></td>
+                              <td className="px-4 py-3"><p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 max-w-[100px] truncate">{order.user_name || order.user_email || order.user_id}</p></td>
+                              <td className="px-4 py-3"><p className="text-[10px] font-black text-gray-900 dark:text-white">₹{order.total}</p></td>
+                              <td className="px-4 py-3"><span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-full capitalize ${PAY_STATUS_CLS[order.payment_status] || 'bg-gray-100 text-gray-700'}`}>{order.payment_status?.replace(/_/g,' ')}</span></td>
+                              <td className="px-4 py-3"><span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-full capitalize ${ORD_STATUS_CLS[order.order_status] || 'bg-gray-100 text-gray-700'}`}>{order.order_status?.replace(/_/g,' ')}</span></td>
+                              <td className="px-4 py-3"><p className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(order.created_at).toLocaleDateString('en-IN')}</p></td>
+                              <td className="px-4 py-3"><Eye className="w-3.5 h-3.5 text-gray-400" /></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Order Detail Panel */}
+              <div className="space-y-3">
+                {selectedStoreOrder ? (
+                  <>
+                    {/* Order Info */}
+                    <div className="card bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="font-black text-sm text-gray-900 dark:text-white">{selectedStoreOrder.id}</p>
+                        <button onClick={() => setSelectedStoreOrder(null)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div><p className="text-[8px] text-gray-400 uppercase font-bold">Customer</p><p className="font-bold text-gray-800 dark:text-white">{selectedStoreOrder.user_name || 'Guest'}</p></div>
+                        <div><p className="text-[8px] text-gray-400 uppercase font-bold">Amount</p><p className="font-black text-green-600">₹{selectedStoreOrder.total}</p></div>
+                        <div><p className="text-[8px] text-gray-400 uppercase font-bold">Payment Method</p><p className="font-bold text-gray-700 dark:text-gray-300 capitalize">{selectedStoreOrder.payment_method}</p></div>
+                        <div><p className="text-[8px] text-gray-400 uppercase font-bold">UTR Number</p><p className="font-mono text-xs font-bold text-gray-700 dark:text-gray-300">{selectedStoreOrder.utr_number || '—'}</p></div>
+                      </div>
+                      {/* Address */}
+                      {selAddr?.address && (
+                        <div className="bg-gray-50 dark:bg-slate-800 rounded-xl p-2.5">
+                          <p className="text-[8px] font-black uppercase text-gray-400 mb-1">Delivery Address</p>
+                          <p className="text-[10px] text-gray-700 dark:text-gray-300">{selAddr.address}, {selAddr.city} – {selAddr.pincode}</p>
+                        </div>
+                      )}
+                      {/* Items */}
+                      <div className="space-y-2">
+                        {selItems.map((it: any, i: number) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <img src={it.image} alt={it.name} className="w-8 h-8 rounded-lg object-cover"
+                              onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=40'; }} />
+                            <div className="flex-1"><p className="text-[10px] font-bold text-gray-800 dark:text-white line-clamp-1">{it.name}</p><p className="text-[8px] text-gray-400">Qty {it.qty}</p></div>
+                            <p className="text-[10px] font-black text-gray-800 dark:text-white">₹{it.price * it.qty}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Screenshot */}
+                    {selectedStoreOrder.screenshot_url && (
+                      <div className="card bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-4">
+                        <p className="text-[8px] font-black uppercase text-gray-400 mb-2">Payment Screenshot</p>
+                        <a href={selectedStoreOrder.screenshot_url} target="_blank" rel="noreferrer">
+                          <img src={selectedStoreOrder.screenshot_url} alt="Payment" className="w-full rounded-xl object-cover max-h-48 hover:opacity-90 transition" />
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Verify Payment */}
+                    {(selectedStoreOrder.payment_status === 'verification_pending' || selectedStoreOrder.payment_status === 'pending') && (
+                      <div className="card bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-4 space-y-3">
+                        <p className="text-[8px] font-black uppercase text-gray-400">Verify Payment</p>
+                        <div className="bg-gray-50 dark:bg-slate-800 rounded-xl p-3">
+                          <p className="text-[9px] text-gray-500 mb-0.5">UTR Number</p>
+                          <p className="font-mono font-black text-sm text-gray-900 dark:text-white">{selectedStoreOrder.utr_number || 'Not provided'}</p>
+                        </div>
+                        <textarea value={storeOrderRejReason} onChange={e => setStoreOrderRejReason(e.target.value)} rows={2}
+                          placeholder="Rejection reason (required for reject/re-upload)"
+                          className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-700 text-xs text-gray-900 dark:text-white outline-none resize-none" />
+                        <div className="grid grid-cols-3 gap-2">
+                          <button onClick={() => handleVerifyStorePayment('approve')} disabled={verifyingStorePayment}
+                            className="h-9 bg-green-600 hover:bg-green-700 text-white text-[9px] font-black rounded-xl transition disabled:opacity-60 flex items-center justify-center gap-1">
+                            <Check className="w-3 h-3" /> Approve
+                          </button>
+                          <button onClick={() => handleVerifyStorePayment('reupload')} disabled={verifyingStorePayment}
+                            className="h-9 bg-amber-500 hover:bg-amber-600 text-white text-[9px] font-black rounded-xl transition disabled:opacity-60 flex items-center justify-center gap-1">
+                            <AlertTriangle className="w-3 h-3" /> Re-upload
+                          </button>
+                          <button onClick={() => handleVerifyStorePayment('reject')} disabled={verifyingStorePayment}
+                            className="h-9 bg-red-600 hover:bg-red-700 text-white text-[9px] font-black rounded-xl transition disabled:opacity-60 flex items-center justify-center gap-1">
+                            <XCircle className="w-3 h-3" /> Reject
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Assign Worker */}
+                    {selectedStoreOrder.order_status === 'confirmed' && (
+                      <div className="card bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-4 space-y-2">
+                        <p className="text-[8px] font-black uppercase text-gray-400">Assign Delivery Worker</p>
+                        <input value={assignWorkerForm.worker_name} onChange={e => setAssignWorkerForm(f => ({ ...f, worker_name: e.target.value }))}
+                          placeholder="Worker Name *" className="w-full h-9 px-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-700 text-xs outline-none" />
+                        <input value={assignWorkerForm.worker_phone} onChange={e => setAssignWorkerForm(f => ({ ...f, worker_phone: e.target.value }))}
+                          placeholder="Phone Number" className="w-full h-9 px-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-700 text-xs outline-none" />
+                        <button onClick={handleAssignWorker} disabled={assigningWorker}
+                          className="w-full h-9 bg-brand-600 hover:bg-brand-700 text-white text-xs font-black rounded-xl transition disabled:opacity-60">
+                          {assigningWorker ? 'Assigning...' : 'Assign Worker'}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Update Tracking */}
+                    <div className="card bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-4 space-y-2">
+                      <p className="text-[8px] font-black uppercase text-gray-400">Update Tracking Stage</p>
+                      <select value={trackingStageForm} onChange={e => setTrackingStageForm(e.target.value)}
+                        className="w-full h-9 px-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-700 text-xs text-gray-900 dark:text-white outline-none">
+                        <option value="">Select Stage</option>
+                        {TRACK_STAGES.map(s => <option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
+                      </select>
+                      <button onClick={handleUpdateTracking} disabled={updatingTracking || !trackingStageForm}
+                        className="w-full h-9 bg-brand-600 hover:bg-brand-700 text-white text-xs font-black rounded-xl transition disabled:opacity-60">
+                        {updatingTracking ? 'Updating...' : 'Update Stage'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="card bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-8 text-center">
+                    <Eye className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-xs font-bold text-gray-400">Select an order to see details</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ═════════════════════════════
+          STORE SETTINGS TAB
+      ═════════════════════════════ */}
+
+
+          </div>
   );
 }

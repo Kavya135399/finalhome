@@ -30,6 +30,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import { useFavorites } from '../context/FavoritesContext';
 import { userBookings, savedAddresses, notifications, walletTransactions, services } from '../data/sampleData';
 import { apiClient } from '../services/apiClient';
 import type { Booking, SavedAddress } from '../types';
@@ -45,7 +46,7 @@ export function DashboardPage() {
 
   const [bookingFilter, setBookingFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [favorites, setFavorites] = useState<string[]>(['s1', 's5']);
+  const { favorites, isFavorite, toggleFavorite } = useFavorites();
   const [addresses, setAddresses] = useState<SavedAddress[]>(savedAddresses);
   const [notifList, setNotifList] = useState(notifications);
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
@@ -64,7 +65,7 @@ export function DashboardPage() {
   };
 
   const filteredBookings = bookingFilter === 'all' ? bookings : bookings.filter((b) => b.status === bookingFilter);
-  const favoriteServices = services.filter((s) => favorites.includes(s.id));
+  const favoriteServices = services.filter((s) => isFavorite(s.id));
   const walletBalance = walletTransactions.reduce((sum, t) => sum + (t.type === 'credit' ? t.amount : -t.amount), 0);
   const unreadCount = notifList.filter((n) => !n.read).length;
 
@@ -79,10 +80,6 @@ export function DashboardPage() {
     } finally {
       setCancelTarget(null);
     }
-  };
-
-  const toggleFavorite = (id: string) => {
-    setFavorites((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
   };
 
   const markAllRead = () => {
@@ -184,7 +181,7 @@ export function DashboardPage() {
                                 <Button size="sm" variant="outline">View</Button>
                               </Link>
                               <button
-                                onClick={() => toggleFavorite(s.id)}
+                                onClick={() => toggleFavorite(s.id, 'service')}
                                 className="p-1 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
                               >
                                 <Heart className="w-4 h-4 fill-red-500" />

@@ -116,7 +116,7 @@ export const coupons: Coupon[] = [
   { code: 'FLAT100', discount: 100, type: 'flat', maxDiscount: 100, minOrder: 499, description: 'Flat ₹100 off on orders above ₹499' },
 ];
 
-export const cities = ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Pune', 'Chennai', 'Gurugram', 'Noida', 'Kolkata', 'Ahmedabad'];
+export const cities = ['Patan, Gujarat'];
 
 export const stats = [
   { label: 'Happy Customers', value: '12M+' },

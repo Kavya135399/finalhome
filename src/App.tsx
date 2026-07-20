@@ -19,6 +19,10 @@ const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then(
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })));
 const ProfessionalDashboardPage = lazy(() => import('./pages/ProfessionalDashboardPage').then((m) => ({ default: m.ProfessionalDashboardPage })));
+const TaxiBookingPage = lazy(() => import('./pages/TaxiBookingPage').then((m) => ({ default: m.TaxiBookingPage })));
+const StorePage = lazy(() => import('./pages/StorePage').then((m) => ({ default: m.StorePage })));
+const StoreMyOrdersPage = lazy(() => import('./pages/StoreMyOrdersPage').then((m) => ({ default: m.StoreMyOrdersPage })));
+const StoreOrderTrackingPage = lazy(() => import('./pages/StoreOrderTrackingPage').then((m) => ({ default: m.StoreOrderTrackingPage })));
 
 function SuspenseWrap({ children }: { children: ReactNode }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
@@ -46,6 +50,10 @@ export const router = createBrowserRouter([
       { path: 'contact', element: <ContactPage /> },
       { path: 'privacy', element: <PrivacyPage /> },
       { path: 'terms', element: <TermsPage /> },
+      { path: 'taxi', element: <SuspenseWrap><TaxiBookingPage /></SuspenseWrap> },
+      { path: 'store', element: <SuspenseWrap><StorePage /></SuspenseWrap> },
+      { path: 'store/orders', element: <SuspenseWrap><StoreMyOrdersPage /></SuspenseWrap> },
+      { path: 'store/order/:orderId', element: <SuspenseWrap><StoreOrderTrackingPage /></SuspenseWrap> },
       { path: 'book/:slug', element: <SuspenseWrap><BookingPage /></SuspenseWrap> },
       {
         path: 'dashboard',

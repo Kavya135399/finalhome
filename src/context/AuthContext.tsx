@@ -9,6 +9,7 @@ interface AuthUser {
   email: string;
   name: string;
   role: Role;
+  avatar?: string;
 }
 
 interface AuthContextValue {
@@ -19,6 +20,7 @@ interface AuthContextValue {
   signUp: (name: string, email: string, password: string, role: Role) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  updateUser: (updatedUser: Partial<AuthUser>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -85,7 +87,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('homeseva.token', data.token);
         return data.user;
       } catch (err: any) {
-        const msg = err.response?.data?.error || err.message || 'Invalid email or password';
+        let msg = err.response?.data?.error || err.message || 'Invalid email or password';
+        if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+          msg = 'Network error: Unable to connect to the server. Please check your internet connection or try again later.';
+        }
         throw new Error(msg);
       }
     }
@@ -106,7 +111,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('homeseva.token', data.token);
         return;
       } catch (err: any) {
-        const msg = err.response?.data?.error || err.message || 'Registration failed';
+        let msg = err.response?.data?.error || err.message || 'Registration failed';
+        if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+          msg = 'Network error: Unable to connect to the server. Please check your internet connection or try again later.';
+        }
         throw new Error(msg);
       }
     }
@@ -140,8 +148,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
+  const updateUser = (updated: Partial<AuthUser>) => {
+    if (!isSupabaseConfigured) {
+      setLocalUser((prev) => {
+        if (!prev) return null;
+        const next = { ...prev, ...updated };
+        saveCurrentLocalUser(next);
+        return next;
+      });
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, resetPassword }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, resetPassword, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

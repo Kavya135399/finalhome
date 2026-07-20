@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { SlidersHorizontal, Search, Star } from 'lucide-react';
 import { ServiceCard } from '../components/ServiceCard';
 import { Button } from '../components/ui/Button';
@@ -27,6 +27,7 @@ const priceRanges = [
 const PAGE_SIZE = 8;
 
 export function ServicesPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [showFiltersSheet, setShowFiltersSheet] = useState(false);
@@ -82,6 +83,10 @@ export function ServicesPage() {
   const paged = filtered.slice(0, page * PAGE_SIZE);
 
   const setCategory = (slug: string) => {
+    if (slug === 'taxi') {
+      navigate('/taxi');
+      return;
+    }
     const next = new URLSearchParams(searchParams);
     if (slug) next.set('category', slug); else next.delete('category');
     setSearchParams(next);

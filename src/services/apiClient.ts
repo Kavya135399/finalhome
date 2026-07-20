@@ -232,4 +232,195 @@ export const apiClient = {
     const res = await api.get('/coupons');
     return res.data;
   },
+
+  // Favorites
+  async getFavorites() {
+    const res = await api.get('/favorites');
+    return res.data;
+  },
+
+  async addFavorite(item_id: string, item_type: 'service' | 'store_product') {
+    const res = await api.post('/favorites', { item_id, item_type });
+    return res.data;
+  },
+
+  async removeFavorite(itemId: string, itemType: string) {
+    const res = await api.delete(`/favorites/${itemId}/${itemType}`);
+    return res.data;
+  },
+
+  // 9. Vehicles CRUD
+  async getVehicles() {
+    const res = await api.get('/vehicles');
+    return res.data;
+  },
+
+  async addVehicle(vehicleData: any) {
+    const res = await api.post('/vehicles', vehicleData);
+    return res.data;
+  },
+
+  async updateVehicle(id: string, vehicleData: any) {
+    const res = await api.put(`/vehicles/${id}`, vehicleData);
+    return res.data;
+  },
+
+  async deleteVehicle(id: string) {
+    const res = await api.delete(`/vehicles/${id}`);
+    return res.data;
+  },
+
+  async manageTaxiBooking(id: string, data: {
+    driverName: string;
+    driverPhone: string;
+    licensePlate: string;
+    status: string;
+    timelineNote: string;
+  }) {
+    const res = await api.put(`/bookings/${id}/manage-taxi`, data);
+    return res.data;
+  },
+
+  // 10. Store Products
+  async getStoreProducts(params?: { category?: string; search?: string }) {
+    const res = await api.get('/store/products', { params });
+    return res.data;
+  },
+
+  async getAdminStoreProducts(params?: { search?: string }) {
+    const res = await api.get('/admin/store/products', { params });
+    return res.data;
+  },
+
+  async addStoreProduct(data: {
+    name: string;
+    category: string;
+    description?: string;
+    price: number;
+    stock?: number;
+    image?: string;
+    is_active?: boolean;
+    is_featured?: boolean;
+    is_popular?: boolean;
+  }) {
+    const res = await api.post('/store/products', data);
+    return res.data;
+  },
+
+  async updateStoreProduct(id: string, data: any) {
+    const res = await api.put(`/store/products/${id}`, data);
+    return res.data;
+  },
+
+  async deleteStoreProduct(id: string) {
+    const res = await api.delete(`/store/products/${id}`);
+    return res.data;
+  },
+
+  // 11. Store Addresses
+  async getStoreAddresses() {
+    const res = await api.get('/store/addresses');
+    return res.data;
+  },
+  async addStoreAddress(data: { label?: string; name?: string; phone?: string; address: string; landmark?: string; city: string; state?: string; pincode: string; is_default?: boolean }) {
+    const res = await api.post('/store/addresses', data);
+    return res.data;
+  },
+  async updateStoreAddress(id: string, data: any) {
+    const res = await api.put(`/store/addresses/${id}`, data);
+    return res.data;
+  },
+  async deleteStoreAddress(id: string) {
+    const res = await api.delete(`/store/addresses/${id}`);
+    return res.data;
+  },
+  async getAddress(id: string) {
+    const res = await api.get(`/user/addresses/${id}`);
+    return res.data;
+  },
+
+  // 12. Store Orders & Payments
+  async createStoreCheckoutSession(data: {
+    items: any[]; address: any; subtotal: number; delivery_fee: number;
+    platform_fee: number; gst: number; coupon?: string; discount?: number;
+    total: number; payment_method: string; notes?: string;
+    preferred_date?: string; preferred_time?: string;
+  }) {
+    const res = await api.post('/store/checkout', data);
+    return res.data;
+  },
+  async verifyStorePaymentGateway(data: { sessionId: string; utr_number: string; screenshot_url?: string }) {
+    const res = await api.post('/store/payment/verify', data);
+    return res.data;
+  },
+  async placeStoreOrder(data: {
+    items: any[]; address: any; subtotal: number; delivery_fee: number;
+    platform_fee: number; gst: number; coupon?: string; discount?: number;
+    total: number; payment_method: string; notes?: string;
+    preferred_date?: string; preferred_time?: string;
+    utr_number?: string; screenshot_url?: string;
+  }) {
+    const res = await api.post('/store/orders', data);
+    return res.data;
+  },
+  async getMyStoreOrders() {
+    const res = await api.get('/store/orders/my');
+    return res.data;
+  },
+  async getStoreOrder(id: string) {
+    const res = await api.get(`/store/orders/${id}`);
+    return res.data;
+  },
+  async cancelStoreOrder(id: string) {
+    const res = await api.put(`/store/orders/${id}/cancel`);
+    return res.data;
+  },
+  async submitStorePayment(orderId: string, data: { utr_number: string; screenshot_url?: string }) {
+    const res = await api.post(`/store/orders/${orderId}/payment`, data);
+    return res.data;
+  },
+  async uploadStoreScreenshot(orderId: string, file: File) {
+    const formData = new FormData();
+    formData.append('screenshot', file);
+    const res = await api.post(`/store/orders/${orderId}/screenshot`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
+
+  // 13. Admin Store Orders
+  async getAdminStoreOrders(params?: { status?: string; payment_status?: string; search?: string }) {
+    const res = await api.get('/admin/store/orders', { params });
+    return res.data;
+  },
+  async verifyStorePayment(orderId: string, data: { action: 'approve' | 'reject' | 'reupload'; rejection_reason?: string }) {
+    const res = await api.put(`/admin/store/orders/${orderId}/verify`, data);
+    return res.data;
+  },
+  async updateStoreTracking(orderId: string, data: { tracking_stage: string; order_status?: string }) {
+    const res = await api.put(`/admin/store/orders/${orderId}/tracking`, data);
+    return res.data;
+  },
+  async assignStoreWorker(orderId: string, data: { worker_name: string; worker_phone: string }) {
+    const res = await api.put(`/admin/store/orders/${orderId}/assign`, data);
+    return res.data;
+  },
+
+  // 14. Store Settings
+  async getStoreSettings() {
+    const res = await api.get('/store/settings');
+    return res.data;
+  },
+  async updateStoreSettings(data: { delivery_fee: number; platform_fee: number; delivery_threshold: number }) {
+    const res = await api.put('/admin/store/settings', data);
+    return res.data;
+  },
+
+  // 15. Simulation
+  async simulatePayment(utr: string, amount: number) {
+    const res = await api.post('/payments/simulate-receive', { utr, amount });
+    return res.data;
+  }
 };
+
+

@@ -10,7 +10,7 @@ export function TopAppBar() {
   const navigate = useNavigate();
   const { theme, toggle } = useTheme();
   
-  const [city, setCity] = useState('Mumbai');
+  const [city, setCity] = useState('Patan, Gujarat');
   const [cityOpen, setCityOpen] = useState(false);
 
   const path = location.pathname;

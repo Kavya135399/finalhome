@@ -1,9 +1,18 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, Star, Plus } from 'lucide-react';
+import { Clock, Star, Plus, Heart } from 'lucide-react';
 import type { Service } from '../types';
+import { useFavorites } from '../context/FavoritesContext';
 
 export function ServiceCard({ service, index = 0 }: { service: Service; index?: number }) {
+  const { isFavorite, toggleFavorite } = useFavorites();
+  
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await toggleFavorite(service.id, 'service');
+  };
+
   // Support both camelCase (frontend data) and snake_case (API response)
   const price = service.price ?? 0;
   const originalPrice = (service.originalPrice ?? (service as any).original_price) ?? price;
@@ -36,6 +45,12 @@ export function ServiceCard({ service, index = 0 }: { service: Service; index?: 
                 {discount}% OFF
               </div>
             )}
+            <button 
+              onClick={handleFavoriteClick}
+              className="absolute top-1 right-1 w-6 h-6 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow-sm z-10 hover:scale-110 transition"
+            >
+              <Heart className={`w-3.5 h-3.5 ${isFavorite(service.id) ? 'fill-red-500 text-red-500' : 'text-gray-500'}`} />
+            </button>
           </div>
 
           {/* Right: Details */}
@@ -47,14 +62,11 @@ export function ServiceCard({ service, index = 0 }: { service: Service; index?: 
                 </span>
                 
                 {/* Duration */}
-<<<<<<< HEAD
-                <span className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1 shrink-0">
-                  <Clock className="w-3 h-3 text-gray-400" /> {service.duration.split(' ')[0]}hr
-=======
-                <span className="text-[10px] text-gray-400 flex items-center gap-1 shrink-0">
-                  <Clock className="w-3 h-3 text-gray-450" /> {duration.split(' ')[0]}hr
->>>>>>> e2187f669b6e4d065fd93981bedbefc20cf66dc3
-                </span>
+
+               <span className="text-[10px] text-gray-400 dark:text-gray-500 flex items-center gap-1 shrink-0">
+  <Clock className="w-3 h-3 text-gray-400" />
+  {duration.split(' ')[0]}hr
+</span>
               </div>
 
               <h3 className="font-extrabold text-sm text-gray-900 dark:text-white truncate mt-0.5 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition duration-200">
@@ -72,26 +84,34 @@ export function ServiceCard({ service, index = 0 }: { service: Service; index?: 
             </div>
 
             {/* Price & Book Button */}
-            <div className="flex items-center justify-between mt-1">
-              <div className="flex items-baseline gap-1.5">
-<<<<<<< HEAD
-                <span className="text-base font-extrabold text-gray-900 dark:text-white">₹{service.price}</span>
-                {service.originalPrice > service.price && (
-                  <span className="text-xs text-gray-450 dark:text-gray-550 line-through font-medium">₹{service.originalPrice}</span>
-=======
-                <span className="text-base font-extrabold text-gray-900 dark:text-white">₹{price}</span>
-                {originalPrice > price && (
-                  <span className="text-xs text-gray-400 line-through">₹{originalPrice}</span>
->>>>>>> e2187f669b6e4d065fd93981bedbefc20cf66dc3
-                )}
-              </div>
+           <div className="flex items-center justify-between mt-1">
+  {/* <div className="flex items-baseline gap-1.5">
+    <span className="text-base font-extrabold text-gray-900 dark:text-white">
+      ₹{service.price}
+    </span>
 
-              {/* Tap Target Optimized button */}
-              <div className="h-8 min-w-[72px] bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 font-extrabold text-xs rounded-xl flex items-center justify-center gap-1 px-3 border border-brand-100/30 group-hover:bg-brand-600 group-hover:text-white dark:group-hover:bg-brand-500 transition duration-300">
-                <span>Book</span>
-                <Plus className="w-3 h-3" />
-              </div>
-            </div>
+    {service.originalPrice > service.price && (
+      <span className="text-xs text-gray-450 dark:text-gray-550 line-through font-medium">
+        ₹{service.originalPrice}
+      </span>
+    )}
+  </div> */}
+<div className="flex items-baseline gap-1.5">
+  <span className="text-base font-extrabold text-gray-900 dark:text-white">
+    ₹{price}
+  </span>
+
+  {originalPrice > price && (
+    <span className="text-xs text-gray-400 line-through">
+      ₹{originalPrice}
+    </span>
+  )}
+</div>
+  <div className="h-8 min-w-[72px] bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 font-extrabold text-xs rounded-xl flex items-center justify-center gap-1 px-3 border border-brand-100/30 group-hover:bg-brand-600 group-hover:text-white dark:group-hover:bg-brand-500 transition duration-300">
+    <span>Book</span>
+    <Plus className="w-3 h-3" />
+  </div>
+</div>
           </div>
         </div>
       </Link>

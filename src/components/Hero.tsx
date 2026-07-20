@@ -14,10 +14,13 @@ import {
   Wrench,
   Zap,
   Crown,
+  ShoppingBag,
   HelpCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { categories } from '../data/sampleData';
+import { categories, cities } from '../data/sampleData';
+
+import { useGreeting } from '../hooks/useGreeting';
 
 const iconMap: Record<string, React.ComponentType<any>> = {
   UtensilsCrossed,
@@ -40,8 +43,9 @@ export function Hero() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [query, setQuery] = useState('');
-  const [city, setCity] = useState('Mumbai');
+  const [city, setCity] = useState('Patan, Gujarat');
   const [cityOpen, setCityOpen] = useState(false);
+  const greeting = useGreeting(user?.name);
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
@@ -54,7 +58,7 @@ export function Hero() {
     setCityOpen(false);
   };
 
-  const popularCities = ['Mumbai', 'Delhi', 'Bangalore', 'Pune', 'Hyderabad', 'Chennai'];
+  const popularCities = cities;
   return (
     <section className="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800/40 select-none shrink-0 relative">
       <div className="max-w-7xl mx-auto px-4 pt-4 pb-6">
@@ -92,21 +96,12 @@ export function Hero() {
               )}
             </div>
           </div>
-
-          {/* Hello Banner */}
-          <div className="text-right">
-            <p className="text-xs text-gray-450">Welcome,</p>
-            <p className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[120px]">
-              {user ? user.name.split(' ')[0] : 'Guest User'}
-            </p>
-          </div>
         </div>
 
         {/* Hero Title */}
         <div className="mb-4">
-          <h1 className="text-xl font-black font-display text-gray-900 dark:text-white leading-tight">
-            Reliable home services, <br />
-            <span className="text-brand-600 dark:text-brand-400">booked in 1-tap.</span>
+          <h1 className="text-xl font-bold font-display text-gray-900 dark:text-white leading-tight">
+            {greeting}
           </h1>
         </div>
 
@@ -142,7 +137,13 @@ export function Hero() {
               return (
                 <button
                   key={cat.id}
-                  onClick={() => navigate(`/services?category=${cat.slug}`)}
+                  onClick={() => {
+                    if (cat.slug === 'taxi') {
+                      navigate('/taxi');
+                    } else {
+                      navigate(`/services?category=${cat.slug}`);
+                    }
+                  }}
                   className="group flex flex-col items-center shrink-0 w-20 pt-1 pb-3 select-none"
                 >
                   {/* 3D Push Button Container */}
@@ -155,6 +156,19 @@ export function Hero() {
                 </button>
               );
             })}
+
+            {/* Static Store Icon */}
+            <button
+              onClick={() => navigate('/store')}
+              className="group flex flex-col items-center shrink-0 w-20 pt-1 pb-3 select-none"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white shadow-[0_5px_0_0_rgba(0,0,0,0.15)] dark:shadow-[0_5px_0_0_rgba(0,0,0,0.4)] transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-[0_8px_0_0_rgba(0,0,0,0.15)] dark:group-hover:shadow-[0_8px_0_0_rgba(0,0,0,0.45)] group-active:translate-y-[4px] group-active:shadow-none">
+                <ShoppingBag className="w-6 h-6 text-white drop-shadow-[0_1.5px_1.5px_rgba(0,0,0,0.2)] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6" />
+              </div>
+              <span className="text-[10px] font-extrabold text-gray-700 dark:text-gray-300 max-w-[76px] text-center leading-tight mt-3">
+                Store
+              </span>
+            </button>
           </div>
         </div>
 

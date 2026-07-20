@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Info } from 'lucide-react';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
@@ -51,6 +51,39 @@ export function LoginPage() {
 
   return (
     <AuthLayout title="Welcome back" subtitle="Sign in to manage your bookings and services.">
+      <div className="bg-brand-50 dark:bg-brand-950/20 border border-brand-100 dark:border-brand-900/40 rounded-xl p-3 mb-4 text-xs text-brand-800 dark:text-brand-300">
+        <div className="flex items-center gap-1.5 font-bold mb-2">
+          <Info className="w-3.5 h-3.5 text-brand-650 dark:text-brand-400" />
+          <span>Demo Credentials (Click to Autofill)</span>
+        </div>
+        <div className="grid grid-cols-1 gap-1.5">
+          <button
+            type="button"
+            onClick={() => { setEmail('admin@example.com'); setPassword('password'); }}
+            className="flex justify-between items-center px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-brand-100/50 dark:border-brand-900/20 hover:bg-brand-100/40 dark:hover:bg-brand-950/40 text-left transition select-none cursor-pointer"
+          >
+            <span>🛡️ <span className="font-semibold text-gray-700 dark:text-gray-300">Admin:</span> <span className="font-mono text-brand-700 dark:text-brand-400">admin@example.com</span></span>
+            <span className="text-[10px] text-gray-400 font-mono">password</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setEmail('vikram@example.com'); setPassword('password'); }}
+            className="flex justify-between items-center px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-brand-100/50 dark:border-brand-900/20 hover:bg-brand-100/40 dark:hover:bg-brand-950/40 text-left transition select-none cursor-pointer"
+          >
+            <span>👤 <span className="font-semibold text-gray-700 dark:text-gray-300">Customer:</span> <span className="font-mono text-brand-700 dark:text-brand-400">vikram@example.com</span></span>
+            <span className="text-[10px] text-gray-400 font-mono">password</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setEmail('rajesh@example.com'); setPassword('password'); }}
+            className="flex justify-between items-center px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-brand-100/50 dark:border-brand-900/20 hover:bg-brand-100/40 dark:hover:bg-brand-950/40 text-left transition select-none cursor-pointer"
+          >
+            <span>🔧 <span className="font-semibold text-gray-700 dark:text-gray-300">Professional:</span> <span className="font-mono text-brand-700 dark:text-brand-400">rajesh@example.com</span></span>
+            <span className="text-[10px] text-gray-400 font-mono">password</span>
+          </button>
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           label="Email address"

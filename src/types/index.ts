@@ -74,10 +74,15 @@ export interface Booking {
   date: string;
   timeSlot: string;
   address: string;
-  status: 'pending' | 'upcoming' | 'completed' | 'cancelled' | 'in-progress';
+  status: 'pending' | 'upcoming' | 'completed' | 'cancelled' | 'in-progress' | 'on-route' | 'started';
   price: number;
   paymentMethod: 'card' | 'upi' | 'cash';
   paid: boolean;
+  notes?: string;
+  created_at?: string;
+  driverPhone?: string;
+  licensePlate?: string;
+  utr?: string;
   timeline?: { status: string; time: string; note: string }[];
 }
 

@@ -32,7 +32,7 @@ export function Navbar() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [city, setCity] = useState('Mumbai');
+  const [city, setCity] = useState('Patan, Gujarat');
   const [cityOpen, setCityOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
