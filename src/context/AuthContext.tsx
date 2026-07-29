@@ -59,21 +59,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     if (!isSupabaseConfigured) {
       setLocalUser(readCurrentLocalUser());
       setLoading(false);
       return;
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    // Safety timer to prevent stuck loading screen if Supabase connection hangs
+    const timer = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 500);
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (mounted) {
+          setSession(data.session);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('Supabase auth session error, falling back to local user:', err);
+        if (mounted) {
+          setLocalUser(readCurrentLocalUser());
+          setLoading(false);
+        }
+      })
+      .finally(() => {
+        clearTimeout(timer);
+      });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
-      setSession(sess);
+      if (mounted) setSession(sess);
     });
-    return () => sub.subscription.unsubscribe();
+
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const user = isSupabaseConfigured ? mapUser(session?.user ?? null) : localUser;

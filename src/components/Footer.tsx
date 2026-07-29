@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Home as HomeIcon, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react';
+import { Home as HomeIcon, Mail, Phone, MapPin, Share2, Globe } from 'lucide-react';
 import { categories } from '../data/sampleData';
 
 const companyLinks = [
@@ -30,7 +30,7 @@ export function Footer() {
               Trusted home services at your fingertips. Book verified professionals for 20+ services across 35+ cities.
             </p>
             <div className="flex items-center gap-3 mt-5">
-              {[Facebook, Twitter, Instagram, Linkedin].map((Icon, i) => (
+              {[Share2, Globe].map((Icon, i) => (
                 <a key={i} href="#" className="w-9 h-9 rounded-lg bg-slate-800 hover:bg-brand-600 flex items-center justify-center transition" aria-label="Social link">
                   <Icon className="w-4 h-4" />
                 </a>

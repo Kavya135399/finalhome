@@ -11,11 +11,11 @@ import { ContactPage } from './pages/ContactPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { TermsPage } from './pages/TermsPage';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 
 const BookingPage = lazy(() => import('./pages/BookingPage').then((m) => ({ default: m.BookingPage })));
-const LoginPage = lazy(() => import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })));
-const RegisterPage = lazy(() => import('./pages/RegisterPage').then((m) => ({ default: m.RegisterPage })));
-const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })));
 const ProfessionalDashboardPage = lazy(() => import('./pages/ProfessionalDashboardPage').then((m) => ({ default: m.ProfessionalDashboardPage })));
@@ -23,6 +23,8 @@ const TaxiBookingPage = lazy(() => import('./pages/TaxiBookingPage').then((m) =>
 const StorePage = lazy(() => import('./pages/StorePage').then((m) => ({ default: m.StorePage })));
 const StoreMyOrdersPage = lazy(() => import('./pages/StoreMyOrdersPage').then((m) => ({ default: m.StoreMyOrdersPage })));
 const StoreOrderTrackingPage = lazy(() => import('./pages/StoreOrderTrackingPage').then((m) => ({ default: m.StoreOrderTrackingPage })));
+const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage').then((m) => ({ default: m.PaymentSuccessPage })));
+const PaymentFailedPage = lazy(() => import('./pages/PaymentFailedPage').then((m) => ({ default: m.PaymentFailedPage })));
 
 function SuspenseWrap({ children }: { children: ReactNode }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
@@ -55,6 +57,8 @@ export const router = createBrowserRouter([
       { path: 'store/orders', element: <SuspenseWrap><StoreMyOrdersPage /></SuspenseWrap> },
       { path: 'store/order/:orderId', element: <SuspenseWrap><StoreOrderTrackingPage /></SuspenseWrap> },
       { path: 'book/:slug', element: <SuspenseWrap><BookingPage /></SuspenseWrap> },
+      { path: 'payment/success', element: <SuspenseWrap><PaymentSuccessPage /></SuspenseWrap> },
+      { path: 'payment/failed', element: <SuspenseWrap><PaymentFailedPage /></SuspenseWrap> },
       {
         path: 'dashboard',
         element: <ProtectedRoute allowedRoles={['customer']}><SuspenseWrap><DashboardPage /></SuspenseWrap></ProtectedRoute>,
@@ -69,15 +73,15 @@ export const router = createBrowserRouter([
       },
       {
         path: 'login',
-        element: <SuspenseWrap><LoginPage /></SuspenseWrap>,
+        element: <LoginPage />,
       },
       {
         path: 'register',
-        element: <SuspenseWrap><RegisterPage /></SuspenseWrap>,
+        element: <RegisterPage />,
       },
       {
         path: 'forgot-password',
-        element: <SuspenseWrap><ForgotPasswordPage /></SuspenseWrap>,
+        element: <ForgotPasswordPage />,
       },
       { path: '*', element: <NotFoundPage /> },
     ],

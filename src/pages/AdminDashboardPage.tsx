@@ -121,7 +121,7 @@ const packagesData = [
   }
 ];
 
-type AdminTab = 'overview' | 'services' | 'store_orders' | 'meal_orders' | 'plumbing_orders' | 'taxi' | 'premium_orders' | 'deep_clean_orders' | 'catering_orders' | 'electrical_orders';
+type AdminTab = 'overview' | 'services' | 'store_orders' | 'meal_orders' | 'plumbing_orders' | 'taxi' | 'premium_orders' | 'deep_clean_orders' | 'catering_orders' | 'electrical_orders' | 'settings';
 
 
 

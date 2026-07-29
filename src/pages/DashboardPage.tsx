@@ -573,6 +573,18 @@ function BookingCard({ booking, onCancel }: { booking: Booking; onCancel: () => 
       text: 'text-rose-600 dark:text-rose-400',
       dot: 'bg-rose-500',
       label: 'Cancelled'
+    },
+    'on-route': {
+      bg: 'bg-purple-50 dark:bg-purple-950/20 border-purple-200/30',
+      text: 'text-purple-600 dark:text-purple-400',
+      dot: 'bg-purple-500',
+      label: 'On Route'
+    },
+    started: {
+      bg: 'bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200/30',
+      text: 'text-indigo-600 dark:text-indigo-400',
+      dot: 'bg-indigo-500',
+      label: 'Started'
     }
   };
 
@@ -631,9 +643,9 @@ function BookingCard({ booking, onCancel }: { booking: Booking; onCancel: () => 
         
         <div className="flex gap-2">
           <button
-            onClick={() => toast('Invoice download is a placeholder', 'info')}
-            className="w-8 h-8 rounded-full border border-gray-150 dark:border-slate-800 flex items-center justify-center text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 transition active:scale-95"
-            title="Download Invoice"
+            onClick={() => window.open(`/api/bookings/${booking.id}/invoice`, '_blank')}
+            className="w-8 h-8 rounded-full border border-gray-150 dark:border-slate-800 flex items-center justify-center text-indigo-500 hover:bg-indigo-50 dark:hover:bg-slate-800 transition active:scale-95"
+            title="Download PDF Invoice"
             aria-label="Download invoice"
           >
             <Download className="w-3.5 h-3.5" />

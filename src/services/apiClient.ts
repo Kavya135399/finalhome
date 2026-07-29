@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -419,6 +419,51 @@ export const apiClient = {
   // 15. Simulation
   async simulatePayment(utr: string, amount: number) {
     const res = await api.post('/payments/simulate-receive', { utr, amount });
+    return res.data;
+  },
+
+  // 16. Razorpay UPI Payment & Verification APIs
+  async createPaymentOrder(data: any) {
+    const res = await api.post('/payment/create-order', data);
+    return res.data;
+  },
+  async verifyPayment(data: any) {
+    const res = await api.post('/payment/verify-payment', data);
+    return res.data;
+  },
+  async getPaymentConfig() {
+    const res = await api.get('/payment/config');
+    return res.data;
+  },
+
+  // 17. Admin Dashboard & Payments Table APIs
+  async getAdminDashboardStats() {
+    const res = await api.get('/admin/dashboard-stats');
+    return res.data;
+  },
+  async getAdminPayments(params?: { search?: string; paymentStatus?: string; bookingStatus?: string; page?: number; limit?: number }) {
+    const res = await api.get('/admin/payments', { params });
+    return res.data;
+  },
+  async updateAdminBookingStatus(id: string, data: { bookingStatus?: string; paymentStatus?: string }) {
+    const res = await api.patch(`/admin/bookings/${id}/status`, data);
+    return res.data;
+  },
+
+  // 18. Customer Bookings & Invoice APIs
+  async getMyBookings(email?: string) {
+    const res = await api.get('/bookings/my-orders', { params: { email } });
+    return res.data;
+  },
+  async getBookingById(id: string) {
+    const res = await api.get(`/bookings/${id}`);
+    return res.data;
+  },
+  async downloadInvoicePdfUrl(id: string) {
+    return `${BASE_URL}/bookings/${id}/invoice`;
+  },
+  async cancelCustomerBooking(id: string) {
+    const res = await api.post(`/bookings/${id}/cancel`);
     return res.data;
   }
 };

@@ -411,7 +411,6 @@ export function StorePage() {
               className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-extrabold border transition whitespace-nowrap ${
                 activeCategory === 'Favorites' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-white dark:bg-slate-800 text-red-500 border-red-100 dark:border-slate-700 hover:border-red-300'}`}>
               <Heart className={`w-3 h-3 ${activeCategory === 'Favorites' ? 'fill-white' : 'fill-red-500'}`} /><span>Favorites</span>
-              {/*favorites.length > 0*/ false && <span className="ml-1 bg-white/20 px-1.5 rounded-md text-[9px]">{favorites.length}</span>}
             </button>
             {CATEGORIES.map(cat => (
               <button key={cat} onClick={() => setActiveCategory(cat)}
