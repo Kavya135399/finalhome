@@ -176,6 +176,11 @@ export function BookingPage() {
       },
       onFailure: (errMsg) => {
         setProcessingPayment(false);
+        if (errMsg.includes('CANCELLED_BY_USER') || errMsg.toLowerCase().includes('cancelled by customer')) {
+          const cleanMsg = errMsg.replace('CANCELLED_BY_USER: ', '');
+          toast(cleanMsg || 'Payment cancelled. Your slot and details are saved—click Pay to try again.', 'warning');
+          return;
+        }
         toast(errMsg, 'error');
         navigate(`/payment/failed?error=${encodeURIComponent(errMsg)}&slug=${slug}`);
       },

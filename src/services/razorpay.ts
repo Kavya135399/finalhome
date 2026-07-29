@@ -159,12 +159,15 @@ export const processUPIPayment = async (options: PaymentOptions) => {
       config: {
         display: {
           blocks: {
-            banks: {
-              name: 'Pay via UPI Only (GPay, PhonePe, Paytm, BHIM, QR)',
-              instruments: [{ method: 'upi' }],
+            upi_qr: {
+              name: 'Scan QR Code or Pay via UPI (GPay, PhonePe, Paytm)',
+              instruments: [
+                { method: 'upi' },
+                { method: 'qr' }
+              ],
             },
           },
-          sequence: ['block.banks'],
+          sequence: ['block.upi_qr'],
           preferences: { show_default_blocks: false },
         },
       },
@@ -185,7 +188,7 @@ export const processUPIPayment = async (options: PaymentOptions) => {
       },
       modal: {
         ondismiss: function () {
-          options.onFailure('Payment process was cancelled by customer.');
+          options.onFailure('CANCELLED_BY_USER: Payment was cancelled by customer.');
         },
       },
     };

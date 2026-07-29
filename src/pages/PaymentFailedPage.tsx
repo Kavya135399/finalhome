@@ -45,9 +45,19 @@ export function PaymentFailedPage() {
         </div>
 
         {/* Error Details Box */}
-        <div className="bg-rose-950/20 border border-rose-800/40 rounded-2xl p-4 mb-8 text-sm text-rose-200">
+        <div className="bg-rose-950/20 border border-rose-800/40 rounded-2xl p-4 mb-6 text-sm text-rose-200">
           <p className="font-semibold mb-1 text-rose-300">Failure Reason:</p>
-          <p className="text-xs text-rose-200/80 font-mono leading-relaxed">{errorMessage}</p>
+          <p className="text-xs text-rose-200/80 font-mono leading-relaxed">
+            {errorMessage.replace('CANCELLED_BY_USER: ', '')}
+          </p>
+        </div>
+
+        {/* Real-world Bank Refund Assurance */}
+        <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3 mb-8 flex items-start gap-2.5 text-xs text-slate-300">
+          <RefreshCw className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+          <p>
+            <span className="font-semibold text-white">Bank Protection:</span> If any amount was deducted from your UPI bank account during this attempt, it will be automatically refunded within 3–5 business days via Razorpay Secure.
+          </p>
         </div>
 
         {/* Action Buttons */}

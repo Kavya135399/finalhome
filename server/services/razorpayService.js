@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { razorpayInstance } from '../config/razorpay.js';
+import { razorpayInstance, getRazorpayKeySecret } from '../config/razorpay.js';
 
 export const createRazorpayOrder = async ({ amount, receipt, notes = {} }) => {
   try {
@@ -32,7 +32,7 @@ export const createRazorpayOrder = async ({ amount, receipt, notes = {} }) => {
 
 export const verifySignature = ({ orderId, paymentId, signature }) => {
   try {
-    const secret = process.env.RAZORPAY_KEY_SECRET;
+    const secret = getRazorpayKeySecret();
     if (!secret) {
       console.error('[SECURITY ERROR] RAZORPAY_KEY_SECRET is missing in environment variables.');
       return false;
