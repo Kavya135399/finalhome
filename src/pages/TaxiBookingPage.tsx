@@ -8,7 +8,7 @@ import {
   Clock,
   MapPin,
   Users,
-  QrCode,
+  ShieldCheck,
   CheckCircle,
   FileText
 } from 'lucide-react';
@@ -18,6 +18,7 @@ import { Badge } from '../components/ui/Badge';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
+import { processUPIPayment } from '../services/razorpay';
 
 interface TaxiServiceCard {
   id: string;
@@ -119,7 +120,6 @@ export function TaxiBookingPage() {
   const [time, setTime] = useState('');
   const [luggage, setLuggage] = useState('');
   const [propertyAssociation, setPropertyAssociation] = useState('No property association');
-  const [utr, setUtr] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // User Rides States
@@ -151,7 +151,6 @@ export function TaxiBookingPage() {
     setLoadingRides(true);
     try {
       const allBookings = await apiClient.getBookings({ userId: user.id });
-      // Filter for bookings containing Taxi or starting with t_ / p_ prefix
       const taxiRides = allBookings.filter(
         (b: any) =>
           b.serviceId?.startsWith('t_') ||
@@ -177,23 +176,11 @@ export function TaxiBookingPage() {
     setActiveTab('book');
   };
 
-  const handleSimulatePay = async () => {
-    const selectedCar = vehicles.find((c) => c.type === vehicleChoice);
-    const rate = selectedCar?.rate ?? 15;
-    
-    const matchedPackage = packagesData.find((p) => p.name === taxiType);
-    const estimatedPrice = matchedPackage ? matchedPackage.price : rate * 30;
-
-    const randomUtr = Array.from({ length: 12 }, () => Math.floor(Math.random() * 10)).join('');
-    try {
-      await apiClient.simulateReceivePayment(randomUtr, estimatedPrice);
-      setUtr(randomUtr);
-      toast(`Payment Simulated! ₹${estimatedPrice} received. UTR code auto-filled.`, 'success');
-    } catch (err: any) {
-      const errMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Simulation failed';
-      toast(errMsg, 'error');
-    }
-  };
+  // Calculate estimated price based on selections
+  const selectedCar = vehicles.find((c) => c.type === vehicleChoice);
+  const rate = selectedCar?.rate ?? 15;
+  const matchedPackage = packagesData.find((p) => p.name === taxiType);
+  const estimatedPrice = matchedPackage ? matchedPackage.price : rate * 30;
 
   const handleBookCab = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,64 +190,48 @@ export function TaxiBookingPage() {
       return;
     }
     if (!pickup || !drop || !date || !time) {
-      toast('Please enter pickup, drop, date, and pickup time details', 'error');
-      return;
-    }
-    if (!utr || !/^\d{12}$/.test(utr)) {
-      toast('Please enter a valid 12-digit UTR Transaction ID', 'error');
+      toast('Please fill in pickup location, drop destination, date, and pickup time', 'error');
       return;
     }
 
     setIsSubmitting(true);
-    try {
-      // Find pricing based on selected vehicle/type
-      const selectedCar = vehicles.find((c) => c.type === vehicleChoice);
-      const rate = selectedCar?.rate ?? 15;
-      
-      const matchedPackage = packagesData.find((p) => p.name === taxiType);
-      const estimatedPrice = matchedPackage ? matchedPackage.price : rate * 30; // standard estimation of 30kms
+    toast('Initializing Razorpay Secure UPI Gateway...', 'info');
 
-      // Serialize trip details inside booking address field
-      const formattedAddress = `Pickup: ${pickup} | Drop: ${drop}`;
-      const notesString = `Pax: ${passengers} | Car: ${vehicleChoice} | Luggage: ${luggage || 'None'} | Prop: ${propertyAssociation}`;
+    const formattedAddress = {
+      street: `Pickup: ${pickup}`,
+      city: `Drop: ${drop}`,
+      state: 'Gujarat',
+      pincode: '384265',
+      fullAddress: `Pickup: ${pickup} | Drop: ${drop}`,
+    };
 
-      const bookingPayload = {
-        userId: user.id,
-        serviceId: selectedCar?.id || 't_generic',
-        serviceName: `${taxiType} (${vehicleChoice})`,
-        serviceImage: selectedCar?.image || 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&q=80&w=400',
-        date,
-        timeSlot: time,
-        address: formattedAddress,
-        notes: notesString,
-        price: estimatedPrice,
-        paymentMethod: 'upi',
-        utr,
-        paid: 0, // Unpaid until admin verifies UTR
-        status: 'pending' as const
-      };
-
-      await apiClient.createBooking(bookingPayload);
-      toast('Cab request submitted! Awaiting payment verification.', 'success');
-      
-      // Clear form
-      setPickup('');
-      setDrop('');
-      setUtr('');
-      
-      // Refresh rides and show rides tab
-      await fetchUserRides();
-      setActiveTab('rides');
-    } catch (err: any) {
-      const errMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Cab booking failed';
-      toast(errMsg, 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
+    processUPIPayment({
+      productName: `${taxiType} (${vehicleChoice})`,
+      productId: selectedCar?.id || 't_cab',
+      amount: estimatedPrice,
+      discount: 0,
+      customerName: user.name || 'Valued Customer',
+      email: user.email || 'customer@homeseva.com',
+      phoneNumber: (user as any)?.phone || '9876543210',
+      address: formattedAddress,
+      bookingDate: date,
+      bookingTime: time,
+      onSuccess: (resData) => {
+        setIsSubmitting(false);
+        toast('Taxi Booking Paid & Confirmed Successfully!', 'success');
+        navigate(
+          `/payment/success?bookingId=${resData.bookingId}&invoiceNumber=${resData.invoiceNumber}&paymentId=${resData.booking.paymentId}&orderId=${resData.booking.razorpayOrderId}`
+        );
+      },
+      onFailure: (errMsg) => {
+        setIsSubmitting(false);
+        toast(errMsg, 'error');
+      },
+    });
   };
 
   const stepsList = [
-    { id: 'pending', label: 'Payment Under Verification', desc: 'Admin is reviewing UPI UTR ID' },
+    { id: 'pending', label: 'Payment Verified', desc: 'Razorpay UPI payment confirmed' },
     { id: 'upcoming', label: 'Driver Confirmed', desc: 'Cab and driver assigned successfully' },
     { id: 'in-progress', label: 'Ride Started', desc: 'Chauffeur has initiated the trip' },
     { id: 'completed', label: 'Ride Completed', desc: 'Cab arrived at destination' }
@@ -279,7 +250,7 @@ export function TaxiBookingPage() {
             <div>
               <h2 className="text-base font-black text-gray-900 dark:text-white">Taxi Cabs Booking</h2>
               <p className="text-[10px] text-gray-400 mt-0.5 leading-normal max-w-[280px] sm:max-w-sm">
-                Book on-demand premium airport transfers, city local cabs and outstation trips.
+                Book on-demand premium airport transfers, city local cabs and outstation trips with Razorpay UPI.
               </p>
             </div>
           </div>
@@ -502,47 +473,29 @@ export function TaxiBookingPage() {
                   </select>
                 </div>
 
-                {/* Scan & Pay Section */}
+                {/* Price Breakdown & Secure Razorpay UPI Payment */}
                 <div className="border-t border-gray-100 dark:border-slate-800/80 pt-5 space-y-4">
-                  <div className="bg-brand-50/20 dark:bg-slate-950/25 border border-brand-100/50 dark:border-slate-800/50 rounded-2xl p-4 flex flex-col items-center text-center">
-                    <span className="text-[9px] uppercase tracking-wider text-brand-600 font-black block mb-3">Scan & Pay via GPay / Any UPI App</span>
-                    
-                    <div className="w-32 h-32 bg-white p-2 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-center relative mb-3">
-                      <QrCode className="w-28 h-28 text-slate-850" />
+                  <div className="bg-brand-50/20 dark:bg-slate-950/25 border border-brand-100/50 dark:border-slate-800/50 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div>
+                      <span className="text-[9px] uppercase tracking-wider text-brand-600 dark:text-brand-400 font-black block">Estimated Trip Fare</span>
+                      <span className="text-xl font-black text-gray-900 dark:text-white">₹{estimatedPrice}</span>
+                      <span className="text-[10px] text-gray-400 block mt-0.5">Includes taxes & fuel charges</span>
                     </div>
 
-                    <p className="text-[10px] font-bold text-gray-650 dark:text-gray-300">
-                      UPI Handle: <span className="text-brand-600">3232_Ayushi Patel</span>
-                    </p>
-                    
-                    <button
-                      type="button"
-                      onClick={handleSimulatePay}
-                      className="text-[9px] font-extrabold text-brand-600 dark:text-brand-400 hover:underline mt-2 flex items-center gap-1"
-                    >
-                      💡 Hint: Click "Simulate Pay" to auto-fill a valid UTR code
-                    </button>
+                    <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-800/30 px-3 py-1.5 rounded-xl">
+                      <ShieldCheck className="w-4 h-4" /> Razorpay UPI Protected
+                    </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <Input
-                      label="Enter UTR / Transaction ID (12 digits)"
-                      placeholder="Enter 12-digit UTR/Ref Number"
-                      value={utr}
-                      onChange={(e) => setUtr(e.target.value.replace(/\D/g, '').slice(0, 12))}
-                      required
-                    />
-                  </div>
+                  <Button
+                    type="submit"
+                    fullWidth
+                    loading={isSubmitting}
+                    className="h-12 rounded-xl text-xs font-black shadow-md mt-2 flex items-center justify-center gap-2"
+                  >
+                    <ShieldCheck className="w-4 h-4" /> Pay ₹{estimatedPrice} & Confirm Cab via Razorpay UPI
+                  </Button>
                 </div>
-
-                <Button
-                  type="submit"
-                  fullWidth
-                  loading={isSubmitting}
-                  className="h-11 rounded-xl text-xs font-black shadow-md mt-2"
-                >
-                  Confirm & Book Cab
-                </Button>
               </form>
             </motion.div>
           )}
@@ -578,9 +531,6 @@ export function TaxiBookingPage() {
                     <p><span className="font-bold text-gray-900 dark:text-white">Route:</span> {selectedRideForTrack.address}</p>
                     <p><span className="font-bold text-gray-900 dark:text-white">Schedule:</span> {selectedRideForTrack.date} at {selectedRideForTrack.timeSlot}</p>
                     <p><span className="font-bold text-gray-900 dark:text-white">Chauffeur:</span> {selectedRideForTrack.professionalName || 'Pending driver assignment'}</p>
-                    {selectedRideForTrack.utr && (
-                      <p><span className="font-bold text-gray-905 dark:text-white">UTR/Ref:</span> <span className="font-mono bg-gray-50 dark:bg-slate-850 px-1 py-0.5 rounded">{selectedRideForTrack.utr}</span></p>
-                    )}
                   </div>
 
                   <div className="relative pl-6 space-y-5 border-t border-gray-100 dark:border-slate-800/80 pt-4 mt-2">
@@ -657,10 +607,8 @@ export function TaxiBookingPage() {
 
                     {rides.map((ride) => {
                       const isUpcoming = ride.status !== 'completed' && ride.status !== 'cancelled';
-                      if (isUpcoming) return null; // only show history here
+                      if (isUpcoming) return null;
                       
-                      const showVerificationBadge = ride.status === 'pending' && !ride.paid;
-
                       return (
                         <div key={ride.id} className="card p-4 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 flex items-center justify-between opacity-85">
                           <div className="space-y-1">
@@ -671,15 +619,9 @@ export function TaxiBookingPage() {
                             <p className="text-[10px] text-gray-550 mt-1">{ride.address?.replace('Pickup: ', '').replace(' | Drop: ', ' → ')}</p>
                           </div>
                           <div className="text-right flex flex-col items-end gap-1.5 shrink-0 ml-4">
-                            {showVerificationBadge ? (
-                              <span className="px-2 py-0.5 bg-amber-50 text-amber-600 dark:bg-amber-950/20 border border-amber-200/20 rounded-full text-[8.5px] font-extrabold uppercase tracking-wider">
-                                Payment Under Verification
-                              </span>
-                            ) : (
-                              <Badge tone={ride.status === 'completed' ? 'green' : 'red'} className="text-[8px] font-extrabold uppercase">
-                                {ride.status}
-                              </Badge>
-                            )}
+                            <Badge tone={ride.status === 'completed' ? 'green' : 'red'} className="text-[8px] font-extrabold uppercase">
+                              {ride.status}
+                            </Badge>
                             <button
                               onClick={() => setSelectedRideForTrack(ride)}
                               className="text-[10.5px] text-brand-600 hover:underline font-bold"
