@@ -465,7 +465,15 @@ export const apiClient = {
   async cancelCustomerBooking(id: string) {
     const res = await api.post(`/bookings/${id}/cancel`);
     return res.data;
+  },
+
+  // 19. Analytics
+  async getAnalytics() {
+    const res = await api.get('/analytics');
+    return res.data;
   }
 };
+
+export { api };
 
 

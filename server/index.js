@@ -1,4 +1,7 @@
 import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+import { UAParser } from 'ua-parser-js';
 import cors from 'cors';
 import sqlite3 from 'sqlite3';
 import bcrypt from 'bcryptjs';
@@ -46,6 +49,10 @@ const upload = multer({
 });
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: '*' } });
+app.use((req, res, next) => { req.io = io; next(); });
+
 app.use(cors({
   origin: true,
   credentials: true,
@@ -106,6 +113,30 @@ const db = new sqlite3.Database(dbFile, (err) => {
           action TEXT NOT NULL,
           details TEXT NOT NULL,
           timestamp TEXT NOT NULL
+        )
+      `);
+      db.run(`
+        CREATE TABLE IF NOT EXISTS visitors (
+          id TEXT PRIMARY KEY,
+          ip TEXT,
+          country TEXT,
+          state TEXT,
+          city TEXT,
+          browser TEXT,
+          device TEXT,
+          os TEXT,
+          referrer TEXT,
+          last_visit TEXT,
+          visit_count INTEGER DEFAULT 1
+        )
+      `);
+      db.run(`
+        CREATE TABLE IF NOT EXISTS page_views (
+          id TEXT PRIMARY KEY,
+          visitor_id TEXT,
+          path TEXT,
+          time_spent INTEGER DEFAULT 0,
+          timestamp TEXT
         )
       `);
 
@@ -1427,8 +1458,40 @@ app.put('/api/bookings/:id/manage-taxi', authenticateToken, async (req, res) => 
 });
 
 
+
+// ==========================================
+// Analytics Endpoints
+// ==========================================
+app.get('/api/analytics', authenticateToken, async (req, res) => {
+  try {
+    const visitors = await dbAll('SELECT * FROM visitors ORDER BY last_visit DESC');
+    const uniqueVisitors = visitors.length;
+    const totalVisitors = visitors.reduce((acc, v) => acc + v.visit_count, 0);
+    const returningVisitors = visitors.filter(v => v.visit_count > 1).length;
+    
+    // Revenue stats
+    const orders = await dbAll("SELECT * FROM store_orders WHERE status = 'paid'");
+    const revenue = orders.reduce((acc, o) => acc + (Number(o.amount) || 0), 0);
+    
+    // Top Services
+    const bookings = await dbAll("SELECT * FROM bookings");
+    
+    res.json({
+      visitors,
+      totalVisitors,
+      uniqueVisitors,
+      returningVisitors,
+      onlineVisitors,
+      totalRevenue: revenue,
+      totalBookings: bookings.length
+    });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Start Express server
 const PORT = 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Relational HomeSeva backend running on http://localhost:${PORT}`);
 });

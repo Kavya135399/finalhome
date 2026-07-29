@@ -33,7 +33,7 @@ const whyChoose = [
   },
   {
     icon: Wallet,
-    title: 'Upfront Pricing',
+    title: 'Upfront Price',
     desc: 'No hidden charges, ever.',
     gradient: 'from-brand-500 to-indigo-500',
     shadowClass: 'shadow-brand-500/20 dark:shadow-brand-950/30',
@@ -41,8 +41,8 @@ const whyChoose = [
   },
   {
     icon: CalendarClock,
-    title: 'On-Time Service',
-    desc: 'Guaranteed punctual arrivals.',
+    title: 'Flexible Slots',
+    desc: 'Book anytime between 8 AM and 8 PM.',
     gradient: 'from-amber-400 to-orange-500',
     shadowClass: 'shadow-amber-500/20 dark:shadow-amber-950/30',
     hoverBg: 'hover:border-amber-500/20 dark:hover:border-amber-800/40 hover:shadow-[0_12px_30px_rgba(245,158,11,0.08)] dark:hover:shadow-[0_12px_30px_rgba(245,158,11,0.2)]'
@@ -50,17 +50,11 @@ const whyChoose = [
   {
     icon: HeadphonesIcon,
     title: '24/7 Support',
-    desc: 'Support is always one tap away.',
+    desc: 'Dedicated support team for help.',
     gradient: 'from-rose-400 to-pink-500',
     shadowClass: 'shadow-rose-500/20 dark:shadow-rose-950/30',
     hoverBg: 'hover:border-rose-500/20 dark:hover:border-rose-800/40 hover:shadow-[0_12px_30px_rgba(244,63,94,0.08)] dark:hover:shadow-[0_12px_30px_rgba(244,63,94,0.2)]'
-  },
-
-  { icon: ShieldCheck, title: 'Verified Experts', desc: 'Background-checked professionals.', color: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-950/40' },
-  { icon: Wallet, title: 'Ufront Price', desc: 'No hidden charges, ever.', color: 'text-brand-500 bg-brand-50 dark:bg-brand-950/40' },
-  { icon: CalendarClock, title: 'Flexible Slots', desc: 'Book anytime between 8 AM and 8 PM.', color: 'text-amber-500 bg-amber-50 dark:bg-amber-950/40' },
-  { icon: HeadphonesIcon, title: '24/7 Support', desc: 'Dedicated support team for help.', color: 'text-blue-500 bg-blue-50 dark:bg-blue-950/40' },
-
+  }
 ];
 
 const howSteps = [

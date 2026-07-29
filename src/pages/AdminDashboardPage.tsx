@@ -15,6 +15,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
+import { OverviewTab } from '../components/admin/OverviewTab';
 import {
   services as mockServices,
   userBookings as mockBookings,
@@ -1240,8 +1241,7 @@ export function AdminDashboardPage() {
     .filter((o) => o.status === 'paid')
     .reduce((sum, o) => sum + (Number(o.amount) || 0), 0);
 
-  const pendingBookings = bookingsList.filter((b) => b.status === 'pending').length;
-  const inProgressBookings = bookingsList.filter((b) => b.status === 'in-progress').length;
+  
 
   if (loading) {
     return (
@@ -1332,7 +1332,8 @@ export function AdminDashboardPage() {
       </aside>
 
       {/* Main Administrative Control Panel Body */}
-      <main className="flex-1 p-4 md:p-6 overflow-y-auto max-w-5xl w-full mx-auto">
+      <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50/50 dark:bg-slate-950 transition-all duration-300 w-full">
+        <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6 space-y-6">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -1344,97 +1345,14 @@ export function AdminDashboardPage() {
           >
             {/* 1. DASHBOARD OVERVIEW TAB */}
             {activeTab === 'overview' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between border-b border-gray-150 dark:border-slate-800 pb-3">
-                  <h2 className="font-extrabold text-sm uppercase text-gray-450 tracking-wider">Dashboard Overview</h2>
-                  <Badge tone="brand" className="py-1 px-2.5 font-bold uppercase text-[9px] tracking-wider">Live Analytics</Badge>
-                </div>
-
-                {/* KPI Metrics Dashboard Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 select-none">
-                  {[
-                    { label: 'Total Revenue', value: `â‚¹${totalRevenue}`, change: '+18.2%', icon: DollarSign, tone: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20' },
-                    { label: 'Total Users', value: usersList.length.toString(), change: '+12.4%', icon: Users, tone: 'bg-blue-50 text-blue-600 dark:bg-blue-950/20' },
-                    { label: 'Pending Bookings', value: pendingBookings.toString(), change: 'Urgent', icon: Clock, tone: 'bg-rose-50 text-rose-600 dark:bg-rose-950/20' },
-                    { label: 'Ongoing Services', value: inProgressBookings.toString(), change: 'Live', icon: Activity, tone: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/20' },
-                  ].map((kpi) => (
-                    <div key={kpi.label} className="card p-4 flex flex-col justify-between h-24 hover:shadow-soft transition-all duration-300">
-                      <div className="flex justify-between items-start">
-                        <div className={`w-8 h-8 rounded-lg ${kpi.tone} flex items-center justify-center`}>
-                          <kpi.icon className="w-4.5 h-4.5" />
-                        </div>
-                        <Badge tone={kpi.label === 'Pending Bookings' ? 'red' : 'green'} className="text-[7.5px] font-bold uppercase py-0.5">{kpi.change}</Badge>
-                      </div>
-                      <div>
-                        <p className="text-base font-black text-gray-900 dark:text-white leading-none mt-2">{kpi.value}</p>
-                        <p className="text-[9px] text-gray-400 font-extrabold uppercase mt-1 tracking-wider">{kpi.label}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Simulated Business SVG charts */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Revenue Growth chart wrapper */}
-                  <div className="card p-4 bg-white dark:bg-slate-900 select-none">
-                    <h3 className="font-extrabold text-xs text-gray-950 dark:text-white mb-4">Revenue Trend (â‚¹)</h3>
-                    <div className="flex items-end justify-between h-36 gap-2">
-                      {[15, 28, 42, 38, 48, 55, 62].map((val, idx) => (
-                        <div key={idx} className="flex-1 flex flex-col items-center gap-1 group">
-                          <div
-                            className="w-full bg-gradient-to-t from-emerald-600 to-teal-500 rounded-t-lg relative transition-all duration-300 hover:brightness-95"
-                            style={{ height: `${(val / 62) * 100}%` }}
-                          >
-                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] font-bold text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                              â‚¹{val}k
-                            </span>
-                          </div>
-                          <span className="text-[8px] text-gray-400 font-extrabold">W{idx + 1}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Booking Metrics growth charts */}
-                  <div className="card p-4 bg-white dark:bg-slate-900 select-none">
-                    <h3 className="font-extrabold text-xs text-gray-950 dark:text-white mb-4">User Growth Stats</h3>
-                    <div className="flex items-end justify-between h-36 gap-2">
-                      {[12, 18, 25, 34, 48, 52, 60].map((val, idx) => (
-                        <div key={idx} className="flex-1 flex flex-col items-center gap-1 group">
-                          <div
-                            className="w-full bg-gradient-to-t from-brand-650 to-brand-450 rounded-t-lg relative transition-all duration-300 hover:brightness-95"
-                            style={{ height: `${(val / 60) * 100}%` }}
-                          >
-                            <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[8px] font-bold text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                              +{val}%
-                            </span>
-                          </div>
-                          <span className="text-[8px] text-gray-400 font-extrabold">M{idx + 1}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Audit Logs Quick View */}
-                <div className="card p-4 bg-white dark:bg-slate-900">
-                  <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-100 dark:border-slate-800">
-                    <h3 className="font-extrabold text-xs text-gray-950 dark:text-white">Recent System Log Audit Trail</h3>
-                    <button onClick={() => setActiveTab('settings')} className="text-[10px] text-brand-650 hover:underline font-extrabold uppercase">See Log Table</button>
-                  </div>
-                  <div className="space-y-3">
-                    {auditLogs.slice(0, 4).map((log) => (
-                      <div key={log.id} className="text-xs flex justify-between items-start gap-4">
-                        <div>
-                          <p className="font-bold text-gray-800 dark:text-gray-200">{log.action}</p>
-                          <p className="text-[10px] text-gray-450 mt-0.5">{log.details}</p>
-                        </div>
-                        <span className="text-[9px] text-gray-400 shrink-0">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <OverviewTab
+                totalRevenue={totalRevenue}
+                usersList={usersList}
+                bookingsList={bookingsList}
+                ordersList={ordersList}
+                auditLogs={auditLogs}
+                setActiveTab={setActiveTab}
+              />
             )}
 
             {/* 2. USER MANAGEMENT TAB */}
@@ -1827,6 +1745,7 @@ export function AdminDashboardPage() {
             )}
 
         </AnimatePresence>
+        </div>
       </main>
 
       {/* ========================================================================= */}
@@ -2877,16 +2796,16 @@ export function AdminDashboardPage() {
         }
 
         return (
-          <div className="space-y-5">
-            <div className="card p-5 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800">
-              <p className="text-[9px] font-black uppercase tracking-widest text-green-600 mb-1">ADMIN PANEL</p>
-              <h2 className="text-xl font-black text-gray-900 dark:text-white">Store Orders</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Verify payments, assign workers, track delivery stages.</p>
+          <div className="space-y-5 max-w-5xl mx-auto w-full">
+            <div className="card p-6 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 text-center shadow-sm">
+              <p className="text-[10px] font-black uppercase tracking-widest text-brand-600 mb-2">ADMIN PANEL</p>
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white">Store Orders</h2>
+              <p className="text-sm text-gray-500 mt-1">Verify payments, assign workers, track delivery stages.</p>
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap gap-2">
-              <div className="relative flex-1 min-w-[180px]">
+            <div className="flex flex-wrap justify-center gap-3">
+              <div className="relative flex-1 min-w-[200px] max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                 <input type="search" placeholder="Search order ID or customer..." value={storeOrdersSearch}
                   onChange={e => setStoreOrdersSearch(e.target.value)}
