@@ -17,6 +17,7 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import { applySecurityMiddleware } from './middleware/securityMiddleware.js';
+import { verifySignature, fetchPaymentDetails } from './services/razorpayService.js';
 
 dotenv.config();
 
@@ -1140,6 +1141,71 @@ app.get('/api/coupons', async (req, res) => {
   }
 });
 
+app.post('/api/coupons/validate', async (req, res) => {
+  try {
+    const { code, subtotal = 0 } = req.body;
+    if (!code) return res.status(400).json({ error: 'Coupon code is required' });
+    
+    const cleanCode = code.trim().toUpperCase();
+    const numSubtotal = Number(subtotal) || 0;
+
+    const fallbackCoupons = {
+      'HOMESEVA10': { code: 'HOMESEVA10', discount: 10, type: 'percent', maxDiscount: 300, minOrder: 0, description: '10% OFF on all orders' },
+      'NEW200': { code: 'NEW200', discount: 200, type: 'flat', maxDiscount: 200, minOrder: 499, description: 'Flat ₹200 OFF on orders above ₹499' },
+      'CLEAN20': { code: 'CLEAN20', discount: 20, type: 'percent', maxDiscount: 500, minOrder: 999, description: '20% OFF (max ₹500) on orders above ₹999' },
+      'FIRST50': { code: 'FIRST50', discount: 50, type: 'percent', maxDiscount: 200, minOrder: 199, description: '50% OFF (max ₹200) on orders above ₹199' },
+      'FLAT100': { code: 'FLAT100', discount: 100, type: 'flat', maxDiscount: 100, minOrder: 499, description: 'Flat ₹100 OFF on orders above ₹499' },
+      'SAFETYFIRST': { code: 'SAFETYFIRST', discount: 150, type: 'flat', maxDiscount: 150, minOrder: 500, description: 'Flat ₹150 OFF' },
+      'CLEAN30': { code: 'CLEAN30', discount: 30, type: 'percent', maxDiscount: 600, minOrder: 1200, description: '30% OFF (max ₹600) on orders above ₹1200' },
+    };
+
+    let couponObj = await dbGet('SELECT * FROM coupons WHERE UPPER(code) = ?', [cleanCode]);
+    if (!couponObj) {
+      couponObj = await dbGet('SELECT * FROM promos WHERE UPPER(code) = ? AND status = "active"', [cleanCode]);
+    }
+    if (!couponObj && fallbackCoupons[cleanCode]) {
+      couponObj = fallbackCoupons[cleanCode];
+    }
+
+    if (!couponObj) {
+      return res.status(404).json({ error: 'Invalid coupon code' });
+    }
+
+    const minOrder = Number(couponObj.minOrder || couponObj.min_order) || 0;
+    if (numSubtotal < minOrder) {
+      return res.status(400).json({ error: `Minimum subtotal of ₹${minOrder} required to apply coupon ${cleanCode}` });
+    }
+
+    let discountAmount = 0;
+    const discountVal = Number(couponObj.discount) || 0;
+    const maxDiscountVal = Number(couponObj.maxDiscount || couponObj.max_discount) || 0;
+    const type = couponObj.type || (discountVal <= 100 ? 'percent' : 'flat');
+
+    if (type === 'percent') {
+      discountAmount = Math.round(numSubtotal * (discountVal / 100));
+      if (maxDiscountVal > 0 && discountAmount > maxDiscountVal) {
+        discountAmount = maxDiscountVal;
+      }
+    } else {
+      discountAmount = Math.min(numSubtotal, discountVal);
+    }
+
+    const finalPayable = Math.max(0, numSubtotal - discountAmount);
+
+    res.json({
+      valid: true,
+      code: cleanCode,
+      type,
+      discount: discountAmount,
+      subtotal: numSubtotal,
+      finalTotal: finalPayable,
+      description: couponObj.description || couponObj.desc || `${cleanCode} Applied!`
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ==========================================
 // Promos & Special Offers APIs
 // ==========================================
@@ -1335,6 +1401,100 @@ app.post('/api/store/checkout', authenticateToken, async (req, res) => {
 
 app.post('/api/store/payment/verify', authenticateToken, async (req, res) => {
   res.json({ success: true });
+});
+
+app.post('/api/store/orders/verify-razorpay', authenticateToken, async (req, res) => {
+  try {
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      orderDetails
+    } = req.body;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ error: 'Missing Razorpay signature verification parameters' });
+    }
+
+    // Verify HMAC SHA256 Signature
+    const isValidSignature = verifySignature({
+      orderId: razorpay_order_id,
+      paymentId: razorpay_payment_id,
+      signature: razorpay_signature
+    });
+
+    if (!isValidSignature) {
+      console.warn(`[SECURITY ALERT] Store Order Signature mismatch for ${razorpay_order_id}`);
+      return res.status(400).json({ error: 'Payment Verification Failed: Cryptographic signature mismatch. Order NOT created.' });
+    }
+
+    // Fetch verified payment metadata from Razorpay SDK
+    let transactionUtr = razorpay_payment_id;
+    try {
+      const paymentMeta = await fetchPaymentDetails(razorpay_payment_id);
+      transactionUtr = paymentMeta.vpa || paymentMeta.acquirer_data?.rrn || paymentMeta.id || razorpay_payment_id;
+    } catch (e) {
+      console.error('Fetch payment details fallback:', e);
+    }
+
+    const userId = req.user && req.user.id !== 'admin' ? req.user.id : (orderDetails?.userId || 'default_user');
+    const {
+      items = [],
+      address = {},
+      subtotal = 0,
+      delivery_fee = 0,
+      platform_fee = 0,
+      gst = 0,
+      coupon = '',
+      discount = 0,
+      total = 0,
+      notes = '',
+      preferred_date = '',
+      preferred_time = ''
+    } = orderDetails || {};
+
+    const id = 'ord_' + Date.now();
+
+    await dbRun(
+      'INSERT INTO store_orders (id, user_id, items, address, subtotal, delivery_fee, platform_fee, gst, coupon, discount, total, payment_method, payment_status, utr_number, screenshot_url, order_status, notes, preferred_date, preferred_time, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        id,
+        userId,
+        typeof items === 'string' ? items : JSON.stringify(items),
+        typeof address === 'string' ? address : JSON.stringify(address),
+        subtotal,
+        delivery_fee,
+        platform_fee,
+        gst,
+        coupon,
+        discount,
+        total,
+        'razorpay_online',
+        'paid',
+        transactionUtr,
+        '',
+        'placed',
+        notes,
+        preferred_date,
+        preferred_time,
+        new Date().toISOString()
+      ]
+    );
+
+    const order = await dbGet('SELECT * FROM store_orders WHERE id = ?', [id]);
+    await addAuditLog(userId, req.user?.name || 'Customer', 'Store Order Paid', `Created store order ${id} via Razorpay Payment ${razorpay_payment_id}`);
+
+    res.json({
+      success: true,
+      order,
+      razorpay_payment_id,
+      razorpay_order_id,
+      invoiceNumber: `INV-${new Date().getFullYear()}-${id.replace('ord_', '')}`
+    });
+  } catch (err) {
+    console.error('[Store Razorpay Verification Error]:', err);
+    res.status(500).json({ error: err.message || 'Payment verification failed' });
+  }
 });
 
 app.post('/api/store/orders', authenticateToken, async (req, res) => {

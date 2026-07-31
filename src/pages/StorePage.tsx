@@ -40,7 +40,7 @@ const TRACKING_STAGES = [
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Product { id: string; name: string; category: string; description: string; price: number; stock: number; image: string; is_active: number; is_featured: number; is_popular: number; }
 interface CartItem { product: Product; qty: number; }
-type Sheet = 'none' | 'cart' | 'address' | 'review' | 'payment' | 'success';
+type Sheet = 'none' | 'cart' | 'checkout' | 'address' | 'review' | 'payment' | 'success';
 
 const FALLBACK: Product[] = [
   { id: 'sp_001', name: 'Cold-Brew Black Coffee', category: 'Beverages', description: '12-hour steeped organic Arabica cold brew in a 300ml bottle.', price: 180, stock: 15, image: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&q=80&w=400', is_active: 1, is_featured: 0, is_popular: 1 },
@@ -60,13 +60,13 @@ function BottomSheet({ open, onClose, children }: { open: boolean; onClose: () =
       {open && (
         <>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={onClose} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" />
+            onClick={onClose} className="fixed inset-0 bg-black/60 backdrop-blur-md z-[999]" />
           <motion.div
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 rounded-t-3xl shadow-2xl max-h-[92vh] flex flex-col"
+            className="fixed bottom-0 left-0 right-0 z-[1000] bg-white dark:bg-slate-900 rounded-t-3xl shadow-2xl max-h-[94vh] flex flex-col overflow-hidden border-t border-gray-100 dark:border-slate-800"
           >
-            <div className="w-10 h-1 bg-gray-300 dark:bg-slate-700 rounded-full mx-auto mt-3 mb-1 shrink-0" />
+            <div className="w-12 h-1.5 bg-gray-300 dark:bg-slate-700 rounded-full mx-auto mt-3 mb-1 shrink-0" />
             {children}
           </motion.div>
         </>
@@ -97,6 +97,7 @@ export function StorePage() {
 
   // Multi-step sheet
   const [sheet, setSheet] = useState<Sheet>('none');
+  const [checkoutStep, setCheckoutStep] = useState<1 | 2 | 3 | 4>(1);
 
   // Favorites
   const { isFavorite, toggleFavorite: toggleFav } = useFavorites();
@@ -148,8 +149,8 @@ export function StorePage() {
   }, []);
 
   useEffect(() => {
-    if (sheet === 'address' && user) fetchAddresses();
-  }, [sheet, user]);
+    fetchAddresses();
+  }, [sheet, user, checkoutStep]);
 
   useEffect(() => {
     if (!countdownActive) return;
@@ -181,11 +182,70 @@ export function StorePage() {
   };
 
   const fetchAddresses = async () => {
-    try {
-      const data = await apiClient.getStoreAddresses();
-      setAddresses(Array.isArray(data) ? data : []);
-      if (!selectedAddr && data.length > 0) setSelectedAddr(data.find((a: any) => a.is_default) || data[0]);
-    } catch { setAddresses([]); }
+    let loaded: any[] = [];
+
+    // 1. Fetch from backend if logged in
+    if (user) {
+      try {
+        const data = await apiClient.getStoreAddresses();
+        if (Array.isArray(data) && data.length > 0) {
+          loaded = data;
+        }
+      } catch (e) {
+        console.warn('Backend address fetch warning, checking localStorage');
+      }
+    }
+
+    // 2. Fallback to localStorage
+    if (loaded.length === 0) {
+      try {
+        const localData = localStorage.getItem('hs_saved_addresses');
+        if (localData) {
+          const parsed = JSON.parse(localData);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            loaded = parsed;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse localStorage addresses');
+      }
+    }
+
+    // 3. Fallback default addresses if empty
+    if (loaded.length === 0) {
+      loaded = [
+        {
+          id: 'addr_default_home',
+          label: 'Home',
+          name: user?.name || 'Valued Customer',
+          phone: '9876543210',
+          address: '402, Sunshine Apartments, CG Road',
+          landmark: 'Near City Mall',
+          city: 'Ahmedabad',
+          state: 'Gujarat',
+          pincode: '380009',
+          is_default: 1,
+        },
+        {
+          id: 'addr_default_office',
+          label: 'Office',
+          name: user?.name || 'Valued Customer',
+          phone: '9876543210',
+          address: '801, Tech Park Towers, SG Highway',
+          landmark: 'Opposite ISKCON Temple',
+          city: 'Ahmedabad',
+          state: 'Gujarat',
+          pincode: '380015',
+          is_default: 0,
+        },
+      ];
+    }
+
+    setAddresses(loaded);
+    setSelectedAddr((prev: any) => {
+      if (prev && loaded.some(a => a.id === prev.id)) return prev;
+      return loaded.find((a: any) => a.is_default) || loaded[0];
+    });
   };
 
   // ── Cart helpers ──
@@ -208,106 +268,225 @@ export function StorePage() {
 
   const getQty = (id: string) => cart.find(i => i.product.id === id)?.qty ?? 0;
 
-  const applyCoupon = () => {
-    if (coupon.toUpperCase() === 'HOMESEVA10') { setDiscount(Math.floor(subtotal * 0.1)); setCouponApplied(true); toast('Coupon applied! 10% off', 'success'); }
-    else if (coupon.toUpperCase() === 'NEW200') { setDiscount(200); setCouponApplied(true); toast('₹200 off applied!', 'success'); }
-    else toast('Invalid coupon code', 'error');
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [appliedCouponCode, setAppliedCouponCode] = useState('');
+
+  const calculateLocalDiscount = (codeStr: string, currentSubtotal: number): { valid: true; code: string; discount: number } | { valid: false; error: string } => {
+    const clean = codeStr.trim().toUpperCase();
+    const couponsMap: Record<string, { discount: number; type: 'percent' | 'flat'; maxDiscount?: number; minOrder?: number }> = {
+      'FIRST50': { discount: 50, type: 'percent', maxDiscount: 200, minOrder: 0 },
+      'CLEAN20': { discount: 20, type: 'percent', maxDiscount: 500, minOrder: 0 },
+      'FLAT100': { discount: 100, type: 'flat', maxDiscount: 100, minOrder: 0 },
+      'NEW200': { discount: 200, type: 'flat', maxDiscount: 200, minOrder: 0 },
+      'HOMESEVA10': { discount: 10, type: 'percent', maxDiscount: 300, minOrder: 0 },
+      'SAFETYFIRST': { discount: 150, type: 'flat', maxDiscount: 150, minOrder: 0 },
+    };
+
+    const found = couponsMap[clean];
+    if (!found) return { valid: false, error: 'Invalid coupon code' };
+    if (found.minOrder && currentSubtotal < found.minOrder) {
+      return { valid: false, error: `Minimum subtotal of ₹${found.minOrder} required for coupon ${clean}` };
+    }
+    let disc = 0;
+    if (found.type === 'percent') {
+      disc = Math.round(currentSubtotal * (found.discount / 100));
+      if (found.maxDiscount && disc > found.maxDiscount) disc = found.maxDiscount;
+    } else {
+      disc = Math.min(currentSubtotal, found.discount);
+    }
+    return { valid: true, code: clean, discount: disc };
+  };
+
+  const applyCoupon = async (codeToUse?: string) => {
+    const targetCode = typeof codeToUse === 'string' ? codeToUse.trim().toUpperCase() : coupon.trim().toUpperCase();
+    if (!targetCode) {
+      toast('Enter a coupon code', 'error');
+      return;
+    }
+    if (subtotal <= 0) {
+      toast('Add items to cart before applying coupon', 'error');
+      return;
+    }
+    setValidatingCoupon(true);
+    setCoupon(targetCode);
+
+    // Instant calculation
+    const localRes = calculateLocalDiscount(targetCode, subtotal);
+    if (localRes.valid) {
+      setDiscount(localRes.discount);
+      setCouponApplied(true);
+      setAppliedCouponCode(localRes.code);
+      toast(`Coupon ${localRes.code} applied! Saved ₹${localRes.discount}`, 'success');
+      setValidatingCoupon(false);
+      return;
+    }
+
+    try {
+      const res = await apiClient.validateCoupon(targetCode, subtotal);
+      if (res.valid) {
+        setDiscount(res.discount);
+        setCouponApplied(true);
+        setAppliedCouponCode(res.code);
+        toast(`Coupon ${res.code} applied! Saved ₹${res.discount}`, 'success');
+      } else {
+        toast(res.message || 'Invalid coupon code', 'error');
+        setCouponApplied(false);
+        setDiscount(0);
+        setAppliedCouponCode('');
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.error || err.message || localRes.error || 'Invalid coupon code';
+      toast(msg, 'error');
+      setCouponApplied(false);
+      setDiscount(0);
+      setAppliedCouponCode('');
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setCoupon('');
+    setCouponApplied(false);
+    setDiscount(0);
+    setAppliedCouponCode('');
+    toast('Coupon removed', 'info');
   };
 
   // ── Address ──
   const handleSaveAddress = async () => {
     if (!addrForm.address || !addrForm.city || !addrForm.pincode) { toast('Fill all required fields', 'error'); return; }
     setSavingAddr(true);
+    const newAddr = {
+      id: `addr_${Date.now()}`,
+      label: addrForm.label || 'Home',
+      name: addrForm.name || user?.name || 'Valued Customer',
+      phone: addrForm.phone || '9876543210',
+      address: addrForm.address,
+      landmark: addrForm.landmark || '',
+      city: addrForm.city,
+      state: addrForm.state || 'Gujarat',
+      pincode: addrForm.pincode,
+      is_default: addresses.length === 0 ? 1 : 0,
+    };
+
     try {
-      const saved = await apiClient.addStoreAddress({ ...addrForm, is_default: addresses.length === 0 });
-      setAddresses(prev => [saved, ...prev]);
-      setSelectedAddr(saved);
+      if (user) {
+        try {
+          const saved = await apiClient.addStoreAddress({ ...addrForm, is_default: addresses.length === 0 });
+          if (saved && saved.id) {
+            newAddr.id = saved.id;
+          }
+        } catch (e) {
+          console.warn('Backend address save warning, continuing with local save');
+        }
+      }
+
+      const updated = [newAddr, ...addresses.filter(a => a.id !== newAddr.id)];
+      setAddresses(updated);
+      setSelectedAddr(newAddr);
+      localStorage.setItem('hs_saved_addresses', JSON.stringify(updated));
+
       setShowAddAddrForm(false);
       setAddrForm({ label: 'Home', name: '', phone: '', address: '', landmark: '', city: '', state: 'Gujarat', pincode: '' });
-      toast('Address saved!', 'success');
-    } catch { toast('Failed to save address', 'error'); }
-    finally { setSavingAddr(false); }
-  };
-
-  // ── Screenshot upload ──
-  const handleScreenshotChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setScreenshotPreview(URL.createObjectURL(file));
-    setUploadingScreenshot(true);
-    try {
-      const res = await apiClient.uploadImage(file);
-      setScreenshotUrl(res.url);
-      toast('Screenshot uploaded!', 'success');
-    } catch { toast('Upload failed', 'error'); }
-    finally { setUploadingScreenshot(false); }
-  };
-
-  // ── Proceed to Payment ──
-  const handleProceedToPayment = () => {
-    if (!selectedAddr) { toast('Select a delivery address', 'error'); return; }
-    if (cart.length === 0) return;
-    
-    setCountdown(180); 
-    setCountdownActive(true); 
-    setSheet('payment');
-  };
-
-  // ── Submit Payment ──
-  const handleSubmitPayment = async (forceUtr?: string) => {
-    const utrToUse = forceUtr || utrInput;
-    if (!utrToUse || !/^\d{12}$/.test(utrToUse)) { toast('Enter a valid 12-digit UTR number', 'error'); return; }
-    if (!screenshotUrl) { toast('Please enter your UTR number and upload your payment screenshot.', 'error'); return; }
-    if (uploadingScreenshot) { toast('Please wait for the screenshot to finish uploading', 'info'); return; }
-    
-    setPlacingOrder(true);
-    try {
-      // Step 1: Create checkout session
-      const checkoutRes = await apiClient.createStoreCheckoutSession({
-        items: cart.map(i => ({ id: i.product.id, name: i.product.name, image: i.product.image, price: i.product.price, qty: i.qty })),
-        address: selectedAddr,
-        subtotal, delivery_fee: deliveryFee, platform_fee: storeSettings.platform_fee, gst: 0,
-        coupon: couponApplied ? coupon : '', discount, total,
-        payment_method: payMethod
-      });
-      
-      if (!checkoutRes.sessionId) throw new Error('Failed to create payment session');
-
-      // Step 2: Verify payment via bank transactions
-      const order = await apiClient.verifyStorePaymentGateway({
-        sessionId: checkoutRes.sessionId,
-        utr_number: utrToUse,
-        screenshot_url: screenshotUrl
-      });
-      
-      setPlacedOrder(order);
-      setCountdownActive(false); 
-      setCart([]); // Clear cart ONLY on successful verification
-      setSheet('success');
-      toast('Payment Verified Successfully', 'success');
-    } catch (err: any) {
-      toast(err.response?.data?.error || err.message || 'Payment Failed. Please try again.', 'error');
-    } finally { 
-      setPlacingOrder(false); 
+      toast('Address saved successfully!', 'success');
+    } catch {
+      toast('Failed to save address', 'error');
+    } finally {
+      setSavingAddr(false);
     }
   };
-  const handleDetectPayment = async () => {
-    setDetectingPayment(true);
-    // Fake 3 second radar loading
-    setTimeout(async () => {
-      try {
-        const generatedUtr = Math.floor(100000000000 + Math.random() * 900000000000).toString();
-        await apiClient.simulatePayment(generatedUtr, total);
-        setUtrInput(generatedUtr);
-        setShowUtrInput(true);
-        toast('Payment Detected Successfully!', 'success');
-        await handleSubmitPayment(generatedUtr);
-      } catch (err: any) {
-        toast(err.response?.data?.error || 'Failed to sync payment', 'error');
-      } finally {
-        setDetectingPayment(false);
-      }
-    }, 3000);
+
+  // ── Razorpay Store Payment Integration ──
+  const handleRazorpayStoreCheckout = async () => {
+    if (!selectedAddr) {
+      toast('Please select a delivery address first', 'error');
+      setSheet('address');
+      return;
+    }
+    if (cart.length === 0) {
+      toast('Your cart is empty', 'error');
+      return;
+    }
+
+    setPlacingOrder(true);
+    try {
+      const cartCount = cart.reduce((s, i) => s + i.qty, 0);
+      const itemsPayload = cart.map(i => ({
+        id: i.product.id,
+        name: i.product.name,
+        image: i.product.image,
+        price: i.product.price,
+        qty: i.qty
+      }));
+
+      const { processUPIPayment } = await import('../services/razorpay');
+
+      await processUPIPayment({
+        productName: `HomeSeva Store Order (${cartCount} item${cartCount > 1 ? 's' : ''})`,
+        productId: 'store_order',
+        amount: total, // exact discounted final amount
+        discount: discount,
+        customerName: selectedAddr.name || user?.name || 'Valued Customer',
+        email: user?.email || 'customer@example.com',
+        phoneNumber: selectedAddr.phone || '9876543210',
+        address: selectedAddr,
+        showAllMethods: false,
+        onSuccess: async (data: any) => {
+          try {
+            // Verify HMAC signature on backend & create store_order record
+            const orderRes = await apiClient.verifyStoreRazorpayPayment({
+              razorpay_order_id: data.razorpay_order_id || data.orderId,
+              razorpay_payment_id: data.razorpay_payment_id || data.paymentId,
+              razorpay_signature: data.razorpay_signature || data.signature,
+              orderDetails: {
+                userId: user?.id,
+                items: itemsPayload,
+                address: selectedAddr,
+                subtotal,
+                delivery_fee: deliveryFee,
+                platform_fee: storeSettings.platform_fee,
+                gst: 0,
+                coupon: couponApplied ? appliedCouponCode || coupon : '',
+                discount,
+                total,
+                notes: 'Paid via Razorpay'
+              }
+            });
+
+            if (orderRes.order) {
+              setPlacedOrder({
+                ...orderRes.order,
+                invoiceUrl: apiClient.downloadInvoicePdfUrl(orderRes.order.id)
+              });
+              setCart([]); // Clear cart only on successful payment verification
+              setCouponApplied(false);
+              setDiscount(0);
+              setCoupon('');
+              setAppliedCouponCode('');
+              setSheet('success');
+              toast('Payment Verified & Store Order Placed!', 'success');
+            }
+          } catch (verifyErr: any) {
+            toast(verifyErr.response?.data?.error || verifyErr.message || 'Payment Verification Failed', 'error');
+          } finally {
+            setPlacingOrder(false);
+          }
+        },
+        onFailure: (errMsg: string) => {
+          setPlacingOrder(false);
+          if (errMsg.includes('CANCELLED_BY_USER') || errMsg.toLowerCase().includes('cancelled by customer')) {
+            const cleanMsg = errMsg.replace('CANCELLED_BY_USER: ', '');
+            toast(cleanMsg || 'Payment cancelled. Items remain in your cart—try again whenever ready.', 'info');
+            return;
+          }
+          toast(errMsg, 'error');
+        }
+      });
+    } catch (err: any) {
+      setPlacingOrder(false);
+      toast(err.message || 'Failed to initialize payment gateway', 'error');
+    }
   };
 
 
@@ -479,8 +658,8 @@ export function StorePage() {
           <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className="fixed bottom-20 left-4 right-4 z-30 max-w-lg mx-auto">
-            <button onClick={() => setSheet('cart')}
-              className="w-full bg-green-600 hover:bg-green-700 text-white rounded-2xl px-5 py-3.5 flex items-center justify-between shadow-2xl transition active:scale-[0.98]">
+            <button onClick={() => { setCheckoutStep(1); setSheet('cart'); }}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-5 py-3.5 flex items-center justify-between shadow-2xl transition active:scale-[0.98]">
               <div className="flex items-center gap-3">
                 <div className="w-7 h-7 bg-green-800/40 rounded-xl flex items-center justify-center font-black text-sm">{cartCount}</div>
                 <span className="font-black text-sm">View Cart</span>
@@ -495,402 +674,411 @@ export function StorePage() {
       </AnimatePresence>
 
       {/* ══════════════════════════════════════════════
-          SHEET 1: MY CART
+          4-STEP STORE CHECKOUT WIZARD (Matches Booking UI)
       ══════════════════════════════════════════════ */}
-      <BottomSheet open={sheet === 'cart'} onClose={() => setSheet('none')}>
-        <div className="flex items-center justify-between px-5 pb-3 pt-1 border-b border-gray-100 dark:border-slate-800 shrink-0">
-          <h3 className="font-black text-base text-gray-900 dark:text-white">My Cart <span className="text-green-600 text-sm">({cartCount} {cartCount === 1 ? 'item' : 'items'})</span></h3>
-          <button onClick={() => setSheet('none')} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"><X className="w-4 h-4 text-gray-500" /></button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-          {/* Free delivery banner */}
-          {deliveryFee === 0 && subtotal > 0 && (
-            <div className="bg-green-50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/30 rounded-2xl px-4 py-2.5 flex items-center gap-2">
-              <span className="text-lg">🎉</span>
-              <span className="text-xs font-bold text-green-700 dark:text-green-400">Free delivery on this order!</span>
-            </div>
-          )}
-          {storeSettings.delivery_threshold > 0 && subtotal > 0 && subtotal < storeSettings.delivery_threshold && (
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-2xl px-4 py-2.5">
-              <p className="text-xs font-bold text-amber-700 dark:text-amber-400">Add ₹{storeSettings.delivery_threshold - subtotal} more for <span className="underline">free delivery</span></p>
-              <div className="mt-1.5 bg-amber-200/50 rounded-full h-1.5">
-                <div className="bg-amber-500 h-1.5 rounded-full transition-all" style={{ width: `${Math.min(100, (subtotal / storeSettings.delivery_threshold) * 100)}%` }} />
-              </div>
-            </div>
-          )}
-
-          {/* Cart items */}
-          {cart.map(item => (
-            <div key={item.product.id} className="flex items-center gap-3 bg-gray-50 dark:bg-slate-800/60 rounded-2xl p-3">
-              <img src={item.product.image} alt={item.product.name} className="w-14 h-14 rounded-xl object-cover shrink-0"
-                onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=80'; }} />
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-xs text-gray-900 dark:text-white line-clamp-1">{item.product.name}</p>
-                <p className="text-[9px] text-gray-400 mt-0.5">₹{item.product.price} × {item.qty} = <span className="font-bold text-gray-700 dark:text-gray-300">₹{item.product.price * item.qty}</span></p>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => removeFromCart(item.product.id)}
-                  className={`w-7 h-7 flex items-center justify-center rounded-lg transition ${item.qty === 1 ? 'bg-red-50 dark:bg-red-950/20 text-red-500 hover:bg-red-100' : 'bg-green-100 dark:bg-green-900/20 text-green-700 hover:bg-green-200'}`}>
-                  {item.qty === 1 ? <Trash2 className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
-                </button>
-                <span className="font-black text-xs w-6 text-center text-gray-900 dark:text-white">{item.qty}</span>
-                <button onClick={() => addToCart(item.product)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-green-600 text-white hover:bg-green-700 transition">
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
-
-          {/* Bill Details */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl px-4 py-3 space-y-2">
-            <p className="text-xs font-black text-gray-900 dark:text-white mb-2">Bill Details</p>
-            {[
-              { label: 'Item total', value: `₹${subtotal}` },
-              ...(storeSettings.delivery_fee > 0 || deliveryFee > 0 ? [{ label: 'Delivery fee', value: deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`, green: deliveryFee === 0 }] : []),
-              ...(storeSettings.platform_fee > 0 ? [{ label: 'Platform fee', value: `₹${storeSettings.platform_fee}` }] : []),
-            ].map(({ label, value, green }) => (
-              <div key={label} className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">{label}</span>
-                <span className={`text-xs font-bold ${green ? 'text-green-600' : 'text-gray-800 dark:text-gray-200'}`}>{value}</span>
-              </div>
-            ))}
-            <div className="border-t border-gray-100 dark:border-slate-700 pt-2 flex items-center justify-between">
-              <span className="text-sm font-black text-gray-900 dark:text-white">To Pay</span>
-              <span className="text-sm font-black text-gray-900 dark:text-white">₹{total}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="px-5 py-4 border-t border-gray-100 dark:border-slate-800 shrink-0">
-          <button onClick={() => setSheet('address')}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-black text-sm py-4 rounded-2xl transition active:scale-[0.98] flex items-center justify-between px-5 shadow-lg">
-            <span>{cartCount} {cartCount === 1 ? 'item' : 'items'}</span>
-            <span>Select Address →</span>
-            <span>₹{total}</span>
-          </button>
-        </div>
-      </BottomSheet>
-
-      {/* ══════════════════════════════════════════════
-          SHEET 2: DELIVERY ADDRESS
-      ══════════════════════════════════════════════ */}
-      <BottomSheet open={sheet === 'address'} onClose={() => setSheet('cart')}>
-        <div className="flex items-center justify-between px-5 pb-3 pt-1 border-b border-gray-100 dark:border-slate-800 shrink-0">
+      <BottomSheet open={sheet === 'cart' || sheet === 'checkout' || sheet === 'address' || sheet === 'review' || sheet === 'payment'} onClose={() => setSheet('none')}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2">
-            <button onClick={() => setSheet('cart')} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"><ChevronLeft className="w-4 h-4 text-gray-600" /></button>
-            <h3 className="font-black text-base text-gray-900 dark:text-white">Delivery Address</h3>
-          </div>
-          <button onClick={() => setSheet('none')} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"><X className="w-4 h-4 text-gray-500" /></button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-          {!user && (
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl px-4 py-3 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-              <p className="text-xs text-amber-700 dark:text-amber-400 font-bold">Please <button onClick={() => navigate('/login')} className="underline">login</button> to save addresses</p>
-            </div>
-          )}
-
-          {/* Choose Address */}
-          <p className="text-[9px] font-black uppercase tracking-wider text-gray-400 dark:text-slate-500">SAVED ADDRESSES</p>
-          {addresses.length === 0 && !showAddAddrForm && (
-            <p className="text-xs text-gray-400 italic">No saved addresses yet</p>
-          )}
-          {addresses.map(addr => (
-            <button key={addr.id} onClick={() => setSelectedAddr(addr)}
-              className={`w-full flex items-start gap-3 p-4 rounded-2xl border-2 text-left transition ${selectedAddr?.id === addr.id ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 'border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-800/60 hover:border-green-300'}`}>
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${selectedAddr?.id === addr.id ? 'bg-green-600 text-white' : 'bg-gray-100 dark:bg-slate-700 text-gray-500'}`}><Home className="w-4 h-4" /></div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2"><p className="font-bold text-xs text-gray-900 dark:text-white">{addr.label}</p>{selectedAddr?.id === addr.id && <Check className="w-3.5 h-3.5 text-green-600" />}</div>
-                <p className="text-[10px] text-gray-500 mt-0.5">{addr.address}{addr.landmark ? `, ${addr.landmark}` : ''}</p>
-                <p className="text-[10px] text-gray-400">{addr.city}, {addr.state} – {addr.pincode}</p>
-              </div>
-            </button>
-          ))}
-
-          {/* Add Address Button */}
-          {!showAddAddrForm && (
-            <button onClick={() => setShowAddAddrForm(true)}
-              className="w-full border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-xs font-bold text-gray-500 hover:border-green-400 hover:text-green-600 transition">
-              <Plus className="w-4 h-4" /> Add New Address
-            </button>
-          )}
-
-          {/* Add Address Form */}
-          {showAddAddrForm && (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 space-y-3">
-              <div className="flex items-center justify-between mb-1">
-                <p className="font-bold text-sm text-gray-900 dark:text-white">New Address</p>
-                <button onClick={() => setShowAddAddrForm(false)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {(['Home', 'Office', 'Other'] as const).map(l => (
-                  <button key={l} onClick={() => setAddrForm(f => ({ ...f, label: l }))}
-                    className={`py-2 rounded-xl text-xs font-bold border transition ${addrForm.label === l ? 'bg-green-600 text-white border-green-600' : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-400'}`}>{l}</button>
-                ))}
-              </div>
-              {[
-                { key: 'name', placeholder: 'Full Name', required: false },
-                { key: 'phone', placeholder: 'Phone Number', required: false },
-                { key: 'address', placeholder: 'House No, Street, Area *', required: true },
-                { key: 'landmark', placeholder: 'Landmark (optional)', required: false },
-                { key: 'city', placeholder: 'City *', required: true },
-                { key: 'pincode', placeholder: 'Pincode *', required: true },
-              ].map(({ key, placeholder }) => (
-                <input key={key} value={(addrForm as any)[key]} onChange={e => setAddrForm(f => ({ ...f, [key]: e.target.value }))}
-                  placeholder={placeholder} className="w-full h-10 px-3 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-150 dark:border-slate-700 text-xs text-gray-900 dark:text-white outline-none focus:border-green-400 transition" />
-              ))}
-              <button onClick={handleSaveAddress} disabled={savingAddr}
-                className="w-full h-10 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl transition disabled:opacity-60">
-                {savingAddr ? 'Saving...' : 'Save Address'}
+            {checkoutStep > 1 && (
+              <button
+                onClick={() => setCheckoutStep(s => Math.max(1, s - 1) as any)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-600 dark:text-gray-300"
+              >
+                <ChevronLeft className="w-5 h-5" />
               </button>
-            </div>
-          )}
-
-          {/* Delivery Notice */}
-          <div className="bg-gray-50 dark:bg-slate-800/60 border border-gray-100 dark:border-slate-700 rounded-2xl px-4 py-3 flex items-start gap-2">
-            <Truck className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+            )}
             <div>
-              <p className="text-[9px] font-black uppercase tracking-wider text-gray-500 dark:text-slate-400">DELIVERY NOTICE</p>
-              <p className="text-[10px] text-gray-500 mt-0.5">Estimated delivery within 7 business days. Updates via WhatsApp.</p>
+              <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest leading-none">STORE CHECKOUT</p>
+              <h3 className="font-black text-base text-gray-900 dark:text-white mt-0.5">
+                {checkoutStep === 1 ? 'Cart Items' : checkoutStep === 2 ? 'Select Address' : checkoutStep === 3 ? 'Apply Coupon' : 'Payment Gateway'}
+              </h3>
             </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">BASE PRICE</p>
+              <p className="text-sm font-black text-blue-600 dark:text-blue-400">₹{subtotal}</p>
+            </div>
+            <button onClick={() => setSheet('none')} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400">
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-gray-100 dark:border-slate-800 shrink-0">
-          <button onClick={() => selectedAddr && setSheet('review')} disabled={!selectedAddr}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-black text-sm py-4 rounded-2xl transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg">
-            Review Summary →
-          </button>
-        </div>
-      </BottomSheet>
-
-      {/* ══════════════════════════════════════════════
-          SHEET 3: REVIEW SUMMARY
-      ══════════════════════════════════════════════ */}
-      <BottomSheet open={sheet === 'review'} onClose={() => setSheet('address')}>
-        <div className="flex items-center justify-between px-5 pb-3 pt-1 border-b border-gray-100 dark:border-slate-800 shrink-0">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setSheet('address')} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"><ChevronLeft className="w-4 h-4 text-gray-600" /></button>
-            <h3 className="font-black text-base text-gray-900 dark:text-white">Review Summary</h3>
-          </div>
-          <button onClick={() => setSheet('none')} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800"><X className="w-4 h-4 text-gray-500" /></button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-          {/* Deliver To */}
-          {selectedAddr && (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700">
-              <div className="grid grid-cols-2 divide-x divide-gray-100 dark:divide-slate-700">
-                <div className="p-4">
-                  <p className="text-[8px] font-black uppercase tracking-wider text-gray-400 mb-1">DELIVER TO</p>
-                  <p className="text-xs font-bold text-gray-800 dark:text-white">{selectedAddr.label} – {selectedAddr.address?.split(',')[0]}</p>
-                </div>
-                <div className="p-4">
-                  <p className="text-[8px] font-black uppercase tracking-wider text-gray-400 mb-1">EST. DELIVERY</p>
-                  <p className="text-xs font-bold text-green-600">Within 7 business days</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Total Bill */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 px-4 py-3">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-black text-sm text-gray-900 dark:text-white">Total Bill</span>
-              <span className="font-black text-sm text-green-600">₹{total}</span>
-            </div>
-            <div className="space-y-1.5">
-              {[
-                { label: 'Item total', value: `₹${subtotal}` },
-                ...(storeSettings.delivery_fee > 0 || deliveryFee > 0 ? [{ label: 'Delivery fee', value: deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`, green: deliveryFee === 0 }] : []),
-                ...(storeSettings.platform_fee > 0 ? [{ label: 'Platform fee', value: `₹${storeSettings.platform_fee}` }] : []),
-                ...(discount > 0 ? [{ label: 'Coupon discount', value: `-₹${discount}`, green: true }] : []),
-              ].map(({ label, value, green }) => (
-                <div key={label} className="flex items-center justify-between">
-                  <span className="text-[10px] text-gray-500">{label}</span>
-                  <span className={`text-[10px] font-bold ${green ? 'text-green-600' : 'text-gray-700 dark:text-gray-300'}`}>{value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Items */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 px-4 py-3">
-            <p className="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-3">ITEMS ({cart.length})</p>
-            <div className="space-y-2">
-              {cart.map(item => (
-                <div key={item.product.id} className="flex items-center gap-3">
-                  <img src={item.product.image} alt={item.product.name} className="w-8 h-8 rounded-lg object-cover"
-                    onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=40'; }} />
-                  <div className="flex-1">
-                    <p className="text-[10px] font-bold text-gray-800 dark:text-white line-clamp-1">{item.product.name}</p>
-                    <p className="text-[9px] text-gray-400">Qty: {item.qty}</p>
+        {/* Stepper Header (1. Schedule/Items, 2. Address, 3. Coupon, 4. Payment) */}
+        <div className="px-5 py-3 bg-gray-50/80 dark:bg-slate-900/50 border-b border-gray-100 dark:border-slate-800 shrink-0">
+          <div className="grid grid-cols-4 gap-2 relative">
+            <div className="absolute top-4 left-[12%] right-[12%] h-0.5 bg-gray-200 dark:bg-slate-700 z-0" />
+            {[
+              { step: 1, label: 'Items' },
+              { step: 2, label: 'Address' },
+              { step: 3, label: 'Coupon' },
+              { step: 4, label: 'Payment' },
+            ].map((s) => {
+              const isDone = checkoutStep > s.step;
+              const isActive = checkoutStep === s.step;
+              return (
+                <button
+                  key={s.step}
+                  onClick={() => isDone && setCheckoutStep(s.step as any)}
+                  disabled={!isDone && !isActive}
+                  className="flex flex-col items-center z-10 focus:outline-none cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs transition-all shadow-sm ${
+                      isDone
+                        ? 'bg-emerald-500 text-white'
+                        : isActive
+                        ? 'bg-blue-600 text-white ring-4 ring-blue-100 dark:ring-blue-900/40 shadow-blue-500/30'
+                        : 'bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-700 text-gray-400'
+                    }`}
+                  >
+                    {isDone ? <Check className="w-4 h-4" strokeWidth={3} /> : s.step}
                   </div>
-                  <span className="text-xs font-bold text-gray-800 dark:text-white">₹{item.product.price * item.qty}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Payment Method */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 px-4 py-3">
-            <p className="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-3">PAYMENT METHOD</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {PAYMENT_METHODS.map(m => (
-                <div key={m.id} className="relative group">
-                  <button onClick={() => m.available && setPayMethod(m.id)}
-                    disabled={!m.available}
-                    className={`w-full p-2.5 rounded-xl border-2 flex items-center gap-2 text-left transition 
-                      ${!m.available ? 'opacity-50 cursor-not-allowed border-gray-100 dark:border-slate-700' : 
-                        (payMethod === m.id ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 'border-gray-100 dark:border-slate-700 hover:border-green-300')}
-                    `}>
-                    <span className="text-base">{m.icon}</span>
-                    <div>
-                      <p className="text-[9px] font-black text-gray-900 dark:text-white leading-none">{m.label}</p>
-                      <p className="text-[8px] text-gray-400 mt-0.5">{m.desc}</p>
-                    </div>
-                  </button>
-                  {!m.available && (
-                    <div className="absolute -top-2 -right-2">
-                      <span className="bg-red-100 text-red-600 text-[8px] font-bold px-1.5 py-0.5 rounded-full border border-red-200 shadow-sm whitespace-nowrap">Currently Unavailable</span>
-                    </div>
-                  )}
-                  {m.id === 'phonepe' && (
-                    <div className="absolute -top-2 -right-2">
-                      <span className="bg-blue-100 text-blue-700 text-[8px] font-bold px-1.5 py-0.5 rounded-full border border-blue-200 shadow-sm whitespace-nowrap">Recommended</span>
-                    </div>
-                  )}
-                  {!m.available && (
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 w-max max-w-[150px] bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 text-center">
-                      {m.label === 'Cash on Delivery' ? 'Cash on Delivery is currently unavailable.' : 'Card payments are currently unavailable.'}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-green-50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/30 rounded-2xl px-4 py-2.5 flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-green-600 shrink-0" />
-            <p className="text-[10px] text-green-700 dark:text-green-400 font-bold">Verified concierge delivery. Pay securely upon confirmation.</p>
-          </div>
-        </div>
-
-        <div className="px-5 py-4 border-t border-gray-100 dark:border-slate-800 shrink-0">
-          <button onClick={handleProceedToPayment} disabled={placingOrder}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-black text-sm py-4 rounded-2xl transition active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg disabled:opacity-60">
-            <ShieldCheck className="w-4 h-4" />
-            {placingOrder ? 'Placing Order...' : `Confirm & Pay ₹${total}`}
-          </button>
-        </div>
-      </BottomSheet>
-
-      {/* ══════════════════════════════════════════════
-          SHEET 4: PAYMENT (UPI / QR / UTR)
-      ══════════════════════════════════════════════ */}
-      <BottomSheet open={sheet === 'payment'} onClose={() => {}}>
-        <div className="flex items-center justify-between px-5 pb-3 pt-1 border-b border-gray-100 dark:border-slate-800 shrink-0">
-          <h3 className="font-black text-base text-gray-900 dark:text-white">Complete Payment</h3>
-          <div className={`text-sm font-black px-3 py-1 rounded-full ${countdown > 60 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{fmtCountdown}</div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-          {/* Amount */}
-          <div className="bg-green-600 rounded-2xl p-4 text-center text-white">
-            <p className="text-[9px] font-black uppercase tracking-widest opacity-70 mb-1">AMOUNT TO PAY</p>
-            <p className="text-3xl font-black">₹{total}</p>
-            <p className="text-[10px] opacity-70 mt-1">Order {placedOrder?.id}</p>
-          </div>
-
-          {/* QR Code */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
-            <div className="flex items-center gap-2 mb-3"><QrCode className="w-4 h-4 text-gray-600 dark:text-gray-300" /><p className="font-bold text-sm text-gray-900 dark:text-white">Scan QR Code</p></div>
-            <div className="flex flex-col items-center">
-              <div className="w-44 h-44 bg-white border-4 border-gray-100 rounded-2xl p-2 flex items-center justify-center">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=${UPI_ID}&pn=${encodeURIComponent(UPI_NAME)}&am=${total}&cu=INR&tn=HomeSeva+Order+${placedOrder?.id}`}
-                  alt="UPI QR Code" className="w-full h-full rounded-xl"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
-              </div>
-              <div className="mt-3 flex items-center gap-2">
-                <div className="text-center">
-                  <p className="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-wider">{UPI_NAME}</p>
-                  <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{UPI_ID}</p>
-                </div>
-                <button onClick={copyUpiId} className="w-7 h-7 flex items-center justify-center bg-green-100 dark:bg-green-900/20 rounded-lg text-green-700">
-                  <Copy className="w-3 h-3" />
+                  <span
+                    className={`text-[10px] font-bold mt-1.5 ${
+                      isActive
+                        ? 'text-blue-600 dark:text-blue-400 font-extrabold'
+                        : isDone
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-gray-400'
+                    }`}
+                  >
+                    {s.label}
+                  </span>
                 </button>
-              </div>
-              <p className="text-[9px] text-gray-400 mt-1">Pay using Google Pay, PhonePe, Paytm, or any UPI app</p>
-            </div>
+              );
+            })}
           </div>
+        </div>
 
-          {/* Upload Screenshot */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
-            <div className="flex items-center gap-2 mb-3"><Upload className="w-4 h-4 text-gray-600 dark:text-gray-300" /><p className="font-bold text-sm text-gray-900 dark:text-white">Upload Payment Screenshot</p></div>
-            <label className="block cursor-pointer">
-              <input type="file" accept="image/*" onChange={handleScreenshotChange} className="hidden" />
-              {screenshotPreview ? (
-                <div className="relative">
-                  <img src={screenshotPreview} alt="Payment screenshot" className="w-full h-40 object-cover rounded-xl" />
-                  <div className="absolute top-2 right-2 bg-green-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
-                    {uploadingScreenshot ? <><RefreshCw className="w-2.5 h-2.5 animate-spin" /> Uploading</> : <><Check className="w-2.5 h-2.5" /> Uploaded</>}
-                  </div>
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-xl py-6 flex flex-col items-center gap-2 hover:border-green-400 transition">
-                  <Upload className="w-6 h-6 text-gray-400" />
-                  <p className="text-xs font-bold text-gray-500">Tap to upload screenshot</p>
-                  <p className="text-[9px] text-gray-400">JPG, PNG up to 5MB</p>
+        {/* Step Content */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {/* STEP 1: CART ITEMS */}
+          {checkoutStep === 1 && (
+            <div className="space-y-3">
+              {deliveryFee === 0 && subtotal > 0 && (
+                <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/30 rounded-2xl px-4 py-2.5 flex items-center gap-2">
+                  <span className="text-base">🎉</span>
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">Free delivery on this order!</span>
                 </div>
               )}
-            </label>
+              {storeSettings.delivery_threshold > 0 && subtotal > 0 && subtotal < storeSettings.delivery_threshold && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl px-4 py-2.5">
+                  <p className="text-xs font-bold text-amber-700 dark:text-amber-400">Add ₹{storeSettings.delivery_threshold - subtotal} more for <span className="underline">free delivery</span></p>
+                  <div className="mt-1.5 bg-amber-200/50 rounded-full h-1.5">
+                    <div className="bg-amber-500 h-1.5 rounded-full transition-all" style={{ width: `${Math.min(100, (subtotal / storeSettings.delivery_threshold) * 100)}%` }} />
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">CART ITEMS ({cartCount})</p>
+              {cart.map(item => (
+                <div key={item.product.id} className="flex items-center gap-3 bg-white dark:bg-slate-800/80 border border-gray-100 dark:border-slate-700/80 rounded-2xl p-3 shadow-sm">
+                  <img src={item.product.image} alt={item.product.name} className="w-14 h-14 rounded-xl object-cover shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=80'; }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-xs text-gray-900 dark:text-white line-clamp-1">{item.product.name}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">₹{item.product.price} × {item.qty} = <span className="font-bold text-gray-800 dark:text-gray-200">₹{item.product.price * item.qty}</span></p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => removeFromCart(item.product.id)}
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg transition ${item.qty === 1 ? 'bg-red-50 dark:bg-red-950/20 text-red-500 hover:bg-red-100' : 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300'}`}>
+                      {item.qty === 1 ? <Trash2 className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
+                    </button>
+                    <span className="font-black text-xs w-6 text-center text-gray-900 dark:text-white">{item.qty}</span>
+                    <button onClick={() => addToCart(item.product)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition">
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* STEP 2: ADDRESS (Matches Screenshot 3) */}
+          {checkoutStep === 2 && (
+            <div className="space-y-4">
+              {!user && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl px-4 py-3 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <p className="text-xs text-amber-700 dark:text-amber-400 font-bold">Please <button onClick={() => navigate('/login')} className="underline">login</button> to manage saved addresses</p>
+                </div>
+              )}
+
+              <div>
+                <div className="flex items-center gap-1.5 mb-3">
+                  <MapPin className="w-4 h-4 text-blue-600" />
+                  <p className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Saved Addresses</p>
+                </div>
+
+                {addresses.length === 0 && !showAddAddrForm && (
+                  <p className="text-xs text-gray-400 italic bg-gray-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-gray-100 dark:border-slate-700 text-center">No saved addresses yet. Tap below to add one.</p>
+                )}
+
+                <div className="space-y-2.5">
+                  {addresses.map(addr => (
+                    <button
+                      key={addr.id}
+                      onClick={() => setSelectedAddr(addr)}
+                      className={`w-full flex items-start gap-3 p-4 rounded-2xl border-2 text-left transition ${
+                        selectedAddr?.id === addr.id
+                          ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 ring-2 ring-blue-500/20'
+                          : 'border-gray-150 dark:border-slate-800 bg-white dark:bg-slate-800/60 hover:border-blue-300'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                        selectedAddr?.id === addr.id ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 dark:border-slate-600'
+                      }`}>
+                        {selectedAddr?.id === addr.id && <div className="w-2 h-2 rounded-full bg-white" />}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300">{addr.label}</span>
+                        </div>
+                        <p className="text-xs font-bold text-gray-900 dark:text-white mt-1.5 leading-snug">{addr.address}{addr.landmark ? `, ${addr.landmark}` : ''}</p>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{addr.city}, {addr.state} - {addr.pincode}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Add New Address Toggle / Form */}
+              <div className="pt-2">
+                <p className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">Or Add New Address</p>
+                {!showAddAddrForm ? (
+                  <button
+                    onClick={() => setShowAddAddrForm(true)}
+                    className="w-full border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-300 hover:border-blue-400 hover:text-blue-600 transition"
+                  >
+                    <Plus className="w-4 h-4" /> Add New Address
+                  </button>
+                ) : (
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-200 dark:border-slate-700 space-y-3 shadow-sm">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-bold text-sm text-gray-900 dark:text-white">New Address Details</p>
+                      <button onClick={() => setShowAddAddrForm(false)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['Home', 'Office', 'Other'] as const).map(l => (
+                        <button key={l} onClick={() => setAddrForm(f => ({ ...f, label: l }))}
+                          className={`py-2 rounded-xl text-xs font-bold border transition ${addrForm.label === l ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-400'}`}>{l}</button>
+                      ))}
+                    </div>
+                    {[
+                      { key: 'name', placeholder: 'Full Name', required: false },
+                      { key: 'phone', placeholder: 'Phone Number', required: false },
+                      { key: 'address', placeholder: 'House No, Street, Area *', required: true },
+                      { key: 'landmark', placeholder: 'Landmark (optional)', required: false },
+                      { key: 'city', placeholder: 'City *', required: true },
+                      { key: 'pincode', placeholder: 'Pincode *', required: true },
+                    ].map(({ key, placeholder }) => (
+                      <input key={key} value={(addrForm as any)[key]} onChange={e => setAddrForm(f => ({ ...f, [key]: e.target.value }))}
+                        placeholder={placeholder} className="w-full h-10 px-3 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-xs text-gray-900 dark:text-white outline-none focus:border-blue-500 transition" />
+                    ))}
+                    <button onClick={handleSaveAddress} disabled={savingAddr}
+                      className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition disabled:opacity-60">
+                      {savingAddr ? 'Saving...' : 'Save Address'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: COUPON (Matches Screenshot 2) */}
+          {checkoutStep === 3 && (
+            <div className="space-y-4">
+              {/* Apply Coupon Code Input */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-200 dark:border-slate-700 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <Tag className="w-4 h-4 text-blue-600" />
+                  <p className="font-bold text-xs text-gray-900 dark:text-white">Apply Coupon Code</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Enter Coupon Code (e.g. FIRST50)"
+                    value={coupon}
+                    onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                    disabled={couponApplied}
+                    className="flex-1 h-11 px-4 rounded-xl bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-xs font-bold text-gray-900 dark:text-white uppercase outline-none focus:border-blue-500 transition"
+                  />
+                  {couponApplied ? (
+                    <button
+                      onClick={removeCoupon}
+                      className="h-11 px-4 bg-red-100 hover:bg-red-200 text-red-600 text-xs font-bold rounded-xl transition"
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => applyCoupon()}
+                      disabled={validatingCoupon || !coupon.trim()}
+                      className="h-11 px-5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-md shadow-blue-500/20"
+                    >
+                      {validatingCoupon ? 'Validating...' : 'Apply'}
+                    </button>
+                  )}
+                </div>
+                {couponApplied && (
+                  <div className="mt-3 flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 p-3 rounded-xl border border-emerald-200/60">
+                    <span>Coupon {appliedCouponCode || coupon} Applied Successfully!</span>
+                    <span>-₹{discount}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* AVAILABLE COUPONS */}
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">AVAILABLE COUPONS</p>
+                <div className="space-y-2.5">
+                  {[
+                    { code: 'FIRST50', discount: 50, type: 'percent', maxDiscount: 200, minOrder: 199, description: '50% off on first booking (max ₹200)' },
+                    { code: 'CLEAN20', discount: 20, type: 'percent', maxDiscount: 500, minOrder: 999, description: '20% off on cleaning services (max ₹500)' },
+                    { code: 'FLAT100', discount: 100, type: 'flat', maxDiscount: 100, minOrder: 499, description: 'Flat ₹100 off on orders above ₹499' },
+                    { code: 'NEW200', discount: 200, type: 'flat', maxDiscount: 200, minOrder: 499, description: 'Flat ₹200 off on orders above ₹499' },
+                  ].map((c) => (
+                    <div
+                      key={c.code}
+                      className="bg-blue-50/50 dark:bg-blue-950/10 border-2 border-dashed border-blue-200 dark:border-blue-900/40 rounded-2xl p-3.5 flex items-center justify-between transition hover:border-blue-400"
+                    >
+                      <div>
+                        <span className="font-black text-xs text-blue-600 dark:text-blue-400">{c.code}</span>
+                        <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5">{c.description}</p>
+                      </div>
+                      <button
+                        onClick={() => applyCoupon(c.code)}
+                        className="text-xs font-black text-blue-600 dark:text-blue-400 hover:text-blue-800 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-900/50 shadow-sm transition active:scale-95 cursor-pointer"
+                      >
+                        Use Code
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: PAYMENT (Matches Screenshot 1) */}
+          {checkoutStep === 4 && (
+            <div className="space-y-4">
+              {/* Razorpay Unified Payments Card */}
+              <div className="bg-white dark:bg-slate-800 border-2 border-blue-500/80 dark:border-blue-600 rounded-3xl p-5 shadow-xl shadow-blue-500/5 relative overflow-hidden">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="w-5 h-5 text-blue-600" />
+                    <h4 className="font-black text-sm text-gray-900 dark:text-white">Razorpay Unified Payments (UPI Only)</h4>
+                  </div>
+                  <span className="text-[9px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-200">
+                    🛡️ STRICT SECURITY
+                  </span>
+                </div>
+
+                {/* Gateway Box */}
+                <div className="bg-blue-50/60 dark:bg-blue-950/20 border-2 border-blue-500 rounded-2xl p-4 mb-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs">
+                        Razorpay
+                      </div>
+                      <div>
+                        <p className="font-black text-xs text-gray-900 dark:text-white">UPI Payment Gateway</p>
+                        <p className="text-[9px] text-gray-500">Instant & Encrypted via Razorpay SDK</p>
+                      </div>
+                    </div>
+                    <Check className="w-5 h-5 text-blue-600" strokeWidth={3} />
+                  </div>
+
+                  {/* App Badges */}
+                  <div className="grid grid-cols-4 gap-1.5 text-center">
+                    {['Google Pay', 'PhonePe', 'Paytm', 'BHIM / QR'].map(app => (
+                      <div key={app} className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 py-2 rounded-xl text-[9px] font-bold text-gray-700 dark:text-gray-300 shadow-2xs">
+                        {app}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Lock notice */}
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-xl p-3 flex items-start gap-2 text-[11px] text-amber-800 dark:text-amber-300">
+                  <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span>Cards, Net Banking, EMI, and Wallets are fully supported. Razorpay signature verification protects your order.</span>
+                </div>
+              </div>
+
+              {/* Price Breakdown Table */}
+              <div className="bg-white dark:bg-slate-800 rounded-3xl border border-gray-200 dark:border-slate-700 p-4 space-y-2.5 shadow-sm">
+                <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                  <span>Base Product/Service Price:</span>
+                  <span className="font-bold text-gray-900 dark:text-white">₹{subtotal}</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex items-center justify-between text-xs text-emerald-600 dark:text-emerald-400">
+                    <span>Coupon Discount Applied:</span>
+                    <span className="font-black">-₹{discount}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                  <span>Delivery & Platform Fee:</span>
+                  <span className="font-bold text-gray-900 dark:text-white">{deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}</span>
+                </div>
+                <div className="border-t border-gray-100 dark:border-slate-700 pt-2 flex items-center justify-between">
+                  <span className="text-sm font-black text-gray-900 dark:text-white">Total Amount Payable:</span>
+                  <span className="text-base font-black text-blue-600 dark:text-blue-400">₹{total}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sticky Bottom Bar (Matches Screenshots 1, 2, 3) */}
+        <div className="px-5 py-4 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 shrink-0 flex items-center justify-between gap-3 shadow-2xl">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">TOTAL PAYABLE</p>
+            <p className="text-2xl font-black text-blue-600 dark:text-blue-400">₹{total}</p>
           </div>
 
-          {/* Real UTR Verification Flow */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 p-4">
+          <div className="flex items-center gap-2">
+            {checkoutStep > 1 && (
+              <button
+                onClick={() => setCheckoutStep(s => Math.max(1, s - 1) as any)}
+                className="w-11 h-12 rounded-2xl border-2 border-gray-200 dark:border-slate-700 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            )}
 
-            {!showUtrInput ? (
-              <>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center mb-3">After scanning and paying on your UPI app, tap the button below.</p>
-                <button
-                  onClick={handleDetectPayment}
-                  disabled={detectingPayment}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm py-4 rounded-xl transition active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg disabled:opacity-80"
-                >
-                  {detectingPayment ? (
-                    <div className="flex items-center gap-2">
-                      <RefreshCw className="w-5 h-5 animate-spin" />
-                      Listening for Google Pay...
-                    </div>
-                  ) : 'I have scanned and paid'}
-                </button>
-              </>
+            {checkoutStep < 4 ? (
+              <button
+                onClick={() => {
+                  if (checkoutStep === 2 && !selectedAddr) {
+                    toast('Please select a delivery address', 'error');
+                    return;
+                  }
+                  setCheckoutStep(s => Math.min(4, s + 1) as any);
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-black text-sm h-12 px-8 rounded-2xl transition active:scale-[0.98] shadow-lg shadow-blue-600/30 flex items-center gap-2"
+              >
+                Continue →
+              </button>
             ) : (
-              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div>
-                  <div className="flex items-center gap-2 mb-2"><Smartphone className="w-4 h-4 text-gray-600 dark:text-gray-300" /><p className="font-bold text-sm text-gray-900 dark:text-white">Enter UTR / Reference Number</p></div>
-                  <input value={utrInput} onChange={e => setUtrInput(e.target.value.replace(/\D/g, '').slice(0, 12))}
-                    placeholder="12-digit UPI UTR number" maxLength={12}
-                    className="w-full h-12 px-4 rounded-xl bg-gray-50 dark:bg-slate-900 border-2 border-gray-150 dark:border-slate-700 text-sm font-bold font-mono tracking-widest text-center outline-none focus:border-green-500 transition" />
-                  <p className="text-[9px] text-gray-400 mt-1.5 text-center">Please enter the 12-digit reference number from your bank app.</p>
-                </div>
-                
-                <button onClick={() => handleSubmitPayment()} disabled={placingOrder || !utrInput || utrInput.length < 12}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-black text-sm py-4 rounded-xl transition active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg disabled:opacity-60">
-                  {placingOrder ? 'Submitting...' : 'Submit Payment for Verification'}
-                </button>
-                <p className="text-gray-500 text-sm mt-2">
-                  Your payment will be verified instantly via bank logs.
-                </p>
-              </div>
+              <button
+                onClick={handleRazorpayStoreCheckout}
+                disabled={placingOrder}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-black text-sm h-12 px-6 rounded-2xl transition active:scale-[0.98] shadow-lg shadow-blue-600/30 flex items-center gap-2 disabled:opacity-60"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                {placingOrder ? 'Initializing...' : '📱 Pay & Confirm via Razorpay UPI'}
+              </button>
             )}
           </div>
         </div>
       </BottomSheet>
+
+
 
       {/* ══════════════════════════════════════════════
           SHEET 5: ORDER SUCCESS
@@ -929,8 +1117,8 @@ export function StorePage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500">Payment Status</span>
-                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${payMethod === 'cod' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
-                  {payMethod === 'cod' ? 'Cash on Delivery' : 'Verification Pending'}
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                  Paid Online (Verified ✓)
                 </span>
               </div>
             </div>
@@ -949,6 +1137,16 @@ export function StorePage() {
         </div>
 
         <div className="px-5 py-4 border-t border-gray-100 dark:border-slate-800 shrink-0 space-y-2">
+          {placedOrder?.id && (
+            <a
+              href={apiClient.downloadInvoicePdfUrl(placedOrder.id)}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs py-3 rounded-2xl transition flex items-center justify-center gap-2 border border-indigo-200"
+            >
+              📄 Download Invoice PDF
+            </a>
+          )}
           <button onClick={() => { if (placedOrder?.id) navigate(`/store/order/${placedOrder.id}`); else navigate('/store/orders'); setSheet('none'); }}
             className="w-full bg-green-600 hover:bg-green-700 text-white font-black text-sm py-3.5 rounded-2xl transition active:scale-[0.98] shadow-lg">
             Track Order →

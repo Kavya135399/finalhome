@@ -159,7 +159,7 @@ export function BookingPage() {
     processUPIPayment({
       productName: service.name,
       productId: service.id,
-      amount: service.price,
+      amount: total,
       discount: discount,
       customerName: user.name || 'Valued Customer',
       email: user.email || 'customer@homeseva.com',
@@ -167,6 +167,7 @@ export function BookingPage() {
       address: finalAddressObj,
       bookingDate: selectedDate,
       bookingTime: slot,
+      showAllMethods: false,
       onSuccess: (resData) => {
         setProcessingPayment(false);
         toast('Payment Verified & Booking Confirmed!', 'success');

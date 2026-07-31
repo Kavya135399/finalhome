@@ -37,6 +37,7 @@ export interface PaymentOptions {
   address?: any;
   bookingDate?: string;
   bookingTime?: string;
+  showAllMethods?: boolean;
   onSuccess: (data: { bookingId: string; invoiceNumber: string; booking: any }) => void;
   onFailure: (error: string) => void;
 }
@@ -64,6 +65,7 @@ export const processUPIPayment = async (options: PaymentOptions) => {
           productId: options.productId,
           amount: options.amount,
           discount: options.discount || 0,
+          isStoreOrder: options.productId === 'store_order' || (typeof options.productId === 'string' && options.productId.startsWith('sp_')),
           customerName: options.customerName,
           email: options.email,
           phoneNumber: options.phoneNumber,
@@ -148,7 +150,7 @@ export const processUPIPayment = async (options: PaymentOptions) => {
       key: orderData.keyId,
       amount: orderData.amount, // in paise
       currency: orderData.currency || 'INR',
-      name: 'HomeSeva Services',
+      name: 'HomeSeva Services & Store',
       description: `Payment for ${options.productName}`,
       order_id: orderData.orderId,
       prefill: {
@@ -156,24 +158,25 @@ export const processUPIPayment = async (options: PaymentOptions) => {
         email: options.email,
         contact: options.phoneNumber,
       },
-      config: {
-        display: {
-          blocks: {
-            upi_qr: {
-              name: 'Scan QR Code or Pay via UPI (GPay, PhonePe, Paytm)',
-              instruments: [
-                { method: 'upi' },
-                { method: 'qr' }
-              ],
-            },
-          },
-          sequence: ['block.upi_qr'],
-          preferences: { show_default_blocks: false },
-        },
-      },
       theme: {
         color: '#4F46E5',
       },
+      ...(options.showAllMethods
+        ? {}
+        : {
+            config: {
+              display: {
+                blocks: {
+                  upi_qr: {
+                    name: 'Scan QR Code or Pay via UPI (GPay, PhonePe, Paytm)',
+                    instruments: [{ method: 'upi' }, { method: 'qr' }],
+                  },
+                },
+                sequence: ['block.upi_qr'],
+                preferences: { show_default_blocks: false },
+              },
+            },
+          }),
       handler: async function (response: {
         razorpay_payment_id: string;
         razorpay_order_id: string;

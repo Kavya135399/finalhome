@@ -45,9 +45,22 @@ export const createOrder = async (req, res) => {
     }
 
     const baseAmount = Number(amount);
-    const gst = Math.round(baseAmount * 0.18);
     const discount = req.body.discount ? Number(req.body.discount) : 0;
-    const finalAmount = Math.max(1, baseAmount + gst - discount);
+    const isStoreOrder = Boolean(
+      req.body.isStoreOrder ||
+      req.body.exactTotal ||
+      productId === 'store_order' ||
+      (typeof productId === 'string' && (productId.startsWith('sp_') || productId.startsWith('store'))) ||
+      (typeof productName === 'string' && productName.toLowerCase().includes('store'))
+    );
+
+    // The amount sent by frontend is ALREADY the exact total payable shown to the user on the screen.
+    // Do NOT add GST on top, as prices are already tax-inclusive.
+    let finalAmount = Math.max(1, Math.round(baseAmount));
+    if (!isStoreOrder && discount > 0 && baseAmount > discount && baseAmount === Number(req.body.basePrice)) {
+      finalAmount = Math.max(1, Math.round(baseAmount - discount));
+    }
+    const gst = Math.round(finalAmount * 0.1525); // tax portion included in final total
 
     const receipt = `rcpt_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const order = await createRazorpayOrder({

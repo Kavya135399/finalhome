@@ -459,7 +459,7 @@ export const apiClient = {
     const res = await api.get(`/bookings/${id}`);
     return res.data;
   },
-  async downloadInvoicePdfUrl(id: string) {
+  downloadInvoicePdfUrl(id: string) {
     return `${BASE_URL}/bookings/${id}/invoice`;
   },
   async cancelCustomerBooking(id: string) {
@@ -484,6 +484,21 @@ export const apiClient = {
   },
   async deletePromo(id: string) {
     const res = await api.delete(`/promos/${id}`);
+    return res.data;
+  },
+
+  // 21. Coupon Validation & Store Razorpay
+  async validateCoupon(code: string, subtotal: number) {
+    const res = await api.post('/coupons/validate', { code, subtotal });
+    return res.data;
+  },
+  async verifyStoreRazorpayPayment(data: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+    orderDetails: any;
+  }) {
+    const res = await api.post('/store/orders/verify-razorpay', data);
     return res.data;
   }
 };
