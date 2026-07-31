@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   ShieldCheck,
@@ -10,17 +9,11 @@ import {
   CalendarCheck,
   UserCheck,
   ChevronDown,
-  ChevronRight,
 } from 'lucide-react';
 import { Hero } from '../components/Hero';
-import { ServiceCard } from '../components/ServiceCard';
-import { ProfessionalCard } from '../components/ProfessionalCard';
-import { TestimonialCard } from '../components/TestimonialCard';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../context/ToastContext';
-import { services, professionals, testimonials, faqs } from '../data/sampleData';
-import { apiClient } from '../services/apiClient';
-import type { Service } from '../types';
+import { faqs } from '../data/sampleData';
 
 const whyChoose = [
   {
@@ -96,15 +89,6 @@ export function HomePage() {
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [servicesList, setServicesList] = useState<Service[]>([]);
-
-  useEffect(() => {
-    apiClient.getServices()
-      .then((data) => setServicesList(data))
-      .catch(() => setServicesList(services));
-  }, []);
-
-  const popularServices = servicesList.filter((s) => s.popular);
 
   const subscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,39 +101,6 @@ export function HomePage() {
     <div className="flex flex-col flex-1 bg-gray-50 dark:bg-slate-950">
       {/* Compact mobile landing header & search */}
       <Hero />
-
-      {/* Popular Services Section (List of horizontal cards, grid on desktop) */}
-      <section className="bg-white dark:bg-slate-900 border-t border-gray-150 dark:border-slate-800/60">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-extrabold text-gray-900 dark:text-white">Trending Services</h2>
-            <Link to="/services" className="text-xs font-bold text-brand-600 dark:text-brand-400 flex items-center gap-0.5">
-              See all <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {popularServices.slice(0, 6).map((s, i) => (
-              <ServiceCard key={s.id} service={s} index={i} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Professionals (Horizontal scroll on mobile, grid on desktop) */}
-      <section className="w-full">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-extrabold text-gray-900 dark:text-white">Top Rated Professionals</h2>
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar scroll-smooth md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:overflow-x-visible md:pb-0 md:gap-6">
-            {professionals.map((p, i) => (
-              <div key={p.id} className="shrink-0 w-64 md:w-auto snap-center">
-                <ProfessionalCard professional={p} index={i} />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Why Choose Us (Compact 2x2 Grid, 4 columns on desktop with 3D animation) */}
       <section className="bg-white dark:bg-slate-900 border-y border-gray-150 dark:border-slate-800/60">
@@ -202,20 +153,6 @@ export function HomePage() {
 
                 <h3 className="font-extrabold text-xs sm:text-sm text-gray-900 dark:text-white mt-1 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors duration-200">{step.title}</h3>
                 <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{step.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Carousel (Grid on desktop) */}
-      <section className="bg-white dark:bg-slate-900 border-t border-gray-150 dark:border-slate-800/60">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <h2 className="text-sm font-extrabold text-gray-900 dark:text-white mb-4">Loved by our Customers</h2>
-          <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-3 xl:grid-cols-4 md:gap-6 md:overflow-x-visible">
-            {testimonials.map((t, i) => (
-              <div key={t.id} className="shrink-0 w-64 md:w-auto snap-center">
-                <TestimonialCard testimonial={t} index={i} />
               </div>
             ))}
           </div>

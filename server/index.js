@@ -139,6 +139,31 @@ const db = new sqlite3.Database(dbFile, (err) => {
           timestamp TEXT
         )
       `);
+      db.run(`
+        CREATE TABLE IF NOT EXISTS promos (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          desc TEXT NOT NULL,
+          code TEXT NOT NULL,
+          bg TEXT NOT NULL,
+          icon TEXT DEFAULT 'Gift',
+          status TEXT DEFAULT 'active',
+          created_at TEXT NOT NULL
+        )
+      `);
+      db.get('SELECT COUNT(*) as cnt FROM promos', (err, row) => {
+        if (!err && row && row.cnt === 0) {
+          const defaultPromos = [
+            { id: 'p_1', title: 'Flat ₹200 OFF', desc: 'On your first service booking', code: 'NEW200', bg: 'from-brand-600 to-blue-500', icon: 'Gift' },
+            { id: 'p_2', title: 'Deep Cleaning Special', desc: 'Up to 30% OFF this weekend', code: 'CLEAN30', bg: 'from-emerald-600 to-teal-500', icon: 'Sparkles' },
+            { id: 'p_3', title: 'Safe & Verified Pros', desc: 'All tools sanitized before entry', code: 'SAFETYFIRST', bg: 'from-amber-600 to-orange-500', icon: 'ShieldCheck' },
+          ];
+          defaultPromos.forEach(p => {
+            db.run('INSERT OR IGNORE INTO promos (id, title, desc, code, bg, icon, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+              [p.id, p.title, p.desc, p.code, p.bg, p.icon, 'active', new Date().toISOString()]);
+          });
+        }
+      });
 
       // Seed default demo accounts if missing
       const hashedDemoPwd = bcrypt.hashSync('password', 10);
@@ -1116,24 +1141,62 @@ app.get('/api/coupons', async (req, res) => {
 });
 
 // ==========================================
+// Promos & Special Offers APIs
+// ==========================================
+app.get('/api/promos', async (req, res) => {
+  try {
+    const promos = await dbAll('SELECT * FROM promos ORDER BY created_at DESC');
+    res.json(promos);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/promos', authenticateToken, async (req, res) => {
+  try {
+    const { title, desc, code, bg = 'from-brand-600 to-blue-500', icon = 'Gift', status = 'active' } = req.body;
+    if (!title || !desc || !code) return res.status(400).json({ error: 'Title, description and discount code are required' });
+    const id = `p_${Date.now()}`;
+    const createdAt = new Date().toISOString();
+    await dbRun(
+      'INSERT INTO promos (id, title, desc, code, bg, icon, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, title, desc, code, bg, icon, status, createdAt]
+    );
+    res.status(201).json({ id, title, desc, code, bg, icon, status, created_at: createdAt });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/promos/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await dbRun('DELETE FROM promos WHERE id = ?', [id]);
+    res.json({ success: true, message: 'Offer deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
 // Favorites CRUD
 // ==========================================
 app.get('/api/favorites', authenticateToken, async (req, res) => {
   try {
-    if (!req.user || req.user.id === 'admin') return res.json([]);
-    const favs = await dbAll('SELECT * FROM favorites WHERE user_id = ?', [req.user.id]);
+    const userId = req.user ? req.user.id : 'default_user';
+    const favs = await dbAll('SELECT * FROM favorites WHERE user_id = ?', [userId]);
     res.json(favs);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/favorites', authenticateToken, async (req, res) => {
   try {
-    if (!req.user || req.user.id === 'admin') return res.status(401).json({ error: 'Unauthorized' });
+    const userId = req.user ? req.user.id : 'default_user';
     const { item_id, item_type } = req.body;
-    const existing = await dbGet('SELECT * FROM favorites WHERE user_id = ? AND item_id = ? AND item_type = ?', [req.user.id, item_id, item_type]);
+    const existing = await dbGet('SELECT * FROM favorites WHERE user_id = ? AND item_id = ? AND item_type = ?', [userId, item_id, item_type]);
     if (existing) return res.json(existing);
     const favId = `fav_${Date.now()}`;
-    await dbRun('INSERT INTO favorites (id, user_id, item_id, item_type, created_at) VALUES (?, ?, ?, ?, ?)', [favId, req.user.id, item_id, item_type, new Date().toISOString()]);
+    await dbRun('INSERT INTO favorites (id, user_id, item_id, item_type, created_at) VALUES (?, ?, ?, ?, ?)', [favId, userId, item_id, item_type, new Date().toISOString()]);
     const created = await dbGet('SELECT * FROM favorites WHERE id = ?', [favId]);
     res.json(created);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -1141,9 +1204,9 @@ app.post('/api/favorites', authenticateToken, async (req, res) => {
 
 app.delete('/api/favorites/:itemId/:itemType', authenticateToken, async (req, res) => {
   try {
-    if (!req.user || req.user.id === 'admin') return res.status(401).json({ error: 'Unauthorized' });
+    const userId = req.user ? req.user.id : 'default_user';
     const { itemId, itemType } = req.params;
-    await dbRun('DELETE FROM favorites WHERE user_id = ? AND item_id = ? AND item_type = ?', [req.user.id, itemId, itemType]);
+    await dbRun('DELETE FROM favorites WHERE user_id = ? AND item_id = ? AND item_type = ?', [userId, itemId, itemType]);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

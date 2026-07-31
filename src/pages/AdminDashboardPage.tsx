@@ -16,6 +16,7 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { OverviewTab } from '../components/admin/OverviewTab';
+import { OffersTab } from '../components/admin/OffersTab';
 import {
   services as mockServices,
   userBookings as mockBookings,
@@ -122,7 +123,7 @@ const packagesData = [
   }
 ];
 
-type AdminTab = 'overview' | 'services' | 'store_orders' | 'meal_orders' | 'plumbing_orders' | 'taxi' | 'premium_orders' | 'deep_clean_orders' | 'catering_orders' | 'electrical_orders' | 'settings';
+type AdminTab = 'overview' | 'offers' | 'services' | 'store_orders' | 'meal_orders' | 'plumbing_orders' | 'taxi' | 'premium_orders' | 'deep_clean_orders' | 'catering_orders' | 'electrical_orders' | 'settings';
 
 
 
@@ -1282,6 +1283,7 @@ export function AdminDashboardPage() {
           <nav className="space-y-1 select-none">
             {[
               { id: 'overview', label: 'Dashboard Overview', icon: Activity },
+              { id: 'offers', label: 'Special Offers & Promos', icon: Tag },
               { id: 'services', label: 'Service Catalog', icon: Wrench },
               { id: 'store_orders', label: 'Store Orders', icon: ShoppingBag },
               { id: 'meal_orders', label: 'Meal Orders', icon: Calendar },
@@ -1354,6 +1356,8 @@ export function AdminDashboardPage() {
                 setActiveTab={setActiveTab}
               />
             )}
+
+            {activeTab === 'offers' && <OffersTab />}
 
             {/* 2. USER MANAGEMENT TAB */}
             {activeTab === 'taxi' && (

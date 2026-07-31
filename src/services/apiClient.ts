@@ -471,6 +471,20 @@ export const apiClient = {
   async getAnalytics() {
     const res = await api.get('/analytics');
     return res.data;
+  },
+
+  // 20. Promos & Offers Management
+  async getPromos() {
+    const res = await api.get('/promos');
+    return res.data;
+  },
+  async addPromo(promoData: any) {
+    const res = await api.post('/promos', promoData);
+    return res.data;
+  },
+  async deletePromo(id: string) {
+    const res = await api.delete(`/promos/${id}`);
+    return res.data;
   }
 };
 
