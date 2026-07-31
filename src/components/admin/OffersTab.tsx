@@ -56,9 +56,9 @@ export const OffersTab: React.FC = () => {
   const getStoredPromos = (): PromoOffer[] => {
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : null;
+      return stored ? JSON.parse(stored) : defaultAdminPromos;
     } catch {
-      return null;
+      return defaultAdminPromos;
     }
   };
 

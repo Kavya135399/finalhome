@@ -54,34 +54,26 @@ const howSteps = [
   {
     icon: Search,
     title: 'Select Service',
-    desc: 'Browse and choose what you need.',
+    desc: 'Browse and choose the service you need.',
     gradient: 'from-blue-500 to-indigo-600',
-    shadowClass: 'shadow-blue-500/20 dark:shadow-blue-950/30',
-    hoverBg: 'hover:border-blue-500/20 dark:hover:border-blue-800/40 hover:shadow-[0_12px_30px_rgba(37,99,235,0.08)] dark:hover:shadow-[0_12px_30px_rgba(37,99,235,0.2)]'
   },
   {
     icon: CalendarCheck,
-    title: 'Pick Slot',
-    desc: 'Select date and time that works.',
+    title: 'Pick Date & Time',
+    desc: 'Choose your preferred schedule.',
     gradient: 'from-purple-500 to-fuchsia-600',
-    shadowClass: 'shadow-purple-500/20 dark:shadow-purple-950/30',
-    hoverBg: 'hover:border-purple-500/20 dark:hover:border-purple-800/40 hover:shadow-[0_12px_30px_rgba(168,85,247,0.08)] dark:hover:shadow-[0_12px_30px_rgba(168,85,247,0.2)]'
   },
   {
     icon: UserCheck,
-    title: 'Get Matched',
-    desc: 'We assign the best rated pro.',
-    gradient: 'from-indigo-500 to-brand-650',
-    shadowClass: 'shadow-indigo-500/20 dark:shadow-indigo-950/30',
-    hoverBg: 'hover:border-indigo-500/20 dark:hover:border-indigo-800/40 hover:shadow-[0_12px_30px_rgba(99,102,241,0.08)] dark:hover:shadow-[0_12px_30px_rgba(99,102,241,0.2)]'
+    title: 'Confirm Booking',
+    desc: 'Review details and complete payment.',
+    gradient: 'from-indigo-500 to-brand-600',
   },
   {
     icon: ShieldCheck,
-    title: 'Relax & Enjoy',
-    desc: 'OTP-verified tracking.',
+    title: 'Enjoy Service',
+    desc: 'Our professional arrives at your location.',
     gradient: 'from-emerald-500 to-teal-600',
-    shadowClass: 'shadow-emerald-500/20 dark:shadow-emerald-950/30',
-    hoverBg: 'hover:border-emerald-500/20 dark:hover:border-emerald-800/40 hover:shadow-[0_12px_30px_rgba(16,185,129,0.08)] dark:hover:shadow-[0_12px_30px_rgba(16,185,129,0.2)]'
   },
 ];
 
@@ -126,35 +118,80 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* How it works (Horizontal steps scroll, 4 columns grid on desktop with 3D guide lines) */}
-      <section className="w-full">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <h2 className="text-sm font-extrabold text-gray-900 dark:text-white mb-4">How it works</h2>
-          <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar md:grid md:grid-cols-4 md:gap-6 md:overflow-x-visible">
-            {howSteps.map((step, i) => (
-              <div
-                key={step.title}
-                className={`group relative shrink-0 w-64 md:w-auto bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-150 dark:border-slate-800/60 shadow-soft transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lg dark:hover:shadow-none ${step.hoverBg}`}
-              >
-                {/* 3D Connector Line for desktop (drawn between cards) */}
-                {i < howSteps.length - 1 && (
-                  <div className="hidden lg:block absolute top-10 left-[calc(100%-8px)] w-[calc(100%-48px)] h-0.5 border-t-2 border-dashed border-gray-200 dark:border-slate-800 z-0 pointer-events-none" />
-                )}
+      {/* How It Works (Premium Vertical Timeline) */}
+      <section className="w-full py-8 md:py-14 bg-white/50 dark:bg-slate-900/40 border-y border-gray-150/60 dark:border-slate-800/60 overflow-hidden">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <div className="text-center max-w-xl mx-auto mb-10 md:mb-14">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 text-xs font-bold tracking-wide uppercase mb-2 border border-brand-200/50 dark:border-brand-800/50">
+              Process Roadmap
+            </span>
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+              How It Works
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
+              Get your home services completed effortlessly in 4 simple steps
+            </p>
+          </div>
 
-                {/* Floating Step Number */}
-                <div className="absolute top-3.5 right-3.5 w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-gray-900 text-xs font-black flex items-center justify-center shadow-md dark:shadow-orange-950/50 select-none z-10">
-                  {i + 1}
-                </div>
+          <div className="relative pl-10 sm:pl-14 md:pl-16">
+            {/* Background vertical line */}
+            <div className="absolute left-[19px] sm:left-[27px] md:left-[31px] top-6 bottom-8 w-1 bg-gray-200 dark:bg-slate-800 rounded-full z-0" />
 
-                {/* 3D sphere styled step icon box */}
-                <div className={`relative w-11 h-11 rounded-2xl bg-gradient-to-br ${step.gradient} text-white flex items-center justify-center shadow-md ${step.shadowClass} mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 z-10`}>
-                  <step.icon className="w-5.5 h-5.5 text-white drop-shadow-[0_1.5px_1.5px_rgba(0,0,0,0.15)]" />
-                </div>
+            {/* Growing animated timeline gradient line */}
+            <motion.div
+              initial={{ scaleY: 0 }}
+              whileInView={{ scaleY: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.2, ease: "easeOut" }}
+              className="absolute left-[19px] sm:left-[27px] md:left-[31px] top-6 bottom-8 w-1 bg-gradient-to-b from-blue-500 via-purple-500 to-emerald-500 origin-top rounded-full z-0"
+            />
 
-                <h3 className="font-extrabold text-xs sm:text-sm text-gray-900 dark:text-white mt-1 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors duration-200">{step.title}</h3>
-                <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{step.desc}</p>
-              </div>
-            ))}
+            <div className="space-y-8 sm:space-y-10 md:space-y-12">
+              {howSteps.map((step, i) => (
+                <motion.div
+                  key={step.title}
+                  initial={{ opacity: 0, y: 35 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 0.5, delay: i * 0.12 }}
+                  className="relative flex items-start group"
+                >
+                  {/* Numbered Circular Icon Node on left timeline */}
+                  <div className="absolute -left-[40px] sm:-left-[56px] md:-left-[64px] top-4 transform -translate-x-1/2 z-10">
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br ${step.gradient} text-white font-extrabold text-sm sm:text-base flex items-center justify-center shadow-lg shadow-gray-200/80 dark:shadow-slate-950 border-4 border-white dark:border-slate-900 group-hover:scale-110 transition-transform duration-300`}>
+                      {i + 1}
+                    </div>
+                  </div>
+
+                  {/* Step Content Card on right */}
+                  <div className="w-full bg-white dark:bg-slate-900 p-5 sm:p-6 md:p-7 rounded-2xl md:rounded-3xl border border-gray-150/80 dark:border-slate-800/80 shadow-soft transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:border-brand-500/30 dark:hover:border-brand-500/40 relative overflow-hidden group-hover:ring-1 group-hover:ring-brand-500/20">
+                    {/* Step badge in card header */}
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/60 px-2.5 py-1 rounded-full border border-brand-200/40 dark:border-brand-800/40">
+                        Step 0{i + 1}
+                      </span>
+                    </div>
+
+                    <div className="flex items-start gap-4 sm:gap-5">
+                      {/* Gradient Step Icon */}
+                      <div className={`w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br ${step.gradient} text-white flex items-center justify-center shadow-md shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>
+                        <step.icon className="w-5.5 h-5.5 sm:w-6 sm:h-6 text-white drop-shadow-[0_1.5px_1.5px_rgba(0,0,0,0.15)]" />
+                      </div>
+
+                      {/* Content details */}
+                      <div className="flex-1">
+                        <h3 className="font-extrabold text-sm sm:text-base md:text-lg text-gray-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors duration-200">
+                          {step.title}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                          {step.desc}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

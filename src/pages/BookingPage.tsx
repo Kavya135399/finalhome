@@ -178,7 +178,7 @@ export function BookingPage() {
         setProcessingPayment(false);
         if (errMsg.includes('CANCELLED_BY_USER') || errMsg.toLowerCase().includes('cancelled by customer')) {
           const cleanMsg = errMsg.replace('CANCELLED_BY_USER: ', '');
-          toast(cleanMsg || 'Payment cancelled. Your slot and details are saved—click Pay to try again.', 'warning');
+          toast(cleanMsg || 'Payment cancelled. Your slot and details are saved—click Pay to try again.', 'info');
           return;
         }
         toast(errMsg, 'error');
