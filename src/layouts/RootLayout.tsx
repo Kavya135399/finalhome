@@ -9,8 +9,6 @@ import {
   User as UserIcon,
   ChevronLeft,
   Menu,
-  Sun,
-  Moon,
   X,
   Info,
   Mail,
@@ -22,14 +20,12 @@ import {
   Settings,
   Car,
 } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useNotifications } from '../context/NotificationContext';
 import { apiClient } from '../services/apiClient';
 
 export function RootLayout() {
-  const { theme, toggle } = useTheme();
   const { user, signOut, updateUser } = useAuth();
   const { toast } = useToast();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
@@ -180,14 +176,6 @@ export function RootLayout() {
           </div>
 
           <div className="flex items-center gap-1.5 relative">
-            <button
-              onClick={toggle}
-              className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 active-scale transition"
-              aria-label="Toggle theme"
-            >
-              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-            </button>
-
             {user ? (
               <>
                 {/* Notification Bell */}

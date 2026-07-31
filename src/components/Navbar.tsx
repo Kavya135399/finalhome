@@ -5,8 +5,6 @@ import {
   Home as HomeIcon,
   Menu,
   X,
-  Moon,
-  Sun,
   MapPin,
   ChevronDown,
   User as UserIcon,
@@ -14,7 +12,6 @@ import {
   LogOut,
   Wrench,
 } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/Button';
 import { cities } from '../data/sampleData';
@@ -27,7 +24,6 @@ const navLinks = [
 ];
 
 export function Navbar() {
-  const { theme, toggle } = useTheme();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
@@ -119,14 +115,6 @@ export function Navbar() {
 
           {/* Right actions */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={toggle}
-              className="p-2.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
-              aria-label="Toggle theme"
-            >
-              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-            </button>
-
             {user ? (
               <div className="relative hidden sm:block">
                 <button

@@ -202,25 +202,50 @@ export function BookingPage() {
         </div>
       </div>
 
-      {/* Steps Bar */}
-      <div className="flex items-center justify-between mb-8 relative">
-        <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gray-200 dark:bg-slate-800 -z-10 -translate-y-1/2" />
-        {steps.map((st, i) => (
-          <div key={st} className="flex flex-col items-center gap-1 bg-white dark:bg-slate-950 px-2">
+      {/* Smooth Gliding Stepper */}
+      <div className="w-full mb-10 mt-4 px-2 sm:px-4">
+        <div className="relative">
+          {/* Background Track */}
+          <div className="absolute top-5 sm:top-5 left-[12%] right-[12%] h-1.5 bg-gray-200 rounded-full z-0 overflow-hidden shadow-inner">
+            {/* Smooth Gliding Progress Bar */}
             <div
-              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all ${
-                i === step
-                  ? 'bg-brand-600 text-white ring-4 ring-brand-100 dark:ring-brand-950/60'
-                  : i < step
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-gray-150 dark:bg-slate-800 text-gray-400'
-              }`}
-            >
-              {i < step ? '✓' : i + 1}
-            </div>
-            <span className={`text-[10px] font-bold ${i === step ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400'}`}>{st}</span>
+              className="h-full bg-gradient-to-r from-brand-600 via-indigo-600 to-emerald-500 rounded-full transition-all duration-700 ease-in-out shadow-xs"
+              style={{
+                width: step === 0 ? '0%' : step === 1 ? '33.33%' : step === 2 ? '66.66%' : '100%',
+              }}
+            />
           </div>
-        ))}
+
+          {/* Step Nodes */}
+          <div className="relative z-10 flex items-center justify-between w-full">
+            {steps.map((st, i) => {
+              const isCompleted = i < step;
+              const isCurrent = i === step;
+              return (
+                <div key={st} className="flex flex-col items-center">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-extrabold transition-all duration-500 transform ${
+                      isCurrent
+                        ? 'bg-brand-600 text-white ring-8 ring-brand-500/20 shadow-lg shadow-brand-500/40 scale-110'
+                        : isCompleted
+                        ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/30 ring-4 ring-emerald-100'
+                        : 'bg-white border-2 border-gray-300 text-gray-400 shadow-xs'
+                    }`}
+                  >
+                    {isCompleted ? '✓' : i + 1}
+                  </div>
+                  <span
+                    className={`mt-2 text-xs sm:text-sm font-extrabold transition-colors duration-300 ${
+                      isCurrent ? 'text-brand-600 font-black' : isCompleted ? 'text-emerald-700 font-bold' : 'text-gray-400 font-medium'
+                    }`}
+                  >
+                    {st}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Step Contents */}

@@ -1,6 +1,5 @@
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { ChevronLeft, Moon, Sun, MapPin, ChevronDown } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext';
+import { ChevronLeft, MapPin, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { cities } from '../data/sampleData';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -8,7 +7,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 export function TopAppBar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { theme, toggle } = useTheme();
   
   const [city, setCity] = useState('Patan, Gujarat');
   const [cityOpen, setCityOpen] = useState(false);
@@ -97,16 +95,7 @@ export function TopAppBar() {
         )}
       </div>
 
-      <div className="flex items-center justify-end gap-1.5 w-1/4">
-        {/* Theme toggle action */}
-        <button
-          onClick={toggle}
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-600 dark:text-gray-300 transition touch-target"
-          aria-label="Toggle theme"
-        >
-          {theme === 'light' ? <Moon className="w-4.5 h-4.5" /> : <Sun className="w-4.5 h-4.5" />}
-        </button>
-      </div>
+      <div className="flex items-center justify-end gap-1.5 w-1/4"></div>
     </header>
   );
 }

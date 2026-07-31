@@ -36,7 +36,7 @@ export function OverviewTab({
   setActiveTab,
 }: OverviewTabProps) {
   // Animation variants
-  const containerVariants = {
+  const containerVariants: any = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
@@ -44,7 +44,7 @@ export function OverviewTab({
     },
   };
 
-  const itemVariants = {
+  const itemVariants: any = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
   };

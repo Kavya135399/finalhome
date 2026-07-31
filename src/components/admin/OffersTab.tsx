@@ -53,7 +53,7 @@ export const OffersTab: React.FC = () => {
   const [bg, setBg] = useState('from-blue-600 to-indigo-600');
   const [iconName, setIconName] = useState('Gift');
 
-  const getStoredPromos = (): PromoOffer[] => {
+  const getStoredPromos = (): PromoOffer[] | null => {
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       return stored ? JSON.parse(stored) : defaultAdminPromos;

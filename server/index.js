@@ -166,6 +166,104 @@ const db = new sqlite3.Database(dbFile, (err) => {
         }
       });
 
+      // Initialize Catering tables and seeds
+      db.run(`
+        CREATE TABLE IF NOT EXISTS catering_packages (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          category TEXT NOT NULL,
+          description TEXT NOT NULL,
+          pax TEXT NOT NULL,
+          price INTEGER NOT NULL,
+          image TEXT NOT NULL,
+          is_active INTEGER DEFAULT 1,
+          created_at TEXT NOT NULL
+        )
+      `);
+      db.run(`
+        CREATE TABLE IF NOT EXISTS catering_requests (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          user_name TEXT NOT NULL,
+          package_id TEXT,
+          package_title TEXT NOT NULL,
+          guest_count INTEGER NOT NULL,
+          event_date TEXT NOT NULL,
+          event_type TEXT,
+          contact_phone TEXT NOT NULL,
+          special_notes TEXT,
+          status TEXT DEFAULT 'pending',
+          total_estimated_price INTEGER NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      `);
+      db.get('SELECT COUNT(*) as cnt FROM catering_packages', (err, row) => {
+        if (!err && row && row.cnt === 0) {
+          const defaultCatering = [
+            {
+              id: 'cat_1',
+              title: 'Festival Food Package',
+              category: 'Festival Specials',
+              description: 'Bespoke traditional festival feast comprising pure ghee sweets (Mohanthal or Sukhadi), premium pooris, potato rassa curry, dal, shrikhand, and dynamic seasonal snacks.',
+              pax: '15 Pax',
+              price: 5000,
+              image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=600'
+            },
+            {
+              id: 'cat_2',
+              title: 'Guest Catering Package',
+              category: 'Catering',
+              description: 'A massive custom premium buffet setup managed by Swad Caterers. Includes multiple starters, live main course counters, dessert station, mocktails, and cleanup service.',
+              pax: '50 Pax',
+              price: 15000,
+              image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=600'
+            },
+            {
+              id: 'cat_3',
+              title: 'Gujarati Thali',
+              category: 'Daily Meals',
+              description: 'A traditional home-style spread including 3 rotlis, 2 seasonal shaaks, 1 dal, basmati rice, premium kadhi, pickle, sweet, and buttermilk.',
+              pax: '1 Pax',
+              price: 250,
+              image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=600'
+            },
+            {
+              id: 'cat_4',
+              title: 'Premium Family Meal',
+              category: 'Family Packages',
+              description: 'A comprehensive family meal consisting of starter paneer tikka, 8 butter naans, 2 large bowls of Punjabi sabji, dal makhani, jeera rice, raita, and gulab jamuns.',
+              pax: '4 Pax',
+              price: 1200,
+              image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&q=80&w=600'
+            },
+            {
+              id: 'cat_5',
+              title: 'Grand Wedding Banquet',
+              category: 'Catering',
+              description: 'Exquisite royal buffet setup featuring live chaat counter, mocktail bar, 5 lavish main dishes, traditional sweets, and personalized serving staff.',
+              pax: '100 Pax',
+              price: 35000,
+              image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=600'
+            },
+            {
+              id: 'cat_6',
+              title: 'Executive Daily Tiffin',
+              category: 'Daily Meals',
+              description: 'Nutritious lunch box delivered hot to your office or home with 4 soft rotis, homestyle dal tadka, fresh seasonal shaak, jeera rice, and salad.',
+              pax: '1 Pax',
+              price: 160,
+              image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=600'
+            }
+          ];
+          defaultCatering.forEach((pkg) => {
+            db.run(
+              'INSERT OR IGNORE INTO catering_packages (id, title, category, description, pax, price, image, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)',
+              [pkg.id, pkg.title, pkg.category, pkg.description, pkg.pax, pkg.price, pkg.image, new Date().toISOString()]
+            );
+          });
+        }
+      });
+
       // Seed default demo accounts if missing
       const hashedDemoPwd = bcrypt.hashSync('password', 10);
       const demoAccounts = [
@@ -1609,7 +1707,59 @@ app.put('/api/admin/store/settings', authenticateToken, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ==========================================
+// CATERING APIs
+// ==========================================
 
+app.get('/api/catering/packages', async (req, res) => {
+  try {
+    const { category } = req.query;
+    let sql = 'SELECT * FROM catering_packages WHERE is_active = 1 ORDER BY created_at ASC';
+    let params = [];
+    if (category && category !== 'All Packages') {
+      sql = 'SELECT * FROM catering_packages WHERE is_active = 1 AND category = ? ORDER BY created_at ASC';
+      params = [category];
+    }
+    const packages = await dbAll(sql, params);
+    res.json(packages);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/catering/packages', authenticateToken, async (req, res) => {
+  try {
+    const { title, category, description, pax, price, image } = req.body;
+    const id = 'cat_' + Date.now();
+    await dbRun(
+      'INSERT INTO catering_packages (id, title, category, description, pax, price, image, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)',
+      [id, title, category, description, pax, Number(price), image || 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=600', new Date().toISOString()]
+    );
+    const newPkg = await dbGet('SELECT * FROM catering_packages WHERE id = ?', [id]);
+    res.status(201).json(newPkg);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/catering/requests/my', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user ? req.user.id : 'customer_default';
+    const requests = await dbAll('SELECT * FROM catering_requests WHERE user_id = ? ORDER BY created_at DESC', [userId]);
+    res.json(requests);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/catering/requests', authenticateToken, async (req, res) => {
+  try {
+    const { package_id, package_title, guest_count, event_date, event_type, contact_phone, special_notes, total_estimated_price } = req.body;
+    const userId = req.user ? req.user.id : 'customer_default';
+    const userName = req.user ? (req.user.name || req.user.email) : 'Customer';
+    const id = 'cr_' + Date.now();
+    await dbRun(
+      'INSERT INTO catering_requests (id, user_id, user_name, package_id, package_title, guest_count, event_date, event_type, contact_phone, special_notes, status, total_estimated_price, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, userId, userName, package_id || null, package_title, Number(guest_count), event_date, event_type || 'Event', contact_phone || '', special_notes || '', 'confirmed', Number(total_estimated_price), new Date().toISOString()]
+    );
+    const createdReq = await dbGet('SELECT * FROM catering_requests WHERE id = ?', [id]);
+    res.status(201).json(createdReq);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 // ==========================================
 // VEHICLES APIs

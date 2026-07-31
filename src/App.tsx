@@ -21,6 +21,7 @@ const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then(
 const ProfessionalDashboardPage = lazy(() => import('./pages/ProfessionalDashboardPage').then((m) => ({ default: m.ProfessionalDashboardPage })));
 const TaxiBookingPage = lazy(() => import('./pages/TaxiBookingPage').then((m) => ({ default: m.TaxiBookingPage })));
 const StorePage = lazy(() => import('./pages/StorePage').then((m) => ({ default: m.StorePage })));
+const CateringPage = lazy(() => import('./pages/CateringPage').then((m) => ({ default: m.CateringPage })));
 const StoreMyOrdersPage = lazy(() => import('./pages/StoreMyOrdersPage').then((m) => ({ default: m.StoreMyOrdersPage })));
 const StoreOrderTrackingPage = lazy(() => import('./pages/StoreOrderTrackingPage').then((m) => ({ default: m.StoreOrderTrackingPage })));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage').then((m) => ({ default: m.PaymentSuccessPage })));
@@ -53,6 +54,8 @@ export const router = createBrowserRouter([
       { path: 'privacy', element: <PrivacyPage /> },
       { path: 'terms', element: <TermsPage /> },
       { path: 'taxi', element: <SuspenseWrap><TaxiBookingPage /></SuspenseWrap> },
+      { path: 'catering', element: <SuspenseWrap><CateringPage /></SuspenseWrap> },
+      { path: 'meals', element: <SuspenseWrap><CateringPage /></SuspenseWrap> },
       { path: 'store', element: <SuspenseWrap><StorePage /></SuspenseWrap> },
       { path: 'store/orders', element: <SuspenseWrap><StoreMyOrdersPage /></SuspenseWrap> },
       { path: 'store/order/:orderId', element: <SuspenseWrap><StoreOrderTrackingPage /></SuspenseWrap> },

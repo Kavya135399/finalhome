@@ -557,45 +557,74 @@ export function StorePage() {
 
       {/* ── Sticky Header ── */}
       <div className="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800/60 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 pt-3 pb-2">
-          <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center gap-2">
-              <Link to="/" className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-900 dark:hover:text-white transition rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800">
-                <ChevronLeft className="w-5 h-5" />
-              </Link>
-              <div>
-                <h1 className="text-sm font-black text-gray-900 dark:text-white leading-none">HomeSeva Store</h1>
-                <p className="text-[10px] text-gray-500 flex items-center gap-0.5 mt-0.5">
-                  <MapPin className="w-2.5 h-2.5 text-green-500" /> Delivering to <span className="font-bold text-gray-700 dark:text-gray-300 ml-0.5">Patan, Gujarat</span>
-                </p>
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12 pt-4 pb-3.5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <MapPin className="w-6 h-6 sm:w-7 sm:h-7 text-green-600 shrink-0 drop-shadow-2xs" />
+              <div className="flex flex-col justify-center">
+                <span className="text-[11px] sm:text-xs font-bold text-gray-400 dark:text-gray-500 leading-tight">
+                  Delivering to
+                </span>
+                <h2 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white leading-snug tracking-tight">
+                  Patan, Gujarat
+                </h2>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => navigate('/store/orders')} className="text-[9px] font-bold text-green-600 hover:underline">My Orders</button>
-              <button onClick={() => cartCount > 0 && setSheet('cart')}
-                className="relative w-8 h-8 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition">
-                <ShoppingCart className="w-4.5 h-4.5" />
-                {cartCount > 0 && <span className="absolute -top-1 -right-1 w-4.5 h-4.5 bg-green-600 text-white text-[9px] font-black rounded-full flex items-center justify-center">{cartCount}</span>}
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => navigate('/store/orders')}
+                className="px-3.5 py-2 rounded-xl border border-green-200 text-xs font-bold text-green-700 bg-green-50 hover:bg-green-100 transition shadow-2xs flex items-center gap-1.5"
+              >
+                <Package className="w-4 h-4 text-green-600" />
+                <span>My Orders</span>
+              </button>
+              <button
+                onClick={() => cartCount > 0 && setSheet('cart')}
+                className="relative w-10 h-10 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition border border-gray-200 dark:border-slate-700/80"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-green-600 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-xs">
+                    {cartCount}
+                  </span>
+                )}
               </button>
             </div>
           </div>
-          <div className="relative mb-2.5">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <input type="search" placeholder="Search products, groceries..." value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full h-9 pl-9 pr-4 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-700 text-xs text-gray-800 dark:text-white placeholder-gray-400 outline-none focus:border-green-400 transition" />
+          <div className="relative mb-3.5">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="search"
+              placeholder="Search products, groceries..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-11 sm:h-12 pl-11 pr-4 rounded-xl sm:rounded-2xl bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 text-sm font-medium text-gray-800 dark:text-white placeholder-gray-400 outline-none focus:border-green-500 focus:bg-white transition shadow-xs"
+            />
           </div>
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                        <button onClick={() => setActiveCategory('Favorites')}
-              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-extrabold border transition whitespace-nowrap ${
-                activeCategory === 'Favorites' ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-white dark:bg-slate-800 text-red-500 border-red-100 dark:border-slate-700 hover:border-red-300'}`}>
-              <Heart className={`w-3 h-3 ${activeCategory === 'Favorites' ? 'fill-white' : 'fill-red-500'}`} /><span>Favorites</span>
+          <div className="flex gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar pb-1.5">
+            <button
+              onClick={() => setActiveCategory('Favorites')}
+              className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold border transition whitespace-nowrap ${
+                activeCategory === 'Favorites'
+                  ? 'bg-red-500 text-white border-red-500 shadow-sm'
+                  : 'bg-white dark:bg-slate-800 text-red-500 border-red-100 dark:border-slate-700 hover:border-red-300'
+              }`}
+            >
+              <Heart className={`w-3.5 h-3.5 ${activeCategory === 'Favorites' ? 'fill-white' : 'fill-red-500'}`} />
+              <span>Favorites</span>
             </button>
-            {CATEGORIES.map(cat => (
-              <button key={cat} onClick={() => setActiveCategory(cat)}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-extrabold border transition whitespace-nowrap ${
-                  activeCategory === cat ? 'bg-green-600 text-white border-green-600 shadow-sm' : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 border-gray-150 dark:border-slate-700 hover:border-gray-300'}`}>
-                <span>{CAT_EMOJI[cat]}</span><span>{cat}</span>
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold border transition whitespace-nowrap ${
+                  activeCategory === cat
+                    ? 'bg-green-600 text-white border-green-600 shadow-sm'
+                    : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-700 hover:border-gray-300'
+                }`}
+              >
+                <span>{CAT_EMOJI[cat]}</span>
+                <span>{cat}</span>
               </button>
             ))}
           </div>
@@ -603,24 +632,44 @@ export function StorePage() {
       </div>
 
       {/* ── Product Listings ── */}
-      <div className="max-w-4xl mx-auto px-4 w-full mt-3 space-y-5">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12 w-full mt-6 space-y-8">
         {/* Banner */}
-        <div className="relative rounded-3xl overflow-hidden">
+        <div className="relative rounded-3xl sm:rounded-[2rem] overflow-hidden shadow-sm">
           <AnimatePresence mode="wait">
-            <motion.div key={bannerIdx} initial={{ opacity: 0, x: 60 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -60 }} transition={{ duration: 0.35 }}
-              className={`bg-gradient-to-br ${banner.bg} p-5 rounded-3xl flex items-center justify-between min-h-[120px] relative overflow-hidden`}>
-              <div className="relative z-10">
-                <span className="text-[8px] font-black uppercase tracking-widest text-white/60 mb-1 block">{banner.tag}</span>
-                <h3 className="text-white font-black text-sm leading-snug max-w-[190px]">{banner.title}</h3>
-                <p className="text-white/70 text-[10px] mt-1 max-w-[190px]">{banner.subtitle}</p>
-                <span className="mt-2 inline-flex items-center gap-1 bg-white/20 backdrop-blur text-white text-[9px] font-black px-2.5 py-1 rounded-full border border-white/30">{banner.badge}</span>
+            <motion.div
+              key={bannerIdx}
+              initial={{ opacity: 0, x: 60 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -60 }}
+              transition={{ duration: 0.35 }}
+              className={`bg-gradient-to-br ${banner.bg} p-6 sm:p-10 rounded-3xl sm:rounded-[2rem] flex items-center justify-between min-h-[160px] sm:min-h-[220px] relative overflow-hidden`}
+            >
+              <div className="relative z-10 max-w-lg sm:max-w-2xl">
+                <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-white/70 mb-1 sm:mb-2 block">
+                  {banner.tag}
+                </span>
+                <h3 className="text-white font-black text-lg sm:text-2xl md:text-3xl leading-snug">
+                  {banner.title}
+                </h3>
+                <p className="text-white/85 text-xs sm:text-sm font-medium mt-1 sm:mt-2">
+                  {banner.subtitle}
+                </p>
+                <span className="mt-3 sm:mt-5 inline-flex items-center gap-1.5 bg-white/20 backdrop-blur text-white text-xs font-extrabold px-3.5 py-1.5 rounded-full border border-white/30 shadow-xs">
+                  {banner.badge}
+                </span>
               </div>
-              <BannerIcon className={`w-16 h-16 ${banner.iconColor} opacity-25 absolute right-4 top-1/2 -translate-y-1/2`} />
+              <BannerIcon className={`w-24 h-24 sm:w-40 sm:h-40 ${banner.iconColor} opacity-25 absolute right-6 sm:right-12 top-1/2 -translate-y-1/2 transform rotate-12 transition-transform duration-700 hover:scale-105`} />
             </motion.div>
           </AnimatePresence>
-          <div className="flex justify-center gap-1.5 mt-2">
+          <div className="flex justify-center gap-2 mt-3">
             {BANNERS.map((_, i) => (
-              <button key={i} onClick={() => setBannerIdx(i)} className={`rounded-full transition-all duration-300 ${i === bannerIdx ? 'w-4 h-1.5 bg-green-600' : 'w-1.5 h-1.5 bg-gray-300 dark:bg-slate-700'}`} />
+              <button
+                key={i}
+                onClick={() => setBannerIdx(i)}
+                className={`rounded-full transition-all duration-300 ${
+                  i === bannerIdx ? 'w-6 h-2 bg-green-600' : 'w-2 h-2 bg-gray-300 dark:bg-slate-700'
+                }`}
+              />
             ))}
           </div>
         </div>
@@ -628,24 +677,51 @@ export function StorePage() {
         {/* Popular */}
         {!searchQuery && activeCategory === 'All' && popular.length > 0 && (
           <section>
-            <div className="flex items-center gap-2 mb-3"><span className="text-base">🔥</span><div><h2 className="text-xs font-black text-gray-900 dark:text-white">Popular Items</h2><p className="text-[9px] text-gray-400">Our most-loved picks</p></div></div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {loading ? [1,2,3,4].map(k => <div key={k} className="h-48 bg-gray-100 dark:bg-slate-800 rounded-2xl animate-pulse" />) : popular.slice(0, 4).map(p => <ProductCard key={p.id} product={p} />)}
+            <div className="flex items-center gap-2.5 mb-4">
+              <span className="text-xl">🔥</span>
+              <div>
+                <h2 className="text-sm sm:text-base font-black text-gray-900 dark:text-white">Popular Items</h2>
+                <p className="text-xs text-gray-400 font-medium">Our most-loved picks</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+              {loading
+                ? [1, 2, 3, 4, 5, 6].map((k) => (
+                    <div key={k} className="h-52 bg-gray-100 dark:bg-slate-800 rounded-2xl animate-pulse" />
+                  ))
+                : popular.slice(0, 6).map((p) => <ProductCard key={p.id} product={p} />)}
             </div>
           </section>
         )}
 
         {/* All Products */}
         <section>
-          <div className="flex items-center gap-2 mb-3"><span className="text-base">🏪</span>
-            <div><h2 className="text-xs font-black text-gray-900 dark:text-white">{searchQuery ? `Results for "${searchQuery}"` : activeCategory === 'All' ? 'All Products' : activeCategory}</h2><p className="text-[9px] text-gray-400">Everything for your home</p></div>
+          <div className="flex items-center gap-2.5 mb-4">
+            <span className="text-xl">🏪</span>
+            <div>
+              <h2 className="text-sm sm:text-base font-black text-gray-900 dark:text-white">
+                {searchQuery ? `Results for "${searchQuery}"` : activeCategory === 'All' ? 'All Products' : activeCategory}
+              </h2>
+              <p className="text-xs text-gray-400 font-medium">Everything for your home</p>
+            </div>
           </div>
           {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">{[1,2,3,4,5,6].map(k => <div key={k} className="h-52 bg-gray-100 dark:bg-slate-800 rounded-2xl animate-pulse" />)}</div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((k) => (
+                <div key={k} className="h-56 bg-gray-100 dark:bg-slate-800 rounded-2xl animate-pulse" />
+              ))}
+            </div>
           ) : filtered.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 rounded-2xl py-12 text-center"><p className="text-2xl mb-2">📦</p><p className="text-xs font-bold text-gray-500">No products found</p></div>
+            <div className="bg-white dark:bg-slate-900 rounded-3xl py-16 text-center border border-gray-100 shadow-xs">
+              <p className="text-4xl mb-3">📦</p>
+              <p className="text-sm font-bold text-gray-500">No products found</p>
+            </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">{filtered.map(p => <ProductCard key={p.id} product={p} />)}</div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+              {filtered.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
           )}
         </section>
       </div>
