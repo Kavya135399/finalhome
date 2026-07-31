@@ -1,11 +1,72 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChefHat, Plus, Check, Calendar, Users, Phone, MapPin, Sparkles, ArrowRight, ArrowLeft, Utensils, Clock, ShieldCheck, CreditCard, Home, Briefcase, Pencil, Trash2, X } from 'lucide-react';
+import {
+  ChefHat,
+  Plus,
+  Minus,
+  Check,
+  Calendar,
+  Users,
+  Phone,
+  MapPin,
+  Sparkles,
+  ArrowRight,
+  ArrowLeft,
+  Utensils,
+  Clock,
+  ShieldCheck,
+  CreditCard,
+  Home,
+  Briefcase,
+  Pencil,
+  Trash2,
+  X,
+  Search,
+  Flame,
+  Star,
+  Heart,
+  Share2,
+  Filter,
+  ShoppingBag,
+  ShoppingCart,
+  SlidersHorizontal,
+  Info,
+  CheckCircle2,
+  FileText,
+  RotateCcw,
+  Sparkle,
+  Truck,
+  Package,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { processUPIPayment } from '../services/razorpay';
 
-interface CateringPackage {
+export interface MealItem {
+  id: string;
+  name: string;
+  category: string;
+  caterer: string;
+  foodType: 'veg' | 'nonveg' | 'jain';
+  rating: number;
+  reviews: number;
+  prepTime: string;
+  calories: number;
+  serves: string;
+  price: number;
+  originalPrice: number;
+  image: string;
+  description: string;
+  popular?: boolean;
+  bestseller?: boolean;
+  discountBadge?: string;
+  ingredients: string[];
+  nutrition: { calories: number; protein: string; carbs: string; fat: string };
+  spiceLevel: 'Mild' | 'Medium' | 'Spicy';
+}
+
+export interface CateringPackage {
   id: string;
   title: string;
   category: string;
@@ -13,9 +74,10 @@ interface CateringPackage {
   pax: string;
   price: number;
   image: string;
+  menuHighlights: string[];
 }
 
-interface CateringRequest {
+export interface CateringRequest {
   id: string;
   package_title: string;
   guest_count: number;
@@ -41,17 +103,173 @@ interface SavedAddress {
   state: string;
 }
 
-const GALLERY_IMAGES = [
-  { id: 1, title: 'Royal Wedding Buffet', category: 'Live Counter', image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=800' },
-  { id: 2, title: 'Authentic Gujarati Feast', category: 'Traditional', image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=800' },
-  { id: 3, title: 'Gourmet Appetizer Station', category: 'Corporate', image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800' },
-  { id: 4, title: 'Festive Sweet & Dessert Counter', category: 'Sweets', image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=800' },
-  { id: 5, title: 'Luxury Family Celebration', category: 'Family Dinner', image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&q=80&w=800' },
-  { id: 6, title: 'Fresh Daily Meal Preparation', category: 'Daily Meals', image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800' },
+const SAMPLE_MEALS: MealItem[] = [
+  {
+    id: 'm1',
+    name: 'Kathiyawadi Gourmet Gujarati Thali',
+    category: 'Gujarati',
+    caterer: 'MasterChef Rajesh Kumar',
+    foodType: 'veg',
+    rating: 4.9,
+    reviews: 1240,
+    prepTime: '25 min',
+    calories: 480,
+    serves: '1 Person',
+    price: 199,
+    originalPrice: 250,
+    discountBadge: '20% OFF',
+    popular: true,
+    bestseller: true,
+    image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=800',
+    description: 'Authentic Kathiyawadi thali featuring Sev Tameta, Ringan Bharta, Phulka Roti, Dal Rice, and Fresh Chaas.',
+    ingredients: ['Paneer', 'Cashews', 'Ghee', 'Pure Spices', 'Basmati Rice', 'Curd'],
+    nutrition: { calories: 480, protein: '16g', carbs: '62g', fat: '18g' },
+    spiceLevel: 'Medium',
+  },
+  {
+    id: 'm2',
+    name: 'Royal Punjabi Butter Paneer & Naan Combo',
+    category: 'North Indian',
+    caterer: 'Amritsari Tadka Caterers',
+    foodType: 'veg',
+    rating: 4.8,
+    reviews: 980,
+    prepTime: '30 min',
+    calories: 620,
+    serves: '1-2 Persons',
+    price: 249,
+    originalPrice: 299,
+    discountBadge: 'POPULAR',
+    popular: true,
+    image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&q=80&w=800',
+    description: 'Rich Creamy Shahi Paneer Butter Masala served with 2 Butter Garlic Naan and Jeera Rice.',
+    ingredients: ['Fresh Cottage Cheese', 'Butter', 'Tomato Gravy', 'Garlic', 'Basmati Rice'],
+    nutrition: { calories: 620, protein: '22g', carbs: '70g', fat: '28g' },
+    spiceLevel: 'Mild',
+  },
+  {
+    id: 'm3',
+    name: 'Healthy Protein Quinoa & Grilled Veggie Bowl',
+    category: 'Healthy Meals',
+    caterer: 'NutriFit Kitchens',
+    foodType: 'veg',
+    rating: 4.9,
+    reviews: 650,
+    prepTime: '15 min',
+    calories: 380,
+    serves: '1 Person',
+    price: 220,
+    originalPrice: 280,
+    discountBadge: 'HEALTHY',
+    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800',
+    description: 'High-protein organic quinoa bowl topped with avocado, roasted chickpeas, broccoli, and lemon tahini dressing.',
+    ingredients: ['Organic Quinoa', 'Avocado', 'Broccoli', 'Chickpeas', 'Tahini'],
+    nutrition: { calories: 380, protein: '18g', carbs: '45g', fat: '12g' },
+    spiceLevel: 'Mild',
+  },
+  {
+    id: 'm4',
+    name: 'South Indian Mini Tiffin Feast',
+    category: 'South Indian',
+    caterer: 'Madras Special Tiffin',
+    foodType: 'veg',
+    rating: 4.7,
+    reviews: 1120,
+    prepTime: '20 min',
+    calories: 410,
+    serves: '1 Person',
+    price: 175,
+    originalPrice: 220,
+    discountBadge: '15% OFF',
+    bestseller: true,
+    image: 'https://images.unsplash.com/photo-1610192244261-3f33de3f55e4?auto=format&fit=crop&q=80&w=800',
+    description: 'Assorted 2 Ghee Mini Idlis, 1 Medu Vada, Mini Masala Dosa, Piping Hot Sambar & 3 Chutneys.',
+    ingredients: ['Fermented Rice & Lentil Batter', 'Pure Ghee', 'Fresh Coconut', 'Curry Leaves'],
+    nutrition: { calories: 410, protein: '14g', carbs: '65g', fat: '10g' },
+    spiceLevel: 'Medium',
+  },
+  {
+    id: 'm5',
+    name: 'Family Celebration Meal Box (Serves 4-5)',
+    category: 'Family Pack',
+    caterer: 'HomeSeva Signature Kitchen',
+    foodType: 'veg',
+    rating: 4.9,
+    reviews: 2150,
+    prepTime: '40 min',
+    calories: 1200,
+    serves: '4-5 Persons',
+    price: 799,
+    originalPrice: 999,
+    discountBadge: 'SAVE ₹200',
+    popular: true,
+    bestseller: true,
+    image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&q=80&w=800',
+    description: 'Grand family feast box: Paneer Tikka Masala, Dal Makhani, 8 Butter Phulkas, Veg Pulao, Gulab Jamun & Salad.',
+    ingredients: ['Paneer', 'Black Lentils', 'Basmati Rice', 'Whole Wheat', 'Khoya'],
+    nutrition: { calories: 1200, protein: '48g', carbs: '140g', fat: '52g' },
+    spiceLevel: 'Medium',
+  },
+  {
+    id: 'm6',
+    name: 'Jain Shuddh Special Satvik Thali',
+    category: 'Jain',
+    caterer: 'Satvik Pure Jain Caterers',
+    foodType: 'jain',
+    rating: 4.9,
+    reviews: 890,
+    prepTime: '25 min',
+    calories: 450,
+    serves: '1 Person',
+    price: 210,
+    originalPrice: 260,
+    discountBadge: 'PURE SATVIK',
+    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800',
+    description: 'No onion, no garlic, 100% Jain Satvik thali with Gatte ki Sabzi, Paneer Makhhania, Phulkas, and Kheer.',
+    ingredients: ['Gram Flour Gatta', 'Fresh Cottage Cheese', 'Cow Ghee', 'Cumin', 'Rock Salt'],
+    nutrition: { calories: 450, protein: '17g', carbs: '58g', fat: '16g' },
+    spiceLevel: 'Mild',
+  },
 ];
 
-const CATEGORIES = ['All Packages', 'Catering', 'Daily Meals', 'Family Packages', 'Festival Specials'];
-const FOOD_PREFERENCES = ['Gujarati', 'Punjabi', 'South Indian', 'Jain', 'Veg', 'Custom'];
+const CATEGORIES = [
+  'All',
+  'Daily Meals',
+  'Healthy Meals',
+  'Family Pack',
+  'Catering',
+  'Birthday',
+  'Wedding',
+  'Corporate',
+  'Tiffin',
+  'Gujarati',
+  'Fast Food',
+  'Diet Meals',
+  'South Indian',
+  'North Indian',
+  'Chinese',
+  'Jain',
+];
+
+const CAT_EMOJI: Record<string, string> = {
+  All: '🛒',
+  'Daily Meals': '🍛',
+  'Healthy Meals': '🥗',
+  'Family Pack': '👨‍👩‍👧',
+  Catering: '🎉',
+  Birthday: '🥳',
+  Wedding: '💍',
+  Corporate: '🏢',
+  Tiffin: '🍱',
+  Gujarati: '🥘',
+  'Fast Food': '🍕',
+  'Diet Meals': '🥗',
+  'South Indian': '🍛',
+  'North Indian': '🥙',
+  Chinese: '🍜',
+  Jain: '🟡',
+  Favorites: '❤️',
+};
 
 const INITIAL_ADDRESSES: SavedAddress[] = [
   {
@@ -64,1017 +282,754 @@ const INITIAL_ADDRESSES: SavedAddress[] = [
     landmark: 'Opp. Garden',
     city: 'Patan',
     pincode: '384265',
-    state: 'Gujarat'
-  }
+    state: 'Gujarat',
+  },
 ];
 
 export function CateringPage() {
   const [searchParams] = useSearchParams();
-  const initialCat = searchParams.get('category') || 'All Packages';
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
 
-  // View state: 'catalog' for packages grid & tabs, 'request' for dedicated Food Arrangements Request Form
-  const [viewMode, setViewMode] = useState<'catalog' | 'request'>('catalog');
-  const [activeTab, setActiveTab] = useState<'CATERING PACKAGES' | 'GALLERY' | 'MY REQUESTS'>('CATERING PACKAGES');
-  const [activeCategory, setActiveCategory] = useState<string>(initialCat);
-  const [packages, setPackages] = useState<CateringPackage[]>([]);
-  const [requests, setRequests] = useState<CateringRequest[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<'MEALS' | 'CATERING PACKAGES' | 'MY REQUESTS'>('MEALS');
+  const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [foodTypeFilter, setFoodTypeFilter] = useState<'all' | 'veg' | 'nonveg' | 'jain'>('all');
+  const [wishlist, setWishlist] = useState<string[]>([]);
+  const [selectedMealModal, setSelectedMealModal] = useState<MealItem | null>(null);
+  const [selectedSpice, setSelectedSpice] = useState<'Mild' | 'Medium' | 'Spicy'>('Medium');
 
-  // Address management modal state
-  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(() => {
+  // Meal Cart state
+  const [mealCart, setMealCart] = useState<{ meal: MealItem; qty: number }[]>(() => {
     try {
-      const stored = localStorage.getItem('user_saved_addresses');
+      const stored = localStorage.getItem('homeseva_meal_cart');
       if (stored) return JSON.parse(stored);
-    } catch (e) {
-      // ignore parse error
-    }
-    return INITIAL_ADDRESSES;
+    } catch (e) {}
+    return [];
   });
-  const [addressModalOpen, setAddressModalOpen] = useState<boolean>(false);
-  const [addressModalMode, setAddressModalMode] = useState<'list' | 'add' | 'edit'>('list');
-  const [editingAddrId, setEditingAddrId] = useState<string | null>(null);
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [cartStep, setCartStep] = useState<number>(1);
+  const [couponCode, setCouponCode] = useState<string>('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
 
-  // Address form inputs
-  const [addrType, setAddrType] = useState<'HOME' | 'WORK' | 'OTHER'>('HOME');
-  const [addrFullName, setAddrFullName] = useState<string>('');
-  const [addrMobile, setAddrMobile] = useState<string>('');
-  const [addrHouse, setAddrHouse] = useState<string>('');
-  const [addrStreet, setAddrStreet] = useState<string>('');
-  const [addrLandmark, setAddrLandmark] = useState<string>('');
-  const [addrCity, setAddrCity] = useState<string>('Patan');
-  const [addrPincode, setAddrPincode] = useState<string>('384265');
-  const [addrState, setAddrState] = useState<string>('Gujarat');
+  useEffect(() => {
+    try {
+      localStorage.setItem('homeseva_meal_cart', JSON.stringify(mealCart));
+    } catch (e) {}
+  }, [mealCart]);
 
-  // Main Form states
+  const addToMealCart = (meal: MealItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setMealCart((prev) => {
+      const existing = prev.find((item) => item.meal.id === meal.id);
+      if (existing) {
+        return prev.map((item) => (item.meal.id === meal.id ? { ...item, qty: item.qty + 1 } : item));
+      }
+      return [...prev, { meal, qty: 1 }];
+    });
+    toast(`${meal.name} added to cart!`, 'success');
+  };
+
+  const updateMealQty = (mealId: string, delta: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setMealCart((prev) => {
+      return prev
+        .map((item) => {
+          if (item.meal.id === mealId) {
+            const newQty = item.qty + delta;
+            return newQty > 0 ? { ...item, qty: newQty } : null;
+          }
+          return item;
+        })
+        .filter(Boolean) as { meal: MealItem; qty: number }[];
+    });
+  };
+
+  const cartCount = mealCart.reduce((sum, item) => sum + item.qty, 0);
+  const cartSubtotal = mealCart.reduce((sum, item) => sum + item.meal.price * item.qty, 0);
+  const cartDiscount = appliedCoupon ? appliedCoupon.discount : 0;
+  const cartDeliveryFee = cartSubtotal >= 500 || cartSubtotal === 0 ? 0 : 40;
+  const cartTotal = Math.max(0, cartSubtotal - cartDiscount + cartDeliveryFee);
+
+  const applyMealCoupon = () => {
+    const code = couponCode.trim().toUpperCase();
+    if (code === 'FIRST50') {
+      const disc = Math.min(100, Math.round(cartSubtotal * 0.5));
+      setAppliedCoupon({ code: 'FIRST50', discount: disc });
+      toast('50% Discount Applied!', 'success');
+    } else if (code === 'CLEAN20' || code === 'HOMESEVA10') {
+      const disc = Math.round(cartSubtotal * 0.2);
+      setAppliedCoupon({ code: 'CLEAN20', discount: disc });
+      toast('20% Discount Applied!', 'success');
+    } else {
+      toast('Invalid Coupon. Try FIRST50 or CLEAN20', 'error');
+    }
+  };
+
+  // Catering Wizard View state
+  const [viewMode, setViewMode] = useState<'catalog' | 'request'>('catalog');
   const [selectedPackage, setSelectedPackage] = useState<CateringPackage | null>(null);
   const [eventType, setEventType] = useState<string>('Birthday');
-  const [deliveryAddress, setDeliveryAddress] = useState<string>(() => {
-    const first = savedAddresses[0] || INITIAL_ADDRESSES[0];
-    return `${first.houseNo}, ${first.street}, ${first.city} - ${first.pincode} (${first.type})`;
-  });
   const [guestCount, setGuestCount] = useState<number>(50);
   const [eventDate, setEventDate] = useState<string>(new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0]);
   const [eventTime, setEventTime] = useState<string>('1:00 PM');
-  // Per user request: DO NOT pre-select Gujarati and Veg by default! Keep array empty initially.
   const [selectedPrefs, setSelectedPrefs] = useState<string[]>([]);
   const [totalBudget, setTotalBudget] = useState<number>(25000);
   const [notes, setNotes] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
-  const [successMsg, setSuccessMsg] = useState<string>('');
+
+  // Address
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(() => {
+    try {
+      const stored = localStorage.getItem('user_saved_addresses');
+      if (stored) return JSON.parse(stored);
+    } catch (e) {}
+    return INITIAL_ADDRESSES;
+  });
+  const [deliveryAddress, setDeliveryAddress] = useState<string>(() => {
+    const first = savedAddresses[0] || INITIAL_ADDRESSES[0];
+    return `${first.houseNo}, ${first.street}, ${first.city} - ${first.pincode} (${first.type})`;
+  });
+
+  const [requests, setRequests] = useState<CateringRequest[]>([]);
+  const [dbMeals, setDbMeals] = useState<MealItem[]>(SAMPLE_MEALS);
 
   useEffect(() => {
-    if (viewMode === 'catalog') {
-      fetchPackages();
-      if (activeTab === 'MY REQUESTS') {
-        fetchMyRequests();
-      }
-    }
-  }, [activeCategory, activeTab, viewMode]);
+    fetchMealsFromApi();
+  }, [activeCategory, foodTypeFilter]);
 
-  const fetchPackages = async () => {
+  const fetchMealsFromApi = async () => {
     try {
-      setLoading(true);
-      const res = await fetch(`/api/catering/packages?category=${encodeURIComponent(activeCategory)}`);
+      let url = `/api/meals?food_type=${foodTypeFilter}`;
+      if (activeCategory !== 'All' && activeCategory !== 'Favorites') {
+        url += `&category=${encodeURIComponent(activeCategory)}`;
+      }
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        setPackages(data);
+        if (Array.isArray(data) && data.length > 0) {
+          setDbMeals(data);
+        }
       }
-    } catch (err) {
-      console.error('Failed to load catering packages:', err);
-    } finally {
-      setLoading(false);
+    } catch (e) {
+      console.error('API fetch error for meals:', e);
     }
   };
+
+  useEffect(() => {
+    if (activeTab === 'MY REQUESTS') {
+      fetchMyRequests();
+    }
+  }, [activeTab]);
 
   const fetchMyRequests = async () => {
     try {
       const token = localStorage.getItem('token') || '';
       const res = await fetch('/api/catering/requests/my', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data = await res.json();
         setRequests(data);
       }
-    } catch (err) {
-      console.error('Failed to load catering requests:', err);
+    } catch (e) {
+      console.error('Failed to load catering requests', e);
     }
   };
 
-  const togglePreference = (pref: string) => {
-    if (selectedPrefs.includes(pref)) {
-      setSelectedPrefs(selectedPrefs.filter((p) => p !== pref));
+  const toggleWishlist = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (wishlist.includes(id)) {
+      setWishlist(wishlist.filter((i) => i !== id));
+      toast('Item removed from Wishlist', 'info');
     } else {
-      setSelectedPrefs([...selectedPrefs, pref]);
-    }
-  };
-
-  const handleGuestCountChange = (val: number) => {
-    setGuestCount(val);
-    if (selectedPackage) {
-      const basePax = parseInt(selectedPackage.pax) || 1;
-      const ratio = Math.max(1, Math.round(val / basePax));
-      setTotalBudget(selectedPackage.price * ratio);
-    } else {
-      setTotalBudget(val * 500); // 500 per plate default quote
+      setWishlist([...wishlist, id]);
+      toast('Added to Wishlist ❤️', 'success');
     }
   };
 
   const openRequestForm = (pkg: CateringPackage | null) => {
-    setSelectedPackage(pkg);
     if (pkg) {
-      setEventType(pkg.title);
-      const parsedGuests = parseInt(pkg.pax) || 25;
+      setSelectedPackage(pkg);
+      setEventType(pkg.category);
+      const parsedGuests = parseInt(pkg.pax) || 50;
       setGuestCount(parsedGuests);
       setTotalBudget(pkg.price);
     } else {
-      setEventType('Birthday');
+      setEventType('Birthday Party');
       setGuestCount(50);
       setTotalBudget(25000);
     }
-    // Ensure preferences start clean and empty per request
     setSelectedPrefs([]);
     setViewMode('request');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ── Address Modal Helpers ──
-  const handleOpenAddAddress = () => {
-    setAddrType('HOME');
-    setAddrFullName(user?.name || '');
-    setAddrMobile((user as any)?.phone || '9876543210');
-    setAddrHouse('');
-    setAddrStreet('');
-    setAddrLandmark('');
-    setAddrCity('Patan');
-    setAddrPincode('384265');
-    setAddrState('Gujarat');
-    setEditingAddrId(null);
-    setAddressModalMode('add');
-  };
-
-  const handleOpenEditAddress = (addr: SavedAddress, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setAddrType(addr.type);
-    setAddrFullName(addr.fullName);
-    setAddrMobile(addr.mobile);
-    setAddrHouse(addr.houseNo);
-    setAddrStreet(addr.street);
-    setAddrLandmark(addr.landmark || '');
-    setAddrCity(addr.city);
-    setAddrPincode(addr.pincode);
-    setAddrState(addr.state);
-    setEditingAddrId(addr.id);
-    setAddressModalMode('edit');
-  };
-
-  const handleDeleteAddress = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const updated = savedAddresses.filter((a) => a.id !== id);
-    setSavedAddresses(updated);
-    try {
-      localStorage.setItem('user_saved_addresses', JSON.stringify(updated));
-    } catch (err) {}
-  };
-
-  const handleSaveAddressForm = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!addrHouse || !addrStreet || !addrCity || !addrPincode) {
-      alert('Please fill in House/Flat no., Street, City and Pincode.');
-      return;
+  // Filtered Meals list
+  const filteredMeals = dbMeals.filter((m) => {
+    if (activeCategory === 'Favorites') {
+      return wishlist.includes(m.id) && (!searchQuery || m.name.toLowerCase().includes(searchQuery.toLowerCase()));
     }
-    const newAddr: SavedAddress = {
-      id: editingAddrId || 'addr_' + Date.now(),
-      type: addrType,
-      fullName: addrFullName || 'Customer',
-      mobile: addrMobile || '9876543210',
-      houseNo: addrHouse,
-      street: addrStreet,
-      landmark: addrLandmark,
-      city: addrCity,
-      pincode: addrPincode,
-      state: addrState,
-    };
+    const matchesSearch =
+      !searchQuery ||
+      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.caterer.toLowerCase().includes(searchQuery.toLowerCase());
 
-    let updatedList: SavedAddress[];
-    if (editingAddrId) {
-      updatedList = savedAddresses.map((a) => (a.id === editingAddrId ? newAddr : a));
-    } else {
-      updatedList = [newAddr, ...savedAddresses];
-    }
+    const matchesCategory = activeCategory === 'All' || m.category.toLowerCase().includes(activeCategory.toLowerCase());
+    const matchesFoodType = foodTypeFilter === 'all' || m.foodType === foodTypeFilter;
 
-    setSavedAddresses(updatedList);
-    try {
-      localStorage.setItem('user_saved_addresses', JSON.stringify(updatedList));
-    } catch (err) {}
+    return matchesSearch && matchesCategory && matchesFoodType;
+  });
 
-    // Set as current delivery address and close modal
-    setDeliveryAddress(`${newAddr.houseNo}, ${newAddr.street}, ${newAddr.city} - ${newAddr.pincode} (${newAddr.type})`);
-    if (newAddr.mobile) setPhone(newAddr.mobile);
-    setAddressModalMode('list');
-    setAddressModalOpen(false);
-  };
-
-  const handleSelectAddress = (addr: SavedAddress) => {
-    setDeliveryAddress(`${addr.houseNo}, ${addr.street}, ${addr.city} - ${addr.pincode} (${addr.type})`);
-    if (addr.mobile) setPhone(addr.mobile);
-    setAddressModalOpen(false);
-  };
-
-  // ── Razorpay UPI Payment Integration ──
+  // Razorpay Catering Booking
   const handleRazorpayPayment = async () => {
     if (!guestCount || guestCount < 1) {
-      alert('Please enter a valid guest count (Pax).');
-      return;
-    }
-    if (!totalBudget || totalBudget < 100) {
-      alert('Please enter a valid budget amount.');
+      toast('Please enter a valid guest count.', 'error');
       return;
     }
 
     setSubmitting(true);
-
-    const formattedAddress = {
-      street: deliveryAddress,
-      city: 'Patan',
-      state: 'Gujarat',
-      pincode: '384265',
-      fullAddress: deliveryAddress,
-    };
-
-    const packageTitle = selectedPackage ? selectedPackage.title : `${eventType} Catering (${selectedPrefs.join(', ') || 'Custom'})`;
-
-    processUPIPayment({
-      productName: `Food Arrangement: ${packageTitle}`,
-      productId: selectedPackage ? selectedPackage.id : 'cat_custom',
-      amount: totalBudget,
-      discount: 0,
-      customerName: user?.name || 'Valued Catering Client',
-      email: user?.email || 'client@homeseva.com',
-      phoneNumber: phone || (user as any)?.phone || '9876543210',
-      address: formattedAddress,
-      bookingDate: eventDate,
-      bookingTime: eventTime,
-      onSuccess: async (resData) => {
-        // Save confirmed booking directly to backend SQLite database
-        try {
+    try {
+      await processUPIPayment({
+        productName: selectedPackage ? selectedPackage.title : `Custom ${eventType} Catering (${guestCount} Guests)`,
+        productId: selectedPackage ? selectedPackage.id : 'custom_catering',
+        amount: totalBudget,
+        discount: 0,
+        customerName: user?.name || 'Valued Customer',
+        email: user?.email || 'customer@homeseva.com',
+        phoneNumber: phone || (user as any)?.phone || '9876543210',
+        address: { fullAddress: deliveryAddress },
+        showAllMethods: false,
+        onSuccess: async (meta) => {
           const token = localStorage.getItem('token') || '';
-          const res = await fetch('/api/catering/requests', {
+          await fetch('/api/catering/requests', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
+              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
-              package_id: selectedPackage ? selectedPackage.id : null,
-              package_title: `${packageTitle} • PAID VIA RAZORPAY (#${resData?.booking?.razorpayPaymentId || 'UPI'})`,
+              package_id: selectedPackage?.id || null,
+              package_title: selectedPackage ? selectedPackage.title : `${eventType} Catering (${guestCount} Guests)`,
               guest_count: guestCount,
-              event_date: `${eventDate} at ${eventTime}`,
+              event_date: eventDate,
               event_type: eventType,
-              contact_phone: phone || (user as any)?.phone || '9876543210',
-              special_notes: `[Preferences: ${selectedPrefs.join(', ') || 'General'}] [Deliver To: ${deliveryAddress}] ${notes}`,
-              total_estimated_price: totalBudget
-            })
+              contact_phone: phone,
+              special_notes: notes,
+              total_estimated_price: totalBudget,
+            }),
           });
 
-          if (res.ok) {
-            setSuccessMsg('Razorpay Payment Verified! Your food arrangements are confirmed.');
-            setTimeout(() => {
-              setSubmitting(false);
-              setSuccessMsg('');
-              setViewMode('catalog');
-              setActiveTab('MY REQUESTS');
-            }, 1500);
-          } else {
-            alert('Payment received but failed to record booking in server. Please contact support.');
-            setSubmitting(false);
-          }
-        } catch (err) {
-          console.error('Error saving catering request after payment:', err);
+          toast('Catering Request Paid & Confirmed via Razorpay!', 'success');
           setSubmitting(false);
-        }
-      },
-      onFailure: (errMsg) => {
-        setSubmitting(false);
-        alert(`Razorpay Checkout Info: ${errMsg}`);
-      }
-    });
+          setViewMode('catalog');
+          setActiveTab('MY REQUESTS');
+          fetchMyRequests();
+        },
+        onFailure: (errMsg) => {
+          toast(errMsg, 'error');
+          setSubmitting(false);
+        },
+      });
+    } catch (err: any) {
+      toast(err.message || 'Payment initiation failed', 'error');
+      setSubmitting(false);
+    }
   };
 
-  // ── RENDER DEDICATED REQUEST FORM VIEW ──
-  if (viewMode === 'request') {
+  // ── Render Card Component matching StorePage ──
+  const MealCard = ({ meal }: { meal: MealItem }) => {
+    const inCart = mealCart.find((i) => i.meal.id === meal.id);
+    const qty = inCart ? inCart.qty : 0;
+
     return (
-      <div className="min-h-screen bg-gray-50/70 dark:bg-slate-950 py-10 px-4 sm:px-8 lg:px-12 relative">
-        <div className="max-w-4xl mx-auto">
-          {/* Main Card Container */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 sm:p-12 border border-gray-100/90 dark:border-slate-800 shadow-sm relative overflow-hidden"
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-150 dark:border-slate-800 overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 flex flex-col"
+      >
+        <div className="relative cursor-pointer" onClick={() => setSelectedMealModal(meal)}>
+          <img
+            src={meal.image}
+            alt={meal.name}
+            className="w-full h-36 sm:h-40 object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src =
+                'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=400';
+            }}
+          />
+          {meal.discountBadge && (
+            <span className="absolute top-2 left-2 bg-amber-500 text-white text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow-xs">
+              {meal.discountBadge}
+            </span>
+          )}
+          <button
+            onClick={(e) => toggleWishlist(meal.id, e)}
+            className="absolute top-2 right-2 w-7 h-7 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow-xs z-10 hover:scale-110 transition"
           >
-            {successMsg ? (
-              <div className="py-20 text-center space-y-4">
-                <div className="w-20 h-20 bg-green-50 dark:bg-green-500/20 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center mx-auto shadow-sm border border-green-200 dark:border-green-500/30">
-                  <Check className="w-10 h-10 stroke-[3]" />
-                </div>
-                <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{successMsg}</h3>
-                <p className="text-sm font-semibold text-gray-500">Redirecting to your confirmed bookings list...</p>
-              </div>
-            ) : (
-              <div className="space-y-8">
-                {/* Header Row */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-gray-100 dark:border-slate-800/80">
-                  <div className="flex items-start sm:items-center gap-4 sm:gap-5">
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-3xl bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-xs border border-blue-100 dark:border-blue-500/30">
-                      <ChefHat className="w-7 h-7 sm:w-8 sm:h-8" />
-                    </div>
-                    <div>
-                      <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight leading-none">
-                        Food Arrangements
-                      </h1>
-                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium mt-1.5">
-                        Custom catering and food curation for your premium events.
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setViewMode('catalog')}
-                    className="px-5 py-3 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/80 text-gray-700 dark:text-gray-300 font-bold text-xs sm:text-sm flex items-center gap-2 shadow-2xs transition shrink-0 self-start sm:self-center"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Back to Dashboard</span>
-                  </button>
-                </div>
-
-                {/* ROW 1: EVENT TYPE & DELIVER TO */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest block mb-2">
-                      EVENT TYPE
-                    </label>
-                    <select
-                      value={eventType}
-                      onChange={(e) => setEventType(e.target.value)}
-                      className="w-full h-14 rounded-2xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 text-gray-900 dark:text-white font-black text-base px-4 outline-none focus:border-blue-500 shadow-2xs transition"
-                    >
-                      <option value="Birthday">Birthday</option>
-                      <option value="Wedding / Reception">Wedding / Reception</option>
-                      <option value="Corporate Banquet & Party">Corporate Banquet & Party</option>
-                      <option value="Anniversary Celebration">Anniversary Celebration</option>
-                      <option value="Festival Puja & Feast">Festival Puja & Feast</option>
-                      <option value="Family Get-Together">Family Get-Together</option>
-                      <option value="Custom Bespoke Dinner">Custom Bespoke Dinner</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest block mb-2">
-                      DELIVER TO
-                    </label>
-                    <div className="min-h-14 py-2 px-4 rounded-2xl bg-white dark:bg-slate-800/60 border border-gray-200/80 dark:border-slate-700 flex items-center justify-between shadow-2xs gap-3">
-                      <div className="flex items-center gap-3 flex-1 overflow-hidden">
-                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 font-bold">
-                          <MapPin className="w-5 h-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">
-                            DELIVERING TO
-                          </span>
-                          <p className="text-xs sm:text-sm font-black text-gray-900 dark:text-white truncate">
-                            {deliveryAddress}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAddressModalMode('list');
-                          setAddressModalOpen(true);
-                        }}
-                        className="px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-black text-xs tracking-wider uppercase transition shrink-0 shadow-2xs"
-                      >
-                        CHANGE
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ROW 2: GUESTS COUNT, DATE, TIME */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                  <div>
-                    <label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest block mb-2">
-                      GUESTS COUNT
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="e.g. 50"
-                      value={guestCount || ''}
-                      onChange={(e) => handleGuestCountChange(parseInt(e.target.value) || 0)}
-                      className="w-full h-14 px-4 rounded-2xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 font-black text-base text-gray-900 dark:text-white outline-none focus:border-blue-500 shadow-2xs transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest block mb-2">
-                      DATE
-                    </label>
-                    <input
-                      type="date"
-                      value={eventDate}
-                      onChange={(e) => setEventDate(e.target.value)}
-                      className="w-full h-14 px-4 rounded-2xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 font-black text-base text-gray-900 dark:text-white outline-none focus:border-blue-500 shadow-2xs transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest block mb-2">
-                      TIME
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 1:00 PM"
-                      value={eventTime}
-                      onChange={(e) => setEventTime(e.target.value)}
-                      className="w-full h-14 px-4 rounded-2xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 font-black text-base text-gray-900 dark:text-white outline-none focus:border-blue-500 shadow-2xs transition"
-                    />
-                  </div>
-                </div>
-
-                {/* ROW 3: FOOD PREFERENCES */}
-                <div>
-                  <label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest block mb-3">
-                    FOOD PREFERENCES
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-                    {FOOD_PREFERENCES.map((pref) => {
-                      const active = selectedPrefs.includes(pref);
-                      return (
-                        <button
-                          key={pref}
-                          type="button"
-                          onClick={() => togglePreference(pref)}
-                          className={`py-3.5 px-6 rounded-2xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
-                            active
-                              ? 'border-2 border-blue-500 bg-blue-50/90 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 shadow-sm scale-[1.02]'
-                              : 'border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:border-gray-300'
-                          }`}
-                        >
-                          <span>{pref}</span>
-                          {active && <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 stroke-[3]" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* ROW 4: TOTAL BUDGET (INR) & CONTACT PHONE */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div>
-                    <label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest block mb-2">
-                      TOTAL BUDGET (INR)
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-lg text-blue-600 dark:text-blue-400">₹</span>
-                      <input
-                        type="number"
-                        placeholder="e.g. 25000"
-                        value={totalBudget || ''}
-                        onChange={(e) => setTotalBudget(parseInt(e.target.value) || 0)}
-                        className="w-full h-14 pl-9 pr-4 rounded-2xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 font-black text-lg text-blue-600 dark:text-blue-400 outline-none focus:border-blue-500 shadow-2xs transition"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest block mb-2">
-                      CONTACT PHONE NUMBER
-                    </label>
-                    <input
-                      type="tel"
-                      placeholder="e.g. +91 98765 43210"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full h-14 px-4 rounded-2xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 font-black text-sm text-gray-900 dark:text-white outline-none focus:border-blue-500 shadow-2xs transition"
-                    />
-                  </div>
-                </div>
-
-                {/* ROW 5: SPECIAL INSTRUCTIONS */}
-                <div>
-                  <label className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest block mb-2">
-                    SPECIAL INSTRUCTIONS
-                  </label>
-                  <textarea
-                    rows={4}
-                    placeholder="Dietary requirements, decoration needs, specific dishes, etc."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="w-full p-4.5 rounded-2xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 font-semibold text-xs sm:text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 outline-none focus:border-blue-500 shadow-2xs transition leading-relaxed"
-                  />
-                </div>
-
-                {/* BOTTOM CONFIRMATION BUTTON WITH RAZORPAY */}
-                <div className="pt-8 border-t border-gray-100 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-5">
-                  <div>
-                    <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-black tracking-wider uppercase mb-1">
-                      <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
-                      <span>Razorpay Secure UPI & Cards Gateway</span>
-                    </div>
-                    <p className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-                      Quoted Payable: <span className="text-blue-600 dark:text-blue-400 font-extrabold">₹{totalBudget.toLocaleString()}</span>
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleRazorpayPayment}
-                    disabled={submitting}
-                    className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-black text-sm sm:text-base px-8 py-4 rounded-2xl shadow-lg shadow-blue-600/20 hover:shadow-blue-600/35 transition-all transform active:scale-95 flex items-center justify-center gap-3 shrink-0"
-                  >
-                    <CreditCard className="w-5 h-5 stroke-[2.5]" />
-                    <span>{submitting ? 'Connecting Razorpay...' : 'Confirm & Pay via Razorpay'}</span>
-                    <ArrowRight className="w-5 h-5 stroke-[3]" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </motion.div>
+            <Heart className={`w-4 h-4 ${wishlist.includes(meal.id) ? 'fill-red-500 text-red-500' : 'text-gray-500'}`} />
+          </button>
         </div>
 
-        {/* ── ADDRESS SELECTION / ADD MODAL (Matches Images 1 & 2) ── */}
-        <AnimatePresence>
-          {addressModalOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
-            >
-              <motion.div
-                initial={{ scale: 0.95, y: 20 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.95, y: 20 }}
-                className="bg-[#FAF9F6] dark:bg-slate-900 rounded-[2.5rem] max-w-md w-full border border-gray-200/80 dark:border-slate-800 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+        <div className="p-3 flex flex-col flex-1">
+          <p className="text-[9px] text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider mb-0.5">
+            {meal.category}
+          </p>
+          <h4 className="font-extrabold text-xs text-gray-900 dark:text-white leading-snug line-clamp-2 flex-1">
+            {meal.name}
+          </h4>
+
+          <div className="flex items-center gap-1 mt-1 mb-2">
+            <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+            <span className="text-[9px] text-gray-500 font-semibold">{meal.rating}</span>
+            <span className="text-gray-300 mx-0.5">•</span>
+            <Clock className="w-3 h-3 text-gray-400" />
+            <span className="text-[9px] text-gray-500">{meal.prepTime}</span>
+          </div>
+
+          <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100 dark:border-slate-800/60">
+            <span className="font-black text-sm text-gray-900 dark:text-white">₹{meal.price}</span>
+            {qty === 0 ? (
+              <button
+                onClick={(e) => addToMealCart(meal, e)}
+                className="flex items-center gap-1 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black px-3 py-1.5 rounded-xl transition active:scale-95 shadow-2xs"
               >
-                {/* Modal Header */}
-                <div className="p-6 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between shrink-0">
-                  <h3 className="text-xl font-black text-gray-900 dark:text-white">
-                    {addressModalMode === 'list' ? 'Delivery Address' : addressModalMode === 'add' ? 'New Address' : 'Edit Address'}
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() => setAddressModalOpen(false)}
-                    className="w-9 h-9 rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-white flex items-center justify-center font-bold hover:bg-gray-100 dark:hover:bg-slate-800 transition"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
+                <Plus className="w-3 h-3" /> ADD
+              </button>
+            ) : (
+              <div className="flex items-center gap-1 bg-amber-600 rounded-xl px-1.5 py-1 text-white">
+                <button onClick={(e) => updateMealQty(meal.id, -1, e)} className="w-4 h-4 flex items-center justify-center font-black">
+                  <Minus className="w-2.5 h-2.5" />
+                </button>
+                <span className="font-black text-xs min-w-[12px] text-center">{qty}</span>
+                <button onClick={(e) => updateMealQty(meal.id, 1, e)} className="w-4 h-4 flex items-center justify-center font-black">
+                  <Plus className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
 
-                {/* Modal Body: LIST MODE (Image 1) */}
-                {addressModalMode === 'list' && (
-                  <div className="p-6 overflow-y-auto space-y-6">
-                    {/* Add New Address Dashed Button */}
-                    <button
-                      type="button"
-                      onClick={handleOpenAddAddress}
-                      className="w-full py-4 px-6 rounded-3xl border-2 border-dashed border-blue-400/80 bg-white/60 dark:bg-blue-500/10 hover:bg-blue-50/80 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-extrabold text-base sm:text-lg flex items-center justify-center gap-2.5 transition shadow-2xs"
-                    >
-                      <Plus className="w-6 h-6 stroke-[2.5]" />
-                      <span>Add New Address</span>
-                    </button>
+  // Catering Wizard View
+  if (viewMode === 'request') {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <button
+            onClick={() => setViewMode('catalog')}
+            className="inline-flex items-center gap-2 text-xs font-bold text-amber-600 hover:underline mb-6"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Meals & Catering
+          </button>
 
-                    <div className="space-y-3">
-                      <span className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest block pl-1">
-                        SAVED ADDRESSES
-                      </span>
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-150 dark:border-slate-800 p-6 sm:p-8 shadow-xl space-y-8">
+            <div className="border-b border-gray-100 dark:border-slate-800 pb-6">
+              <span className="text-[10px] font-black uppercase text-amber-600 tracking-widest block mb-1">
+                Custom Catering Calculator
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">
+                {selectedPackage ? selectedPackage.title : 'Configure Event Catering'}
+              </h2>
+            </div>
 
-                      {savedAddresses.map((addr) => {
-                        const Icon = addr.type === 'HOME' ? Home : addr.type === 'WORK' ? Briefcase : MapPin;
-                        return (
-                          <div
-                            key={addr.id}
-                            onClick={() => handleSelectAddress(addr)}
-                            className="bg-white dark:bg-slate-800/90 rounded-[2rem] p-6 border border-gray-200/70 dark:border-slate-700/80 shadow-xs hover:border-blue-500 hover:shadow-md transition cursor-pointer flex flex-col gap-2.5 relative group"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2.5 text-gray-900 dark:text-white">
-                                <Icon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                                <span className="font-extrabold text-lg capitalize">{addr.type.toLowerCase()}</span>
-                              </div>
-                              <div className="flex items-center gap-2.5 text-gray-400">
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleOpenEditAddress(addr, e)}
-                                  className="w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-blue-600 flex items-center justify-center transition"
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleDeleteAddress(addr.id, e)}
-                                  className="w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-red-500 flex items-center justify-center transition"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
+            {/* Guest Slider */}
+            <div className="bg-gray-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-amber-600" /> Guest Count (Pax)
+                </label>
+                <span className="text-xl font-black text-amber-600">{guestCount} Guests</span>
+              </div>
+              <input
+                type="range"
+                min="10"
+                max="500"
+                step="5"
+                value={guestCount}
+                onChange={(e) => setGuestCount(parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-600"
+              />
+            </div>
 
-                            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 font-medium space-y-1 pl-1">
-                              <p className="font-bold text-gray-800 dark:text-gray-200">{addr.houseNo}, {addr.street}</p>
-                              {addr.landmark && <p className="text-gray-400 text-xs">{addr.landmark}</p>}
-                              <p className="text-gray-500">{addr.city}, {addr.state} - <span className="font-extrabold">{addr.pincode}</span></p>
-                              <p className="text-gray-500 pt-1">Phone: <span className="font-extrabold text-gray-700 dark:text-gray-200">{addr.mobile}</span></p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Modal Body: ADD / EDIT MODE (Image 2) */}
-                {(addressModalMode === 'add' || addressModalMode === 'edit') && (
-                  <form onSubmit={handleSaveAddressForm} className="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
-                    {/* Segmented Address Type selector */}
-                    <div className="bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl grid grid-cols-3 gap-1 mb-4 border border-gray-200/50 dark:border-slate-700">
-                      {(['HOME', 'WORK', 'OTHER'] as const).map((type) => (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => setAddrType(type)}
-                          className={`py-2.5 rounded-xl font-extrabold text-xs tracking-wider uppercase transition ${
-                            addrType === type
-                              ? 'bg-white dark:bg-slate-900 text-gray-900 dark:text-white shadow-xs scale-[1.02]'
-                              : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                          }`}
-                        >
-                          {type}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-1.5">
-                        FULL NAME *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={addrFullName}
-                        onChange={(e) => setAddrFullName(e.target.value)}
-                        placeholder="Enter your name"
-                        className="w-full h-11 px-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 font-bold text-sm outline-none focus:border-blue-500 shadow-2xs transition"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-1.5">
-                        MOBILE NUMBER *
-                      </label>
-                      <input
-                        type="tel"
-                        required
-                        value={addrMobile}
-                        onChange={(e) => setAddrMobile(e.target.value)}
-                        placeholder="Enter 10-digit mobile number"
-                        className="w-full h-11 px-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 font-bold text-sm outline-none focus:border-blue-500 shadow-2xs transition"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-1.5">
-                        HOUSE / FLAT NO. *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={addrHouse}
-                        onChange={(e) => setAddrHouse(e.target.value)}
-                        placeholder="House / Flat / Block no."
-                        className="w-full h-11 px-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 font-bold text-sm outline-none focus:border-blue-500 shadow-2xs transition"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-1.5">
-                        STREET / AREA *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={addrStreet}
-                        onChange={(e) => setAddrStreet(e.target.value)}
-                        placeholder="Street, area or society name"
-                        className="w-full h-11 px-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 font-bold text-sm outline-none focus:border-blue-500 shadow-2xs transition"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-1.5">
-                        LANDMARK (OPTIONAL)
-                      </label>
-                      <input
-                        type="text"
-                        value={addrLandmark}
-                        onChange={(e) => setAddrLandmark(e.target.value)}
-                        placeholder="Near hospital, bus stand, etc."
-                        className="w-full h-11 px-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 font-medium text-sm outline-none focus:border-blue-500 shadow-2xs transition"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-[10px] font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-1.5">
-                          CITY *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={addrCity}
-                          onChange={(e) => setAddrCity(e.target.value)}
-                          className="w-full h-11 px-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 font-bold text-sm outline-none focus:border-blue-500 shadow-2xs transition"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-1.5">
-                          PINCODE *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={addrPincode}
-                          onChange={(e) => setAddrPincode(e.target.value)}
-                          className="w-full h-11 px-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 font-extrabold text-sm outline-none focus:border-blue-500 shadow-2xs transition"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest block mb-1.5">
-                        STATE *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={addrState}
-                        onChange={(e) => setAddrState(e.target.value)}
-                        className="w-full h-11 px-4 rounded-xl bg-white dark:bg-slate-800 border border-gray-200/80 dark:border-slate-700 font-bold text-sm outline-none focus:border-blue-500 shadow-2xs transition"
-                      />
-                    </div>
-
-                    <div className="pt-4 flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setAddressModalMode('list')}
-                        className="w-1/3 py-3.5 rounded-2xl border border-gray-300 dark:border-slate-700 text-gray-600 dark:text-gray-300 font-extrabold text-sm hover:bg-gray-100 transition"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="flex-1 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-base shadow-lg shadow-blue-600/25 hover:shadow-blue-600/35 transition active:scale-95 flex items-center justify-center"
-                      >
-                        Save Address
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            {/* Payment Summary */}
+            <div className="p-6 rounded-2xl bg-amber-50/50 dark:bg-slate-800/80 border border-amber-200 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Estimated Total Budget</span>
+                <p className="text-3xl font-black text-amber-600">₹{totalBudget.toLocaleString()}</p>
+              </div>
+              <button
+                onClick={handleRazorpayPayment}
+                disabled={submitting}
+                className="w-full sm:w-auto h-14 px-8 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-sm shadow-lg active:scale-95 transition flex items-center justify-center gap-2"
+              >
+                <CreditCard className="w-5 h-5" />
+                <span>{submitting ? 'Initializing Gateway...' : 'Pay & Confirm Catering via Razorpay'}</span>
+              </button>
+            </div>
+          </motion.div>
+        </div>
       </div>
     );
   }
 
-  // ── RENDER MAIN CATALOG & TABS VIEW ──
+  // Main Render matching StorePage layout 100%!
   return (
-    <div className="min-h-screen bg-gray-50/50 dark:bg-slate-950 py-8 px-4 sm:px-8 lg:px-12">
-      <div className="max-w-[1440px] mx-auto">
-        {/* ── Top Hero Banner Container ── */}
-        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 sm:p-10 border border-gray-100 dark:border-slate-800 shadow-sm mb-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-start sm:items-center gap-4 sm:gap-5">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-3xl bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-xs border border-blue-100 dark:border-blue-500/30">
-                <ChefHat className="w-7 h-7 sm:w-8 sm:h-8" />
-              </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 dark:text-white tracking-tight">
-                  Food Arrangements
-                </h1>
-                <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium mt-1">
-                  Custom catering and food curation for your premium events.
-                </p>
+    <div className="flex flex-col flex-1 bg-gray-50 dark:bg-slate-950 min-h-screen pb-28 select-none">
+      {/* ── Sticky Header matching StorePage ── */}
+      <div className="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800/60 shadow-sm">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12 pt-4 pb-3.5">
+          <div className="flex items-center justify-between mb-3">
+            {/* Left Location */}
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <MapPin className="w-6 h-6 sm:w-7 sm:h-7 text-amber-600 shrink-0 drop-shadow-2xs" />
+              <div className="flex flex-col justify-center">
+                <span className="text-[11px] sm:text-xs font-bold text-gray-400 dark:text-gray-500 leading-tight">
+                  Delivering to
+                </span>
+                <h2 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white leading-snug tracking-tight">
+                  Patan, Gujarat
+                </h2>
               </div>
             </div>
+
+            {/* Right Action Buttons */}
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => setActiveTab('MY REQUESTS')}
+                className="px-3.5 py-2 rounded-xl border border-amber-200 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 transition shadow-2xs flex items-center gap-1.5"
+              >
+                <Package className="w-4 h-4 text-amber-600" />
+                <span>My Orders</span>
+              </button>
+              <button
+                onClick={() => cartCount > 0 && setIsCartOpen(true)}
+                className="relative w-10 h-10 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-xl transition border border-gray-200 dark:border-slate-700/80"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-amber-600 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-xs">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Search Box */}
+          <div className="relative mb-3.5">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="search"
+              placeholder="Search meals, caterers, Gujarati thali..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-11 sm:h-12 pl-11 pr-4 rounded-xl sm:rounded-2xl bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700 text-sm font-medium text-gray-800 dark:text-white placeholder-gray-400 outline-none focus:border-amber-500 focus:bg-white transition shadow-xs"
+            />
+          </div>
+
+          {/* Category Pills matching StorePage */}
+          <div className="flex gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar pb-1.5">
             <button
-              onClick={() => openRequestForm(null)}
-              className="bg-slate-950 dark:bg-blue-600 hover:bg-slate-900 dark:hover:bg-blue-700 text-white font-black text-sm sm:text-base px-6 py-4 rounded-2xl flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg transition active:scale-95 shrink-0"
+              onClick={() => setActiveCategory('Favorites')}
+              className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold border transition whitespace-nowrap ${
+                activeCategory === 'Favorites'
+                  ? 'bg-red-500 text-white border-red-500 shadow-sm'
+                  : 'bg-white dark:bg-slate-800 text-red-500 border-red-100 dark:border-slate-700 hover:border-red-300'
+              }`}
             >
-              <Plus className="w-5 h-5 text-blue-400 dark:text-white stroke-[3]" />
-              <span>Request Catering</span>
+              <Heart className={`w-3.5 h-3.5 ${activeCategory === 'Favorites' ? 'fill-white' : 'fill-red-500'}`} />
+              <span>Favorites</span>
             </button>
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-extrabold border transition whitespace-nowrap ${
+                  activeCategory === cat
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                    : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-slate-700 hover:border-gray-300'
+                }`}
+              >
+                <span>{CAT_EMOJI[cat] || '🍛'}</span>
+                <span>{cat}</span>
+              </button>
+            ))}
           </div>
-
-          {/* ── Segmented Tab Bar ── */}
-          <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-800/80">
-            <div className="bg-slate-100/90 dark:bg-slate-800/90 p-1.5 rounded-2xl w-fit flex flex-wrap gap-1 border border-gray-200/60 dark:border-slate-700">
-              {(['CATERING PACKAGES', 'GALLERY', 'MY REQUESTS'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-5 sm:px-7 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm tracking-wider uppercase transition-all ${
-                    activeTab === tab
-                      ? 'bg-white dark:bg-slate-900 text-gray-900 dark:text-white shadow-sm scale-[1.02]'
-                      : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ── Category Filter Pills (Visible in Packages Tab) ── */}
-          {activeTab === 'CATERING PACKAGES' && (
-            <div className="flex gap-2.5 overflow-x-auto no-scrollbar pt-6">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`shrink-0 px-5 sm:px-6 py-2 rounded-full text-xs sm:text-sm font-extrabold transition whitespace-nowrap ${
-                    activeCategory === cat
-                      ? 'border-2 border-blue-500 bg-blue-50/90 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 shadow-sm'
-                      : 'border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:border-gray-300'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
+      </div>
 
-        {/* ── Main Tab Contents ── */}
-        <AnimatePresence mode="wait">
-          {/* TAB 1: CATERING PACKAGES */}
-          {activeTab === 'CATERING PACKAGES' && (
-            <motion.div
-              key="packages"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 pb-16"
-            >
-              {loading ? (
-                [1, 2, 3, 4, 5, 6].map((k) => (
-                  <div key={k} className="h-[420px] bg-white dark:bg-slate-900 rounded-[2rem] animate-pulse border border-gray-100 dark:border-slate-800" />
-                ))
-              ) : packages.length === 0 ? (
-                <div className="col-span-full bg-white dark:bg-slate-900 rounded-[2.5rem] py-20 text-center border border-gray-100 dark:border-slate-800 shadow-2xs">
-                  <Utensils className="w-16 h-16 text-gray-300 mx-auto mb-3 animate-bounce" />
-                  <h3 className="text-lg font-black text-gray-800 dark:text-white">No catering packages available in this category</h3>
-                  <p className="text-sm text-gray-500 mt-1">Check back soon or submit a custom catering request!</p>
-                </div>
-              ) : (
-                packages.map((pkg) => (
-                  <div
-                    key={pkg.id}
-                    className="bg-white dark:bg-slate-900 rounded-[2rem] border border-gray-100/90 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col hover:-translate-y-1 group"
+      {/* ── Main Content Grid matching StorePage ── */}
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12 py-6 flex-1 w-full">
+        {activeTab === 'MEALS' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider">
+                {activeCategory} Dishes ({filteredMeals.length})
+              </h3>
+
+              {/* Dietary Filter Pill */}
+              <div className="flex items-center gap-1.5">
+                {(['all', 'veg', 'nonveg', 'jain'] as const).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setFoodTypeFilter(type)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase transition ${
+                      foodTypeFilter === type
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'bg-white dark:bg-slate-900 text-gray-500 border border-gray-200 dark:border-slate-800'
+                    }`}
                   >
-                    <div className="relative overflow-hidden h-56 sm:h-64">
-                      <img
-                        src={pkg.image}
-                        alt={pkg.title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=600';
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
-                    </div>
+                    {type === 'veg' ? '🟢 Veg' : type === 'nonveg' ? '🔴 Non-Veg' : type === 'jain' ? '🟡 Jain' : 'All'}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                    <div className="p-6 sm:p-7 flex flex-col flex-1">
-                      <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg w-fit mb-3 border border-slate-200/60 dark:border-slate-700">
-                        {pkg.category}
-                      </span>
-                      <h3 className="text-xl font-black text-gray-900 dark:text-white leading-snug mb-2.5">
-                        {pkg.title}
-                      </h3>
-                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 line-clamp-4 leading-relaxed font-medium flex-1 mb-6">
-                        {pkg.description}
-                      </p>
+            {filteredMeals.length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center border border-gray-150 dark:border-slate-800">
+                <Utensils className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                <p className="text-xs font-bold text-gray-500">No dishes found in this category.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
+                {filteredMeals.map((meal) => (
+                  <MealCard key={meal.id} meal={meal} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-                      <div className="pt-4 border-t border-gray-100 dark:border-slate-800/80 flex items-center justify-between mt-auto">
-                        <div>
-                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
-                            SERVES / BASE RATE
-                          </span>
-                          <div className="text-base sm:text-lg font-black text-gray-900 dark:text-white flex items-center">
-                            {pkg.pax} <span className="mx-1.5 text-gray-400">•</span> ₹{pkg.price.toLocaleString()}
+        {/* Catering Requests List */}
+        {activeTab === 'MY REQUESTS' && (
+          <div className="max-w-3xl mx-auto space-y-4">
+            {requests.length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center border border-gray-150 dark:border-slate-800">
+                <Utensils className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                <h4 className="text-sm font-black text-gray-900 dark:text-white">No active orders or catering requests</h4>
+                <p className="text-xs text-gray-500 mt-1">Order meals to track your delivery status in real-time!</p>
+              </div>
+            ) : (
+              requests.map((req) => (
+                <div key={req.id} className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-gray-150 dark:border-slate-800 shadow-xs flex items-center justify-between gap-4">
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-green-600 bg-green-50 px-2 py-0.5 rounded-md">
+                      ✓ {req.status}
+                    </span>
+                    <h4 className="font-extrabold text-sm text-gray-900 dark:text-white mt-1">{req.package_title}</h4>
+                    <p className="text-xs text-gray-500">Date: {req.event_date} • Guests: {req.guest_count} Pax</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-base font-black text-amber-600">₹{req.total_estimated_price.toLocaleString()}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── FLOATING CART BAR MATCHING STORE PAGE ── */}
+      <AnimatePresence>
+        {cartCount > 0 && activeTab === 'MEALS' && !isCartOpen && (
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            className="fixed bottom-20 left-1/2 -translate-x-1/2 w-[90%] max-w-sm z-40"
+          >
+            <div
+              onClick={() => {
+                setCartStep(1);
+                setIsCartOpen(true);
+              }}
+              className="bg-amber-600 hover:bg-amber-500 text-white rounded-2xl px-5 py-3 shadow-xl border border-white/20 flex items-center justify-between cursor-pointer active:scale-95 transition"
+            >
+              <div className="flex items-center gap-2 text-xs font-black">
+                <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">
+                  {cartCount}
+                </span>
+                <span>View Cart</span>
+              </div>
+              <span className="font-black text-sm">₹{cartTotal.toLocaleString()} ›</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── 4-STEP MEAL CHECKOUT SHEET (z-[1000]) ── */}
+      <AnimatePresence>
+        {isCartOpen && (
+          <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCartOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[90vh]"
+            >
+              <div className="w-12 h-1.5 bg-gray-300 dark:bg-slate-700 rounded-full mx-auto mt-3 mb-1 shrink-0" />
+
+              {/* Header */}
+              <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+                <div>
+                  <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest block">Meal Checkout</span>
+                  <h3 className="text-base font-black text-gray-900 dark:text-white">
+                    {cartStep === 1 ? '① Review Items' : cartStep === 2 ? '② Address' : cartStep === 3 ? '③ Summary' : '④ Payment'}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsCartOpen(false)}
+                  className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-500 hover:text-gray-900 dark:hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 flex-1 overflow-y-auto space-y-4">
+                {cartStep === 1 && (
+                  <div className="space-y-3">
+                    {mealCart.map(({ meal, qty }) => (
+                      <div key={meal.id} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-slate-800">
+                        <div className="flex items-center gap-3">
+                          <img src={meal.image} alt={meal.name} className="w-12 h-12 rounded-lg object-cover" />
+                          <div>
+                            <p className="text-xs font-bold text-gray-900 dark:text-white line-clamp-1">{meal.name}</p>
+                            <span className="text-xs text-amber-600 font-black">₹{meal.price} × {qty}</span>
                           </div>
                         </div>
-
-                        <button
-                          onClick={() => openRequestForm(pkg)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm px-6 py-3 rounded-2xl shadow-sm hover:shadow-md transition active:scale-95"
-                        >
-                          Book
-                        </button>
+                        <div className="flex items-center gap-1 bg-amber-600 rounded-xl px-1.5 py-1 text-white">
+                          <button onClick={() => updateMealQty(meal.id, -1)} className="w-4 h-4 flex items-center justify-center font-black">-</button>
+                          <span className="font-black text-xs min-w-[12px] text-center">{qty}</span>
+                          <button onClick={() => updateMealQty(meal.id, 1)} className="w-4 h-4 flex items-center justify-center font-black">+</button>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                )}
+
+                {cartStep === 2 && (
+                  <div className="space-y-3">
+                    <span className="text-xs font-bold text-gray-500 uppercase block">Delivery Address</span>
+                    <div className="p-4 rounded-xl border-2 border-amber-500 bg-amber-50/50 text-xs font-bold text-gray-900 dark:text-white">
+                      📍 {deliveryAddress}
                     </div>
                   </div>
-                ))
-              )}
-            </motion.div>
-          )}
+                )}
 
-          {/* TAB 2: GALLERY */}
-          {activeTab === 'GALLERY' && (
-            <motion.div
-              key="gallery"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-16"
-            >
-              {GALLERY_IMAGES.map((item) => (
-                <div key={item.id} className="relative group rounded-[2rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 h-72 sm:h-80 border border-gray-100 dark:border-slate-800">
-                  <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6 sm:p-8">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider bg-blue-600 text-white px-2.5 py-1 rounded-md w-fit mb-2">
-                      {item.category}
-                    </span>
-                    <h4 className="text-lg sm:text-xl font-black text-white">{item.title}</h4>
+                {(cartStep === 3 || cartStep === 4) && (
+                  <div className="p-4 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 space-y-2 text-xs">
+                    <div className="flex justify-between font-bold text-gray-600 dark:text-gray-400">
+                      <span>Subtotal</span>
+                      <span>₹{cartSubtotal}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-gray-600 dark:text-gray-400">
+                      <span>Delivery Fee</span>
+                      <span>{cartDeliveryFee === 0 ? 'FREE' : `₹${cartDeliveryFee}`}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-slate-700 font-black text-sm text-gray-900 dark:text-white">
+                      <span>Total Amount</span>
+                      <span className="text-amber-600">₹{cartTotal}</span>
+                    </div>
                   </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900">
+                <span className="text-lg font-black text-amber-600">₹{cartTotal}</span>
+                <div className="flex items-center gap-2">
+                  {cartStep > 1 && (
+                    <button onClick={() => setCartStep(cartStep - 1)} className="px-4 h-11 rounded-xl border border-gray-200 text-xs font-bold">
+                      Back
+                    </button>
+                  )}
+                  {cartStep < 4 ? (
+                    <button onClick={() => setCartStep(cartStep + 1)} className="px-6 h-11 rounded-xl bg-amber-600 text-white font-black text-xs">
+                      Continue ➔
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        processUPIPayment({
+                          productName: `HomeSeva Meal Order (${cartCount} items)`,
+                          productId: 'meal_order',
+                          amount: cartTotal,
+                          discount: 0,
+                          customerName: user?.name || 'Valued Customer',
+                          email: user?.email || 'customer@homeseva.com',
+                          phoneNumber: '9876543210',
+                          address: { fullAddress: deliveryAddress },
+                          showAllMethods: false,
+                          onSuccess: () => {
+                            toast('Meal order paid & confirmed via Razorpay!', 'success');
+                            setMealCart([]);
+                            setIsCartOpen(false);
+                            setActiveTab('MY REQUESTS');
+                          },
+                          onFailure: (err) => toast(err, 'error'),
+                        });
+                      }}
+                      className="px-6 h-11 rounded-xl bg-amber-600 text-white font-black text-xs flex items-center gap-1"
+                    >
+                      📱 Pay via Razorpay UPI
+                    </button>
+                  )}
                 </div>
-              ))}
+              </div>
             </motion.div>
-          )}
+          </div>
+        )}
+      </AnimatePresence>
 
-          {/* TAB 3: MY REQUESTS */}
-          {activeTab === 'MY REQUESTS' && (
-            <motion.div
-              key="my-requests"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-4 max-w-4xl mx-auto pb-16"
-            >
-              {requests.length === 0 ? (
-                <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] py-20 text-center border border-gray-100 dark:border-slate-800 shadow-2xs">
-                  <Clock className="w-16 h-16 text-gray-300 mx-auto mb-3" />
-                  <h3 className="text-xl font-black text-gray-800 dark:text-white">No catering requests booked yet</h3>
-                  <p className="text-sm text-gray-500 mt-1">Your upcoming events and meal plans will be listed here with live status!</p>
-                  <button
-                    onClick={() => setActiveTab('CATERING PACKAGES')}
-                    className="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm px-7 py-3 rounded-2xl shadow-sm transition"
-                  >
-                    Browse Packages
-                  </button>
+      {/* Quick View Modal */}
+      <AnimatePresence>
+        {selectedMealModal && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-4 pb-20">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedMealModal(null)} className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl overflow-hidden z-10 flex flex-col max-h-[85vh]">
+              <div className="relative h-48 overflow-hidden shrink-0">
+                <img src={selectedMealModal.image} alt={selectedMealModal.name} className="w-full h-full object-cover" />
+                <button onClick={() => setSelectedMealModal(null)} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-5 flex-1 overflow-y-auto space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-extrabold text-lg text-gray-900 dark:text-white">{selectedMealModal.name}</h3>
+                  <span className="font-black text-amber-600 text-lg">₹{selectedMealModal.price}</span>
                 </div>
-              ) : (
-                requests.map((req) => (
-                  <div key={req.id} className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-slate-800 shadow-xs hover:shadow-md transition flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2.5">
-                        <span className="px-3 py-1 bg-green-50 text-green-700 dark:bg-green-500/20 dark:text-green-400 font-black text-xs uppercase tracking-wider rounded-lg border border-green-200 dark:border-green-500/30 flex items-center gap-1.5">
-                          <Check className="w-3.5 h-3.5 stroke-[3]" /> {req.status}
-                        </span>
-                        <span className="text-xs text-gray-400 font-bold">• ID: #{req.id.slice(-6)}</span>
-                      </div>
-                      <h4 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white">{req.package_title}</h4>
-                      <div className="flex flex-wrap gap-y-1 gap-x-4 text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400">
-                        <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-blue-500" /> Event Date: {req.event_date}</span>
-                        <span className="flex items-center gap-1.5"><Users className="w-4 h-4 text-blue-500" /> Guests: {req.guest_count} Pax</span>
-                      </div>
-                      {req.special_notes && (
-                        <p className="text-xs text-gray-500 italic bg-gray-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-gray-200/60 dark:border-slate-700/60">
-                          "{req.special_notes}"
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="sm:text-right shrink-0 pt-4 sm:pt-0 border-t sm:border-0 border-gray-100 dark:border-slate-800">
-                      <span className="text-[10px] font-black uppercase text-gray-400 tracking-wider block">Estimated Total</span>
-                      <div className="text-xl sm:text-2xl font-black text-blue-600 dark:text-blue-400">₹{req.total_estimated_price.toLocaleString()}</div>
-                      <span className="text-[10px] text-emerald-600 font-extrabold block mt-1">Catering Pro Assigned</span>
-                    </div>
-                  </div>
-                ))
-              )}
+                <p className="text-xs text-gray-500">{selectedMealModal.description}</p>
+                <div className="bg-gray-50 dark:bg-slate-800 p-3 rounded-xl grid grid-cols-4 gap-2 text-center text-xs">
+                  <div><span className="text-[9px] text-gray-400 font-bold block">CALORIES</span><span className="font-bold">{selectedMealModal.nutrition.calories} kcal</span></div>
+                  <div><span className="text-[9px] text-gray-400 font-bold block">PROTEIN</span><span className="font-bold">{selectedMealModal.nutrition.protein}</span></div>
+                  <div><span className="text-[9px] text-gray-400 font-bold block">CARBS</span><span className="font-bold">{selectedMealModal.nutrition.carbs}</span></div>
+                  <div><span className="text-[9px] text-gray-400 font-bold block">FAT</span><span className="font-bold">{selectedMealModal.nutrition.fat}</span></div>
+                </div>
+              </div>
+              <div className="p-4 border-t border-gray-100 dark:border-slate-800">
+                <button onClick={(e) => { addToMealCart(selectedMealModal, e); setSelectedMealModal(null); }} className="w-full bg-amber-600 text-white font-black py-3 rounded-2xl text-xs flex items-center justify-center gap-2">
+                  <ShoppingBag className="w-4 h-4" /> Add to Cart • ₹{selectedMealModal.price}
+                </button>
+              </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

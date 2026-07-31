@@ -514,7 +514,7 @@ export function RootLayout() {
 
       {/* Bottom Navigation Bar */}
       {showBottomNav && (
-        <nav className="fixed bottom-0 inset-x-0 h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-gray-150 dark:border-slate-800/60 z-50 pb-[env(safe-area-inset-bottom)] select-none">
+        <nav className="fixed bottom-0 inset-x-0 h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-gray-150 dark:border-slate-800/60 z-30 pb-[env(safe-area-inset-bottom)] select-none">
           <div className="max-w-7xl mx-auto h-full flex items-center justify-around">
             {/* Tab 1: Home */}
             <Link
