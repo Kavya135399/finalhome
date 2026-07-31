@@ -1,61 +1,210 @@
 import { createTransporter } from '../config/mailer.js';
 import { generateInvoicePDF } from './invoiceService.js';
+import { getTemplateHtml } from './emailTemplates.js';
 
-export const sendBookingConfirmationEmail = async (bookingData) => {
+const getFromEmail = () => process.env.EMAIL_FROM || 'HomeSeva <bhalepadharya.app@gmail.com>';
+const getAdminEmail = () => process.env.ADMIN_EMAIL || 'bhalepadharya.app@gmail.com';
+
+/**
+ * Core Mail Dispatcher
+ */
+export const dispatchEmail = async ({ to, subject, html, attachments = [] }) => {
   try {
-    const pdfBuffer = await generateInvoicePDF(bookingData);
     const transporter = createTransporter();
-
-    const fromEmail = process.env.EMAIL_FROM || 'HomeSeva Payments <noreply@homeseva.com>';
     const mailOptions = {
-      from: fromEmail,
-      to: bookingData.email,
-      subject: `Booking Confirmed & Tax Invoice - ${bookingData.bookingId}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; borderRadius: 8px; overflow: hidden;">
-          <div style="background-color: #4F46E5; color: #ffffff; padding: 24px; text-align: center;">
-            <h1 style="margin: 0; font-size: 24px;">Booking Confirmed!</h1>
-            <p style="margin-top: 8px; opacity: 0.9;">Thank you for your payment with HomeSeva</p>
-          </div>
-
-          <div style="padding: 24px; color: #374151; background-color: #ffffff;">
-            <p>Dear <strong>${bookingData.customerName}</strong>,</p>
-            <p>Your payment via Razorpay UPI was <strong>VERIFIED & SUCCESSFUL</strong>. Here are your booking details:</p>
-            
-            <div style="background-color: #f9fafb; border: 1px solid #f3f4f6; padding: 16px; border-radius: 6px; margin: 20px 0;">
-              <table style="width: 100%; font-size: 14px; line-height: 1.6;">
-                <tr><td><strong>Booking ID:</strong></td><td>${bookingData.bookingId}</td></tr>
-                <tr><td><strong>Invoice #:</strong></td><td>${bookingData.invoiceNumber}</td></tr>
-                <tr><td><strong>Service Name:</strong></td><td>${bookingData.productName}</td></tr>
-                <tr><td><strong>Date & Time:</strong></td><td>${bookingData.bookingDate} at ${bookingData.bookingTime}</td></tr>
-                <tr><td><strong>Total Amount Paid:</strong></td><td><strong style="color: #059669;">₹${bookingData.finalAmount}</strong></td></tr>
-                <tr><td><strong>Payment Method:</strong></td><td>Razorpay UPI (${bookingData.paymentMethod})</td></tr>
-                <tr><td><strong>Payment ID:</strong></td><td>${bookingData.razorpayPaymentId}</td></tr>
-              </table>
-            </div>
-
-            <p>Your official tax invoice PDF has been generated and attached to this email.</p>
-            
-            <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 13px; color: #6b7280;">
-              <p>Need support? Contact us at <a href="mailto:support@homeseva.com" style="color: #4F46E5;">support@homeseva.com</a> or call +91 98765 43210.</p>
-            </div>
-          </div>
-        </div>
-      `,
-      attachments: [
-        {
-          filename: `Invoice_${bookingData.invoiceNumber}.pdf`,
-          content: pdfBuffer,
-          contentType: 'application/pdf',
-        },
-      ],
+      from: getFromEmail(),
+      to,
+      subject,
+      html,
+      attachments,
     };
 
     const result = await transporter.sendMail(mailOptions);
-    console.log(`[Email Service] Confirmation email sent to ${bookingData.email} (Msg ID: ${result.messageId})`);
-    return true;
+    console.log(`[Email Dispatch Success] To: ${to} | Subject: "${subject}" | MsgID: ${result.messageId}`);
+    return { success: true, messageId: result.messageId };
   } catch (error) {
-    console.error('[Email Service Error]:', error.message);
+    console.error(`[Email Dispatch Failure] To: ${to} | Error:`, error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Order Notifications (Placed, Confirmed, Shipped, Delivered, Cancelled, etc.)
+ */
+export const sendOrderNotification = async (templateKey, orderData) => {
+  const recipient = orderData.email || orderData.customerEmail;
+  if (!recipient) {
+    console.error('[Email Service] No recipient email specified for order notification');
     return false;
   }
+
+  const subjects = {
+    order_placed: `📦 Order Placed - ${orderData.bookingId || orderData.orderId}`,
+    order_confirmed: `✅ Order Confirmed & Tax Invoice - ${orderData.bookingId || orderData.orderId}`,
+    order_packed: `🎁 Order Packed - ${orderData.bookingId || orderData.orderId}`,
+    order_shipped: `🚚 Order Shipped - ${orderData.bookingId || orderData.orderId}`,
+    out_for_delivery: `🛵 Out for Delivery - ${orderData.bookingId || orderData.orderId}`,
+    delivered: `🎉 Order Delivered - ${orderData.bookingId || orderData.orderId}`,
+    order_cancelled: `❌ Order Cancelled - ${orderData.bookingId || orderData.orderId}`,
+    payment_failed: `⚠️ Payment Failed for Order - ${orderData.bookingId || orderData.orderId}`,
+    refund_initiated: `🔄 Refund Initiated - ${orderData.bookingId || orderData.orderId}`,
+    refund_completed: `💰 Refund Completed - ${orderData.bookingId || orderData.orderId}`,
+  };
+
+  const html = getTemplateHtml(templateKey, orderData);
+  const attachments = [];
+
+  // Generate PDF Invoice attachment for confirmed or delivered orders
+  if (['order_confirmed', 'delivered'].includes(templateKey)) {
+    try {
+      const pdfBuffer = await generateInvoicePDF(orderData);
+      attachments.push({
+        filename: `Invoice_${orderData.invoiceNumber || orderData.bookingId || 'HomeSeva'}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      });
+    } catch (err) {
+      console.error('[Invoice Generation Attachment Error]:', err.message);
+    }
+  }
+
+  return await dispatchEmail({
+    to: recipient,
+    subject: subjects[templateKey] || `HomeSeva Order Update - ${orderData.bookingId || 'Notification'}`,
+    html,
+    attachments,
+  });
+};
+
+/**
+ * Backwards Compatible Helper for Booking Confirmation
+ */
+export const sendBookingConfirmationEmail = async (bookingData) => {
+  return await sendOrderNotification('order_confirmed', bookingData);
+};
+
+/**
+ * Customer Account Notifications (Welcome, OTP, Password Reset, Profile Edit)
+ */
+export const sendCustomerAccountNotification = async (templateKey, userData) => {
+  const recipient = userData.email;
+  if (!recipient) return false;
+
+  const subjects = {
+    welcome: 'Welcome to HomeSeva! 🎉',
+    verify_email: 'Verify Your HomeSeva Account Email 🔒',
+    resend_otp: 'Your New HomeSeva Verification OTP 🔒',
+    forgot_password: 'Reset Your HomeSeva Password 🔑',
+    forgot_password_otp: 'Password Reset OTP - HomeSeva 🔑',
+    password_changed: 'Security Alert: Password Changed Successfully 🛡️',
+    profile_updated: 'Security Alert: Profile Details Updated',
+    address_changed: 'Security Alert: Address Book Updated',
+  };
+
+  const html = getTemplateHtml(templateKey, userData);
+  return await dispatchEmail({
+    to: recipient,
+    subject: subjects[templateKey] || 'HomeSeva Account Security Update',
+    html,
+  });
+};
+
+/**
+ * Payment Notifications
+ */
+export const sendPaymentNotification = async (templateKey, paymentData) => {
+  const recipient = paymentData.email;
+  if (!recipient) return false;
+
+  const subjects = {
+    payment_success: `💳 Payment Successful - Order #${paymentData.bookingId || paymentData.orderId}`,
+    payment_failed: `❌ Payment Failed - Order #${paymentData.bookingId || paymentData.orderId}`,
+    refund_completed: `💰 Refund Credit Confirmation - Order #${paymentData.bookingId || paymentData.orderId}`,
+    cod_confirmation: `📦 Cash on Delivery Confirmed - Order #${paymentData.bookingId || paymentData.orderId}`,
+  };
+
+  const html = getTemplateHtml(templateKey, paymentData);
+  return await dispatchEmail({
+    to: recipient,
+    subject: subjects[templateKey] || 'HomeSeva Payment Update',
+    html,
+  });
+};
+
+/**
+ * Offer & Marketing Broadcast Emails
+ */
+export const sendMarketingBroadcast = async (promoData, recipientList = []) => {
+  if (!recipientList.length) {
+    console.log('[Marketing Broadcast] No recipients provided');
+    return { count: 0 };
+  }
+
+  const subject = promoData.subject || promoData.title || '🎁 Special Offer from HomeSeva!';
+  const html = getTemplateHtml('offer_announcement', promoData);
+
+  let successCount = 0;
+  for (const email of recipientList) {
+    const res = await dispatchEmail({ to: email, subject, html });
+    if (res.success) successCount++;
+  }
+
+  console.log(`[Marketing Broadcast Completed] Sent to ${successCount}/${recipientList.length} users`);
+  return { count: successCount, total: recipientList.length };
+};
+
+/**
+ * Admin Notifications (New Order, Cancelled Order, Low Stock, Contact Form)
+ */
+export const sendAdminNotification = async (alertType, alertData) => {
+  const adminEmail = getAdminEmail();
+  const title = alertData.title || `Alert: ${alertType}`;
+  const details = alertData.details || JSON.stringify(alertData);
+
+  const html = getTemplateHtml('admin_alert', {
+    alertTitle: title,
+    alertDetails: details,
+  });
+
+  return await dispatchEmail({
+    to: adminEmail,
+    subject: `📢 [Admin Alert] ${title}`,
+    html,
+  });
+};
+
+/**
+ * Review Request Email
+ */
+export const sendReviewRequestEmail = async (orderData) => {
+  const recipient = orderData.email;
+  if (!recipient) return false;
+
+  const html = getTemplateHtml('review_request', orderData);
+  return await dispatchEmail({
+    to: recipient,
+    subject: `⭐ How was your service? Rate your experience with HomeSeva`,
+    html,
+  });
+};
+
+/**
+ * Reminder Emails (Cart, Wishlist, Offer Expiry)
+ */
+export const sendReminderEmail = async (templateKey, reminderData) => {
+  const recipient = reminderData.email;
+  if (!recipient) return false;
+
+  const subjects = {
+    cart_reminder: '🛒 Items are waiting in your cart!',
+    wishlist_reminder: '❤️ Items on your wishlist are back in stock!',
+    offer_expiring: '⏰ Your special discount coupon expires soon!',
+  };
+
+  const html = getTemplateHtml(templateKey, reminderData);
+  return await dispatchEmail({
+    to: recipient,
+    subject: subjects[templateKey] || 'HomeSeva Reminder',
+    html,
+  });
 };

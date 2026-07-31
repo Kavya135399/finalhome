@@ -6,7 +6,7 @@ import {
   verifyWebhookSignature,
   fetchPaymentDetails,
 } from '../services/razorpayService.js';
-import { sendBookingConfirmationEmail } from '../services/emailService.js';
+import { sendBookingConfirmationEmail, sendAdminNotification } from '../services/emailService.js';
 import { getRazorpayKeyId } from '../config/razorpay.js';
 
 // In-memory / fallback storage array if MongoDB is not connected
@@ -54,13 +54,11 @@ export const createOrder = async (req, res) => {
       (typeof productName === 'string' && productName.toLowerCase().includes('store'))
     );
 
-    // The amount sent by frontend is ALREADY the exact total payable shown to the user on the screen.
-    // Do NOT add GST on top, as prices are already tax-inclusive.
     let finalAmount = Math.max(1, Math.round(baseAmount));
     if (!isStoreOrder && discount > 0 && baseAmount > discount && baseAmount === Number(req.body.basePrice)) {
       finalAmount = Math.max(1, Math.round(baseAmount - discount));
     }
-    const gst = Math.round(finalAmount * 0.1525); // tax portion included in final total
+    const gst = Math.round(finalAmount * 0.1525);
 
     const receipt = `rcpt_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const order = await createRazorpayOrder({
@@ -139,7 +137,6 @@ export const verifyPayment = async (req, res) => {
     if (!isValidSignature) {
       console.warn(`[SECURITY ALERT] Invalid signature for Order ${razorpay_order_id} & Payment ${razorpay_payment_id}`);
       
-      // Log failed security event
       try {
         await PaymentLog.create({
           event: 'signature_verification_failed',
@@ -159,12 +156,10 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
-    // Fetch verified transaction metadata from Razorpay SDK
     const paymentMeta = await fetchPaymentDetails(razorpay_payment_id);
     console.log('[DEBUG PAYMENT DETAILS FETCHED]:', paymentMeta);
     const transactionId = paymentMeta.vpa || paymentMeta.acquirer_data?.rrn || paymentMeta.id || razorpay_payment_id;
 
-    // Generate unique IDs
     const bookingId = `HS-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 900 + 100)}`;
     const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(Math.random() * 90000 + 10000)}`;
 
@@ -179,7 +174,7 @@ export const verifyPayment = async (req, res) => {
       userId: req.user?.id || details.userId || 'guest',
       customerName: details.customerName || 'Customer',
       phoneNumber: details.phoneNumber || details.phone || '9876543210',
-      email: details.email || 'customer@example.com',
+      email: details.email || 'bhalepadharya.app@gmail.com',
       address: {
         street: details.address?.street || details.address || 'Standard Address',
         city: details.address?.city || 'Mumbai',
@@ -208,7 +203,6 @@ export const verifyPayment = async (req, res) => {
       updatedAt: new Date(),
     };
 
-    // Save to MongoDB
     let savedBooking;
     try {
       savedBooking = await Booking.create(newBookingData);
@@ -219,7 +213,6 @@ export const verifyPayment = async (req, res) => {
     
     fallbackBookings.unshift(newBookingData);
 
-    // Audit log success
     try {
       await PaymentLog.create({
         event: 'payment_verified_booking_created',
@@ -234,10 +227,16 @@ export const verifyPayment = async (req, res) => {
       // ignore
     }
 
-    // Trigger async email notification with attached PDF invoice
+    // Dispatch Order Confirmation Email with PDF invoice attached
     sendBookingConfirmationEmail(newBookingData).catch((err) => {
       console.error('Email dispatch background warning:', err.message);
     });
+
+    // Send Admin Notification
+    sendAdminNotification('new_order', {
+      title: `New Paid Order #${bookingId}`,
+      details: `Received payment of ₹${finalAmt} for ${newBookingData.productName} from ${newBookingData.customerName} (${newBookingData.email}).`,
+    }).catch((err) => console.error('Admin alert warning:', err.message));
 
     return res.status(200).json({
       success: true,
@@ -261,7 +260,7 @@ export const verifyPayment = async (req, res) => {
 export const handleWebhook = async (req, res) => {
   try {
     const signature = req.headers['x-razorpay-signature'];
-    const rawBody = req.rawBody || req.body; // Buffer or raw string
+    const rawBody = req.rawBody || req.body;
 
     if (!signature) {
       return res.status(400).json({ success: false, message: 'Missing Webhook Signature header' });
@@ -282,7 +281,6 @@ export const handleWebhook = async (req, res) => {
       const orderId = paymentEntity.order_id;
       const paymentId = paymentEntity.id;
 
-      // Update MongoDB status if booking exists
       try {
         await Booking.findOneAndUpdate(
           { razorpayOrderId: orderId },

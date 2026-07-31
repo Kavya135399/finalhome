@@ -11,14 +11,17 @@ import {
   LayoutDashboard,
   LogOut,
   Wrench,
+  Shield,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/Button';
 import { cities } from '../data/sampleData';
+import { NotificationBell } from './notifications/NotificationBell';
 
 const navLinks = [
   { to: '/', label: 'Home' },
   { to: '/services', label: 'Services' },
+  { to: '/memberships-info', label: 'Membership' },
   { to: '/about', label: 'About' },
   { to: '/contact', label: 'Contact' },
 ];
@@ -115,6 +118,7 @@ export function Navbar() {
 
           {/* Right actions */}
           <div className="flex items-center gap-2">
+            <NotificationBell />
             {user ? (
               <div className="relative hidden sm:block">
                 <button
@@ -141,6 +145,9 @@ export function Navbar() {
                       </div>
                       <Link to="/dashboard" onClick={() => setProfileOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-slate-800 transition">
                         <LayoutDashboard className="w-4 h-4" /> Dashboard
+                      </Link>
+                      <Link to="/memberships" onClick={() => setProfileOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-slate-800 transition">
+                        <Shield className="w-4 h-4 text-amber-500" /> My Memberships
                       </Link>
                       {user.role === 'professional' && (
                         <Link to="/pro/dashboard" onClick={() => setProfileOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-slate-800 transition">

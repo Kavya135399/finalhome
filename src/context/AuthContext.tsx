@@ -17,7 +17,8 @@ interface AuthContextValue {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<AuthUser>;
-  signUp: (name: string, email: string, password: string, role: Role) => Promise<void>;
+  signUp: (name: string, email: string, password: string, role: Role, mobile?: string) => Promise<{ requiresVerification: boolean; email: string; otp?: string }>;
+  verifyEmail: (email: string, otp: string) => Promise<AuthUser>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUser: (updatedUser: Partial<AuthUser>) => void;
@@ -128,29 +129,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return mapped;
   };
 
-  const signUp = async (name: string, email: string, password: string, role: Role) => {
-    if (!isSupabaseConfigured) {
-      try {
-        const data = await apiClient.register(name, email, password, role);
-        setLocalUser(data.user);
-        saveCurrentLocalUser(data.user);
-        localStorage.setItem('homeseva.token', data.token);
-        return;
-      } catch (err: any) {
-        let msg = err.response?.data?.error || err.message || 'Registration failed';
-        if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
-          msg = 'Network error: Unable to connect to the server. Please check your internet connection or try again later.';
-        }
-        throw new Error(msg);
+  const signUp = async (name: string, email: string, password: string, role: Role, mobile = '') => {
+    try {
+      const data = await apiClient.register(name, email, password, role, mobile);
+      return { requiresVerification: true, email: data.email || email, otp: data.otp };
+    } catch (err: any) {
+      let msg = err.response?.data?.error || err.message || 'Registration failed';
+      if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+        msg = 'Network error: Unable to connect to the server. Please check your internet connection or try again later.';
       }
+      throw new Error(msg);
     }
+  };
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { name, role } },
-    });
-    if (error) throw error;
+  const verifyEmail = async (email: string, otp: string) => {
+    try {
+      const data = await apiClient.verifyEmail(email, otp);
+      if (!data.success || !data.user) {
+        throw new Error(data.error || 'Verification failed');
+      }
+      setLocalUser(data.user);
+      saveCurrentLocalUser(data.user);
+      if (data.token) {
+        localStorage.setItem('homeseva.token', data.token);
+      }
+      return data.user;
+    } catch (err: any) {
+      let msg = err.response?.data?.error || err.message || 'Verification failed';
+      throw new Error(msg);
+    }
   };
 
   const signOut = async () => {
@@ -186,7 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut, resetPassword, updateUser }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, verifyEmail, signOut, resetPassword, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

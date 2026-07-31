@@ -6,6 +6,7 @@ import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import { OtpVerificationModal } from '../components/auth/OtpVerificationModal';
 
 export function LoginPage() {
   const { signIn } = useAuth();
@@ -15,6 +16,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   const validate = () => {
@@ -42,10 +44,27 @@ export function LoginPage() {
       } else {
         navigate('/dashboard');
       }
-    } catch (err) {
-      toast(err instanceof Error ? err.message : 'Login failed', 'error');
+    } catch (err: any) {
+      if (err.requiresVerification || err.response?.data?.requiresVerification) {
+        toast('Please verify your email before logging in.', 'info');
+        setShowOtpModal(true);
+      } else {
+        toast(err.message || 'Login failed', 'error');
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOtpVerified = (_token?: string, user?: any) => {
+    setShowOtpModal(false);
+    toast('Email verified successfully! Logging you in...', 'success');
+    if (user?.role === 'admin') {
+      navigate('/admin');
+    } else if (user?.role === 'professional') {
+      navigate('/pro/dashboard');
+    } else {
+      navigate('/dashboard');
     }
   };
 
@@ -135,6 +154,15 @@ export function LoginPage() {
       <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-6">
         New to HomeSeva? <Link to="/register" className="text-brand-600 font-semibold hover:underline">Create an account</Link>
       </p>
+
+      {/* OTP Modal */}
+      <OtpVerificationModal
+        isOpen={showOtpModal}
+        email={email}
+        onClose={() => setShowOtpModal(false)}
+        onSuccess={handleOtpVerified}
+        type="verification"
+      />
     </AuthLayout>
   );
 }

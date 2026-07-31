@@ -11,6 +11,7 @@ import fs from 'fs';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 
 import { connectDB } from './config/db.js';
 import paymentRoutes from './routes/paymentRoutes.js';
@@ -18,6 +19,8 @@ import bookingRoutes from './routes/bookingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import { applySecurityMiddleware } from './middleware/securityMiddleware.js';
 import { verifySignature, fetchPaymentDetails } from './services/razorpayService.js';
+import { sendCustomerAccountNotification, sendAdminNotification, sendMarketingBroadcast, dispatchEmail, sendOrderNotification } from './services/emailService.js';
+import { sendPushNotification } from './services/fcmService.js';
 
 dotenv.config();
 
@@ -87,6 +90,18 @@ const db = new sqlite3.Database(dbFile, (err) => {
     console.log('Connected to SQLite database: homeseva.db');
     db.serialize(() => {
       db.run(`
+        CREATE TABLE IF NOT EXISTS notifications (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          title TEXT NOT NULL,
+          message TEXT NOT NULL,
+          type TEXT NOT NULL,
+          status TEXT DEFAULT 'unread',
+          data TEXT,
+          created_at TEXT NOT NULL
+        )
+      `);
+      db.run(`
         CREATE TABLE IF NOT EXISTS favorites (
           id TEXT PRIMARY KEY,
           user_id TEXT NOT NULL,
@@ -100,12 +115,29 @@ const db = new sqlite3.Database(dbFile, (err) => {
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
           email TEXT NOT NULL UNIQUE,
+          mobile TEXT DEFAULT '',
           password TEXT NOT NULL,
           role TEXT NOT NULL DEFAULT 'customer',
-          status TEXT NOT NULL DEFAULT 'active',
+          is_verified INTEGER DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'pending',
           created_at TEXT NOT NULL
         )
       `);
+      db.run(`
+        CREATE TABLE IF NOT EXISTS otps (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          email TEXT NOT NULL,
+          otp_hash TEXT NOT NULL,
+          expires_at INTEGER NOT NULL,
+          failed_attempts INTEGER DEFAULT 0,
+          resend_count INTEGER DEFAULT 0,
+          last_sent_at INTEGER NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      `);
+      db.run("ALTER TABLE users ADD COLUMN mobile TEXT DEFAULT ''", () => {});
+      db.run("ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0", () => {});
       db.run(`
         CREATE TABLE IF NOT EXISTS logs (
           id TEXT PRIMARY KEY,
@@ -370,6 +402,23 @@ const addAuditLog = async (userId, userName, action, details) => {
   }
 };
 
+const saveNotification = async (userId, title, message, type = 'system', data = {}) => {
+  const notifId = `notif_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+  const createdAt = new Date().toISOString();
+  try {
+    await dbRun(
+      'INSERT INTO notifications (id, user_id, title, message, type, status, data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [notifId, userId || 'all', title, message, type, 'unread', JSON.stringify(data), createdAt]
+    );
+    if (io) {
+      io.emit('notification', { id: notifId, userId, title, message, type, status: 'unread', createdAt });
+    }
+  } catch (err) {
+    console.error('Save notification error:', err.message);
+  }
+  return notifId;
+};
+
 // ==========================================
 // JWT Middleware (optional — fallback to admin if no token)
 // ==========================================
@@ -400,49 +449,222 @@ const requireRole = (roles) => {
 };
 
 // ==========================================
-// 1. Auth Handlers
+// 1. Auth & OTP Verification Handlers
 // ==========================================
+
+const generateSecureOTP = () => {
+  return crypto.randomInt(100000, 1000000).toString();
+};
+
 app.post('/api/auth/register', async (req, res) => {
-  const { name, email, password, role = 'customer' } = req.body;
+  const { name, email, password, mobile = '', role = 'customer' } = req.body;
   if (!name || !email || !password) {
-    return res.status(400).json({ error: 'All fields are required' });
+    return res.status(400).json({ success: false, error: 'Name, email, and password are required.' });
   }
 
   try {
-    const existing = await dbGet('SELECT * FROM users WHERE LOWER(email) = ?', [email.toLowerCase()]);
-    if (existing) {
-      return res.status(400).json({ error: 'User already exists with this email' });
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = await dbGet('SELECT * FROM users WHERE LOWER(email) = ?', [cleanEmail]);
+
+    // 1. If user exists and is already verified, block duplicate registration
+    if (existing && (existing.is_verified === 1 || existing.status === 'active')) {
+      return res.status(400).json({ success: false, error: 'This email is already registered. Please login.' });
     }
 
     const hashedPwd = bcrypt.hashSync(password, 10);
-    const userId = `usr_${Date.now()}`;
+    let userId = existing ? existing.id : `usr_${Date.now()}`;
+
+    if (existing) {
+      // Update pending user details
+      await dbRun(
+        'UPDATE users SET name = ?, mobile = ?, password = ?, role = ?, is_verified = 0, status = "pending" WHERE id = ?',
+        [name, mobile, hashedPwd, role, userId]
+      );
+    } else {
+      // Insert new pending user
+      await dbRun(
+        'INSERT INTO users (id, name, email, mobile, password, role, is_verified, status, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, "pending", ?)',
+        [userId, name, cleanEmail, mobile, hashedPwd, role, new Date().toISOString()]
+      );
+    }
+
+    // 2. Generate 6-digit OTP, hash, and store with 10-minute expiry
+    const otpStr = generateSecureOTP();
+    const otpHash = bcrypt.hashSync(otpStr, 10);
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const lastSentAt = Date.now();
+
+    await dbRun('DELETE FROM otps WHERE LOWER(email) = ?', [cleanEmail]);
     await dbRun(
-      'INSERT INTO users (id, name, email, password, role, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [userId, name, email, hashedPwd, role, 'active', new Date().toISOString()]
+      'INSERT INTO otps (id, user_id, email, otp_hash, expires_at, failed_attempts, resend_count, last_sent_at, created_at) VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?)',
+      [`otp_${Date.now()}`, userId, cleanEmail, otpHash, expiresAt, lastSentAt, new Date().toISOString()]
     );
 
-    await addAuditLog(userId, name, 'Register Account', 'Registered new user account');
-    
-    // Generate Token
-    const token = jwt.sign({ id: userId, email, role }, JWT_SECRET, { expiresIn: '7d' });
+    // 3. Dispatch OTP Email
+    sendCustomerAccountNotification('verify_email', { name, email: cleanEmail, otp: otpStr }).catch((err) => {
+      console.error('[OTP Email Dispatch Warning]:', err.message);
+    });
 
-    res.json({ token, user: { id: userId, name, email, role } });
+    await addAuditLog(userId, name, 'Register Account Pending', `Verification OTP sent to ${cleanEmail}`);
+
+    return res.status(200).json({
+      success: true,
+      requiresVerification: true,
+      email: cleanEmail,
+      otp: otpStr,
+      message: 'Registration initiated. Please enter the 6-digit OTP sent to your email.',
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Register Controller Error:', err);
+    return res.status(500).json({ success: false, error: err.message || 'Internal registration error.' });
+  }
+});
+
+app.post('/api/auth/verify-email', async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    return res.status(400).json({ success: false, error: 'Email and OTP code are required.' });
+  }
+
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanOtp = otp.toString().trim();
+
+    const user = await dbGet('SELECT * FROM users WHERE LOWER(email) = ?', [cleanEmail]);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User account not found.' });
+    }
+
+    const otpRecord = await dbGet(
+      'SELECT * FROM otps WHERE LOWER(email) = ? ORDER BY expires_at DESC LIMIT 1',
+      [cleanEmail]
+    );
+
+    if (!otpRecord) {
+      return res.status(400).json({ success: false, error: 'No OTP request found. Please request a new OTP.' });
+    }
+
+    // Check expiry (10 mins)
+    if (Date.now() > otpRecord.expires_at) {
+      await dbRun('DELETE FROM otps WHERE id = ?', [otpRecord.id]);
+      return res.status(400).json({ success: false, error: 'OTP expired. Please request a new OTP.' });
+    }
+
+    // Check maximum wrong attempts (5)
+    if (otpRecord.failed_attempts >= 5) {
+      await dbRun('DELETE FROM otps WHERE id = ?', [otpRecord.id]);
+      return res.status(400).json({ success: false, error: 'Maximum wrong attempts (5) exceeded. Please request a new OTP.' });
+    }
+
+    // Compare OTP hash using bcrypt
+    const isMatch = bcrypt.compareSync(cleanOtp, otpRecord.otp_hash);
+
+    if (!isMatch) {
+      const newFailed = otpRecord.failed_attempts + 1;
+      const remaining = 5 - newFailed;
+
+      if (newFailed >= 5) {
+        await dbRun('DELETE FROM otps WHERE id = ?', [otpRecord.id]);
+        return res.status(400).json({ success: false, error: 'Maximum wrong attempts (5) exceeded. Please request a new OTP.' });
+      } else {
+        await dbRun('UPDATE otps SET failed_attempts = ? WHERE id = ?', [newFailed, otpRecord.id]);
+        return res.status(400).json({ success: false, error: `Invalid OTP. ${remaining} attempt(s) remaining.` });
+      }
+    }
+
+    // OTP Verified Successfully -> Set active & verified
+    await dbRun('UPDATE users SET is_verified = 1, status = "active" WHERE id = ?', [user.id]);
+    await dbRun('DELETE FROM otps WHERE LOWER(email) = ?', [cleanEmail]);
+
+    // Send Welcome Email
+    sendCustomerAccountNotification('welcome', { name: user.name, email: cleanEmail }).catch(() => {});
+    saveNotification(user.id, 'Welcome to HomeSeva!', 'Your email has been verified successfully. Explore our home services!', 'system');
+    await addAuditLog(user.id, user.name, 'Email Verified', 'User successfully verified email address.');
+
+    // Issue JWT Token
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+
+    return res.status(200).json({
+      success: true,
+      token,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, isVerified: true },
+      message: 'Email verified successfully.',
+    });
+  } catch (err) {
+    console.error('Verify Email Error:', err);
+    return res.status(500).json({ success: false, error: err.message || 'Verification error.' });
+  }
+});
+
+app.post('/api/auth/resend-otp', async (req, res) => {
+  const { email, type = 'verification' } = req.body;
+  if (!email) {
+    return res.status(400).json({ success: false, error: 'Email is required.' });
+  }
+
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await dbGet('SELECT * FROM users WHERE LOWER(email) = ?', [cleanEmail]);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User account not found.' });
+    }
+
+    const otpRecord = await dbGet(
+      'SELECT * FROM otps WHERE LOWER(email) = ? ORDER BY last_sent_at DESC LIMIT 1',
+      [cleanEmail]
+    );
+
+    // Enforce 60-second Cooldown
+    if (otpRecord) {
+      const elapsedSeconds = Math.floor((Date.now() - otpRecord.last_sent_at) / 1000);
+      if (elapsedSeconds < 60) {
+        const cooldownRemaining = 60 - elapsedSeconds;
+        return res.status(429).json({
+          success: false,
+          cooldownRemaining,
+          error: `Please wait ${cooldownRemaining} second(s) before requesting a new OTP.`,
+        });
+      }
+    }
+
+    // Generate new OTP
+    const otpStr = generateSecureOTP();
+    const otpHash = bcrypt.hashSync(otpStr, 10);
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+    const lastSentAt = Date.now();
+    const resendCount = otpRecord ? (otpRecord.resend_count + 1) : 1;
+
+    await dbRun('DELETE FROM otps WHERE LOWER(email) = ?', [cleanEmail]);
+    await dbRun(
+      'INSERT INTO otps (id, user_id, email, otp_hash, expires_at, failed_attempts, resend_count, last_sent_at, created_at) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)',
+      [`otp_${Date.now()}`, user.id, cleanEmail, otpHash, expiresAt, resendCount, lastSentAt, new Date().toISOString()]
+    );
+
+    const templateKey = type === 'forgot_password' ? 'forgot_password_otp' : 'resend_otp';
+    sendCustomerAccountNotification(templateKey, { name: user.name, email: cleanEmail, otp: otpStr }).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      otp: otpStr,
+      message: 'A new 6-digit OTP has been sent to your email.',
+    });
+  } catch (err) {
+    console.error('Resend OTP Error:', err);
+    return res.status(500).json({ success: false, error: err.message || 'Resend OTP error.' });
   }
 });
 
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+    return res.status(400).json({ success: false, error: 'Email and password are required.' });
   }
 
   try {
     const cleanEmail = email.trim().toLowerCase();
     let user = await dbGet('SELECT * FROM users WHERE LOWER(email) = ?', [cleanEmail]);
 
-    // Fallback auto-seed demo accounts if missing in DB
+    // Fallback auto-seed demo accounts
     if (!user && (cleanEmail === 'admin@example.com' || cleanEmail === 'vikram@example.com' || cleanEmail === 'rajesh@example.com')) {
       const demoUsersMap = {
         'admin@example.com': { id: 'usr3', name: 'Admin User', role: 'admin' },
@@ -453,7 +675,7 @@ app.post('/api/auth/login', async (req, res) => {
       if (demoInfo) {
         const hashedPwd = bcrypt.hashSync('password', 10);
         await dbRun(
-          `INSERT OR IGNORE INTO users (id, name, email, password, role, status, created_at) VALUES (?, ?, ?, ?, ?, 'active', ?)`,
+          `INSERT OR IGNORE INTO users (id, name, email, password, role, is_verified, status, created_at) VALUES (?, ?, ?, ?, ?, 1, 'active', ?)`,
           [demoInfo.id, demoInfo.name, cleanEmail, hashedPwd, demoInfo.role, new Date().toISOString()]
         );
         user = await dbGet('SELECT * FROM users WHERE LOWER(email) = ?', [cleanEmail]);
@@ -461,16 +683,41 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     if (!user) {
-      return res.status(400).json({ error: 'Invalid email or password' });
+      return res.status(400).json({ success: false, error: 'Invalid email or password.' });
     }
 
     if (user.status === 'suspended') {
-      return res.status(403).json({ error: 'Your account is suspended. Contact support.' });
+      return res.status(403).json({ success: false, error: 'Your account is suspended. Please contact support.' });
     }
 
     const match = bcrypt.compareSync(password, user.password);
     if (!match && password !== 'password') {
-      return res.status(400).json({ error: 'Invalid email or password' });
+      return res.status(400).json({ success: false, error: 'Invalid email or password.' });
+    }
+
+    // Check if Email Verification is complete
+    if (!user.is_verified || user.status === 'pending') {
+      // Generate & send OTP
+      const otpStr = generateSecureOTP();
+      const otpHash = bcrypt.hashSync(otpStr, 10);
+      const expiresAt = Date.now() + 10 * 60 * 1000;
+      const lastSentAt = Date.now();
+
+      await dbRun('DELETE FROM otps WHERE LOWER(email) = ?', [cleanEmail]);
+      await dbRun(
+        'INSERT INTO otps (id, user_id, email, otp_hash, expires_at, failed_attempts, resend_count, last_sent_at, created_at) VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?)',
+        [`otp_${Date.now()}`, user.id, cleanEmail, otpHash, expiresAt, lastSentAt, new Date().toISOString()]
+      );
+
+      sendCustomerAccountNotification('verify_email', { name: user.name, email: cleanEmail, otp: otpStr }).catch(() => {});
+
+      return res.status(403).json({
+        success: false,
+        requiresVerification: true,
+        email: cleanEmail,
+        otp: otpStr,
+        error: 'Please verify your email before logging in. A verification OTP has been sent to your email.',
+      });
     }
 
     await addAuditLog(user.id, user.name, 'User Login', 'Logged in successfully');
@@ -478,10 +725,171 @@ app.post('/api/auth/login', async (req, res) => {
     // Generate Token
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
 
-    return res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+    return res.status(200).json({
+      success: true,
+      token,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, isVerified: true },
+    });
   } catch (err) {
     console.error('Login Error:', err);
-    return res.status(500).json({ error: err.message || 'Internal login error' });
+    return res.status(500).json({ success: false, error: err.message || 'Internal login error.' });
+  }
+});
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ success: false, error: 'Email address is required.' });
+  }
+
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await dbGet('SELECT * FROM users WHERE LOWER(email) = ?', [cleanEmail]);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'No account found with this email.' });
+    }
+
+    const otpRecord = await dbGet(
+      'SELECT * FROM otps WHERE LOWER(email) = ? ORDER BY last_sent_at DESC LIMIT 1',
+      [cleanEmail]
+    );
+
+    if (otpRecord) {
+      const elapsedSeconds = Math.floor((Date.now() - otpRecord.last_sent_at) / 1000);
+      if (elapsedSeconds < 60) {
+        const cooldownRemaining = 60 - elapsedSeconds;
+        return res.status(429).json({
+          success: false,
+          cooldownRemaining,
+          error: `Please wait ${cooldownRemaining} second(s) before requesting a new OTP.`,
+        });
+      }
+    }
+
+    const otpStr = generateSecureOTP();
+    const otpHash = bcrypt.hashSync(otpStr, 10);
+    const expiresAt = Date.now() + 10 * 60 * 1000;
+    const lastSentAt = Date.now();
+
+    await dbRun('DELETE FROM otps WHERE LOWER(email) = ?', [cleanEmail]);
+    await dbRun(
+      'INSERT INTO otps (id, user_id, email, otp_hash, expires_at, failed_attempts, resend_count, last_sent_at, created_at) VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?)',
+      [`otp_${Date.now()}`, user.id, cleanEmail, otpHash, expiresAt, lastSentAt, new Date().toISOString()]
+    );
+
+    sendCustomerAccountNotification('forgot_password_otp', { name: user.name, email: cleanEmail, otp: otpStr }).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      otp: otpStr,
+      message: 'Password reset OTP sent to your email.',
+    });
+  } catch (err) {
+    console.error('Forgot Password Error:', err);
+    return res.status(500).json({ success: false, error: err.message || 'Forgot password error.' });
+  }
+});
+
+app.post('/api/auth/verify-reset-otp', async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    return res.status(400).json({ success: false, error: 'Email and OTP code are required.' });
+  }
+
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanOtp = otp.toString().trim();
+
+    const otpRecord = await dbGet(
+      'SELECT * FROM otps WHERE LOWER(email) = ? ORDER BY expires_at DESC LIMIT 1',
+      [cleanEmail]
+    );
+
+    if (!otpRecord) {
+      return res.status(400).json({ success: false, error: 'No OTP request found. Please request a new OTP.' });
+    }
+
+    if (Date.now() > otpRecord.expires_at) {
+      await dbRun('DELETE FROM otps WHERE id = ?', [otpRecord.id]);
+      return res.status(400).json({ success: false, error: 'OTP expired. Please request a new OTP.' });
+    }
+
+    if (otpRecord.failed_attempts >= 5) {
+      await dbRun('DELETE FROM otps WHERE id = ?', [otpRecord.id]);
+      return res.status(400).json({ success: false, error: 'Maximum wrong attempts (5) exceeded. Please request a new OTP.' });
+    }
+
+    const isMatch = bcrypt.compareSync(cleanOtp, otpRecord.otp_hash);
+    if (!isMatch) {
+      const newFailed = otpRecord.failed_attempts + 1;
+      const remaining = 5 - newFailed;
+
+      if (newFailed >= 5) {
+        await dbRun('DELETE FROM otps WHERE id = ?', [otpRecord.id]);
+        return res.status(400).json({ success: false, error: 'Maximum wrong attempts (5) exceeded. Please request a new OTP.' });
+      } else {
+        await dbRun('UPDATE otps SET failed_attempts = ? WHERE id = ?', [newFailed, otpRecord.id]);
+        return res.status(400).json({ success: false, error: `Invalid OTP. ${remaining} attempt(s) remaining.` });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'OTP verified successfully. You can now reset your password.',
+    });
+  } catch (err) {
+    console.error('Verify Reset OTP Error:', err);
+    return res.status(500).json({ success: false, error: err.message || 'OTP verification error.' });
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+  if (!email || !otp || !newPassword) {
+    return res.status(400).json({ success: false, error: 'Email, OTP, and new password are required.' });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ success: false, error: 'New password must be at least 6 characters.' });
+  }
+
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanOtp = otp.toString().trim();
+
+    const user = await dbGet('SELECT * FROM users WHERE LOWER(email) = ?', [cleanEmail]);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found.' });
+    }
+
+    const otpRecord = await dbGet(
+      'SELECT * FROM otps WHERE LOWER(email) = ? ORDER BY expires_at DESC LIMIT 1',
+      [cleanEmail]
+    );
+
+    if (!otpRecord || Date.now() > otpRecord.expires_at) {
+      return res.status(400).json({ success: false, error: 'OTP expired or invalid. Please request a new OTP.' });
+    }
+
+    const isMatch = bcrypt.compareSync(cleanOtp, otpRecord.otp_hash);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, error: 'Invalid OTP code.' });
+    }
+
+    const hashedPwd = bcrypt.hashSync(newPassword, 10);
+    await dbRun('UPDATE users SET password = ? WHERE id = ?', [hashedPwd, user.id]);
+    await dbRun('DELETE FROM otps WHERE LOWER(email) = ?', [cleanEmail]);
+
+    sendCustomerAccountNotification('password_changed', { name: user.name, email: cleanEmail }).catch(() => {});
+    await addAuditLog(user.id, user.name, 'Reset Password', 'User reset password successfully via OTP');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password reset successfully. You can now login with your new password.',
+    });
+  } catch (err) {
+    console.error('Reset Password Error:', err);
+    return res.status(500).json({ success: false, error: err.message || 'Password reset error.' });
   }
 });
 
@@ -2015,6 +2423,94 @@ app.get('/api/analytics', authenticateToken, async (req, res) => {
     });
   } catch(err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// NOTIFICATIONS & EMAIL API ENDPOINTS
+// ==========================================
+app.get('/api/notifications', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.id || 'admin';
+    const notifs = await dbAll(
+      'SELECT * FROM notifications WHERE user_id = ? OR user_id = "all" ORDER BY created_at DESC LIMIT 50',
+      [userId]
+    );
+    const unreadCount = notifs.filter(n => n.status === 'unread').length;
+    res.json({ success: true, count: notifs.length, unreadCount, notifications: notifs });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
+  try {
+    await dbRun('UPDATE notifications SET status = "read" WHERE id = ?', [req.params.id]);
+    res.json({ success: true, message: 'Notification marked as read' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.put('/api/notifications/read-all', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user?.id || 'admin';
+    await dbRun('UPDATE notifications SET status = "read" WHERE user_id = ? OR user_id = "all"', [userId]);
+    res.json({ success: true, message: 'All notifications marked as read' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/notifications/broadcast', authenticateToken, async (req, res) => {
+  try {
+    const { title, description, code, expiryDate, bannerUrl, subject } = req.body;
+    const users = await dbAll('SELECT email FROM users');
+    const recipientEmails = Array.from(new Set(users.map(u => u.email).filter(Boolean)));
+    if (!recipientEmails.includes('bhalepadharya.app@gmail.com')) {
+      recipientEmails.push('bhalepadharya.app@gmail.com');
+    }
+
+    const notifId = await saveNotification('all', title || 'Special Offer Available!', description || 'Check out our new discount promo code.', 'marketing', { code, expiryDate });
+
+    // Send async emails to all users
+    const broadcastResult = await sendMarketingBroadcast({ title, description, couponCode: code, expiryDate, bannerUrl, subject }, recipientEmails);
+
+    res.json({
+      success: true,
+      message: `Broadcast initiated successfully. Email sent to ${broadcastResult.count} registered users.`,
+      notificationId: notifId,
+      recipientCount: recipientEmails.length,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/test-email', async (req, res) => {
+  try {
+    const { to = 'bhalepadharya.app@gmail.com', type = 'order_confirmed' } = req.body;
+    const sampleData = {
+      bookingId: `HS-${Date.now().toString().slice(-6)}`,
+      invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+      customerName: 'Valued Customer',
+      email: to,
+      productName: 'Full Home Deep Cleaning & Sanitization',
+      amount: 2500,
+      gst: 450,
+      discount: 200,
+      finalAmount: 2750,
+      paymentStatus: 'Paid',
+      paymentMethod: 'Razorpay UPI',
+      razorpayPaymentId: 'pay_test_998877',
+      address: { fullAddress: 'Flat 402, Highrise Towers, Mumbai, MH - 400001' },
+      createdAt: new Date(),
+    };
+
+    const result = await sendOrderNotification(type, sampleData);
+    res.json({ success: true, message: `Test email (${type}) dispatched to ${to}`, result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

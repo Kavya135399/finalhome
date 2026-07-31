@@ -172,6 +172,33 @@ export const OffersTab: React.FC = () => {
     }
   };
 
+  const handleBroadcastOffer = async (p: PromoOffer) => {
+    try {
+      const res = await fetch('http://localhost:5000/api/notifications/broadcast', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+        body: JSON.stringify({
+          title: p.title,
+          description: p.desc,
+          code: p.code,
+          expiryDate: 'Limited Period',
+          subject: `🎁 Exclusive Offer: ${p.title} (${p.code})`,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotification('success', data.message || `Broadcast email sent to users!`);
+      } else {
+        showNotification('error', data.error || 'Failed to send broadcast email.');
+      }
+    } catch (err) {
+      showNotification('error', 'Error broadcasting offer email.');
+    }
+  };
+
   const renderIcon = (name: string) => {
     switch (name) {
       case 'Sparkles': return <Sparkles className="w-6 h-6 text-white" />;
@@ -186,7 +213,6 @@ export const OffersTab: React.FC = () => {
 
   return (
     <div className="space-y-8 p-6 max-w-7xl mx-auto">
-      {/* Top Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-gray-100 dark:border-slate-800">
         <div>
           <div className="flex items-center gap-2.5">
@@ -211,7 +237,6 @@ export const OffersTab: React.FC = () => {
         </button>
       </div>
 
-      {/* Alert Notification */}
       {notification && (
         <div className={`p-4 rounded-2xl flex items-center gap-3 font-medium text-sm border shadow-sm ${
           notification.type === 'success'
@@ -223,7 +248,6 @@ export const OffersTab: React.FC = () => {
         </div>
       )}
 
-      {/* Add Offer Form */}
       {isCreating && (
         <div className="bg-white dark:bg-slate-850 rounded-2xl border border-gray-200 dark:border-slate-800 shadow-soft-xl p-6 transition-all duration-300">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
@@ -249,11 +273,11 @@ export const OffersTab: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
-                  Subtitle / Description <span className="text-rose-500">*</span>
+                  Description <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Valid on all deep cleaning packages"
+                  placeholder="e.g. On all kitchen cleaning"
                   value={desc}
                   onChange={(e) => setDesc(e.target.value)}
                   className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white text-sm font-medium outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all"
@@ -267,71 +291,68 @@ export const OffersTab: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. CLEAN300"
+                  placeholder="e.g. SAVE300"
                   value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white text-sm font-bold uppercase tracking-wider outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all font-mono"
+                  onChange={(e) => setCode(e.target.value)}
+                  className="w-full h-12 px-4 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white text-sm font-medium outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition-all uppercase"
                   required
                 />
               </div>
             </div>
 
-            {/* Theme Select */}
-            <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">
-                Select Card Gradient Theme
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-                {colorPresets.map((preset) => (
-                  <button
-                    key={preset.name}
-                    type="button"
-                    onClick={() => setBg(preset.bg)}
-                    className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all active-scale ${
-                      bg === preset.bg
-                        ? 'border-brand-600 dark:border-white ring-2 ring-brand-500/20 bg-gray-50 dark:bg-slate-800'
-                        : 'border-gray-200 dark:border-slate-750 hover:border-gray-300 dark:hover:border-slate-650'
-                    }`}
-                  >
-                    <div className={`w-full h-8 rounded-lg ${preset.preview} shadow-sm`} />
-                    <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300">{preset.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Icon Select */}
-            <div>
-              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">
-                Select Badge Icon
-              </label>
-              <div className="flex flex-wrap gap-3">
-                {iconPresets.map((ip) => {
-                  const IconComp = ip.icon;
-                  return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-gray-100 dark:border-slate-800">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">
+                  Gradient Style Preset
+                </label>
+                <div className="grid grid-cols-3 gap-3">
+                  {colorPresets.map((preset) => (
                     <button
-                      key={ip.value}
+                      key={preset.name}
                       type="button"
-                      onClick={() => setIconName(ip.value)}
-                      className={`px-4 py-2.5 rounded-xl border flex items-center gap-2 transition-all text-sm font-bold active-scale ${
-                        iconName === ip.value
-                          ? 'border-brand-600 bg-brand-50 dark:bg-slate-800 text-brand-600 dark:text-white shadow-xs'
-                          : 'border-gray-200 dark:border-slate-750 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800'
+                      onClick={() => setBg(preset.bg)}
+                      className={`h-10 rounded-xl ${preset.preview} flex items-center justify-center text-xs font-bold text-white shadow-sm transition transform active:scale-95 ${
+                        bg === preset.bg ? 'ring-4 ring-brand-500/40 scale-[1.02]' : 'opacity-80 hover:opacity-100'
                       }`}
                     >
-                      <IconComp className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                      {ip.name}
+                      {preset.name}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">
+                  Icon Category
+                </label>
+                <div className="grid grid-cols-3 gap-3">
+                  {iconPresets.map((p) => {
+                    const IconComp = p.icon;
+                    return (
+                      <button
+                        key={p.name}
+                        type="button"
+                        onClick={() => setIconName(p.value)}
+                        className={`h-10 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition transform active:scale-95 ${
+                          iconName === p.value
+                            ? 'border-brand-500 bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-400'
+                            : 'border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        <IconComp className="w-4 h-4" />
+                        {p.name}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            <div className="pt-2 flex justify-end gap-3">
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setIsCreating(false)}
-                className="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition"
+                className="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 font-bold text-sm hover:bg-gray-100 dark:hover:bg-slate-800 transition"
               >
                 Cancel
               </button>
@@ -348,7 +369,6 @@ export const OffersTab: React.FC = () => {
         </div>
       )}
 
-      {/* Current Offers List */}
       <div>
         <h2 className="text-base font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wider flex items-center justify-between">
           <span>Live Homepage Offers ({promos.length})</span>
@@ -373,7 +393,6 @@ export const OffersTab: React.FC = () => {
                 key={p.id}
                 className={`relative group rounded-2xl p-6 text-white shadow-soft-lg hover:shadow-soft-xl transition-all duration-300 bg-gradient-to-r ${p.bg} flex flex-col justify-between overflow-hidden border border-white/10`}
               >
-                {/* Decorative background circle */}
                 <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/5 rounded-full pointer-events-none" />
 
                 <div>
@@ -388,19 +407,27 @@ export const OffersTab: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-white/20 flex items-center justify-between">
+                <div className="mt-6 pt-4 border-t border-white/20 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-xs font-bold text-white bg-black/20 px-3 py-1.5 rounded-lg border border-white/15">
                     <span>CODE: <strong className="underline underline-offset-2">{p.code}</strong></span>
                   </div>
 
-                  <button
-                    onClick={() => handleDeletePromo(p.id, p.title)}
-                    className="p-2 rounded-xl bg-rose-500/90 hover:bg-rose-600 text-white shadow-md transition transform active:scale-95 flex items-center gap-1 text-xs font-bold px-3"
-                    title="Delete offer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Delete</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleBroadcastOffer(p)}
+                      className="p-2 rounded-xl bg-amber-500/90 hover:bg-amber-600 text-white shadow-md transition transform active:scale-95 flex items-center gap-1 text-xs font-bold px-2.5"
+                      title="Send email broadcast & push notification to all users"
+                    >
+                      <span>Broadcast</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeletePromo(p.id, p.title)}
+                      className="p-2 rounded-xl bg-rose-500/90 hover:bg-rose-600 text-white shadow-md transition transform active:scale-95 flex items-center gap-1 text-xs font-bold px-2.5"
+                      title="Delete offer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

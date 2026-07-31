@@ -4,9 +4,9 @@ dotenv.config();
 
 export const createTransporter = () => {
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const port = parseInt(process.env.SMTP_PORT || '587', 10);
-  const user = process.env.SMTP_USER || '';
-  const pass = process.env.SMTP_PASS || '';
+  const port = parseInt(process.env.SMTP_PORT || '465', 10);
+  const user = process.env.SMTP_USER || 'bhalepadharya.app@gmail.com';
+  const pass = process.env.SMTP_PASS || 'bdjgvxddlpbdbemm';
 
   if (!user || !pass) {
     console.log('[Mailer] SMTP credentials missing in .env. Email dispatch logged in dev mode.');
@@ -18,10 +18,25 @@ export const createTransporter = () => {
     };
   }
 
+  if (host.includes('gmail')) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user, pass },
+      tls: {
+        rejectUnauthorized: false
+      }
+    });
+  }
+
+  const isSecure = port === 465;
+
   return nodemailer.createTransport({
     host,
     port,
-    secure: port === 465,
+    secure: isSecure,
     auth: { user, pass },
+    tls: {
+      rejectUnauthorized: false
+    }
   });
 };

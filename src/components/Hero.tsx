@@ -50,7 +50,7 @@ const heroServices = [
     id: 'membership',
     name: 'Membership',
     icon: ShieldCheck,
-    path: '/services?category=luxury-premium-package',
+    path: '/memberships-info',
     bgClass: 'bg-[#EBFCF4] dark:bg-emerald-500/15 text-[#059669] dark:text-emerald-400 border border-[#D1FAE5]/70 dark:border-emerald-500/30 group-hover:bg-[#D1FAE5]/90 dark:group-hover:bg-emerald-500/25',
     shadowClass: 'shadow-sm shadow-emerald-500/5 group-hover:shadow-md group-hover:shadow-emerald-500/15 dark:group-hover:shadow-none',
   },

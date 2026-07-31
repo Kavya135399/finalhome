@@ -1,6 +1,7 @@
 import { Booking } from '../models/Booking.js';
 import { fallbackBookings } from './paymentController.js';
 import { generateInvoicePDF } from '../services/invoiceService.js';
+import { sendOrderNotification, sendAdminNotification } from '../services/emailService.js';
 
 export const getCustomerBookings = async (req, res) => {
   try {
@@ -80,7 +81,7 @@ export const downloadInvoice = async (req, res) => {
         invoiceNumber: `INV-${Date.now()}`,
         customerName: 'Valued Customer',
         phoneNumber: '9876543210',
-        email: 'customer@homeseva.com',
+        email: 'bhalepadharya.app@gmail.com',
         productName: 'Home Cleaning Service',
         amount: 1500,
         gst: 270,
@@ -111,6 +112,7 @@ export const downloadInvoice = async (req, res) => {
 export const cancelBooking = async (req, res) => {
   try {
     const { id } = req.params;
+    const reason = req.body.reason || 'Customer request';
     let booking;
     try {
       booking = await Booking.findOneAndUpdate(
@@ -129,6 +131,21 @@ export const cancelBooking = async (req, res) => {
         message: 'Booking not found or cannot be cancelled in its current state.',
       });
     }
+
+    const cancellationData = {
+      ...booking._doc ? booking._doc : booking,
+      reason,
+      status: 'Cancelled',
+    };
+
+    // Send Cancellation Email to Customer
+    sendOrderNotification('order_cancelled', cancellationData);
+
+    // Send Alert to Admin
+    sendAdminNotification('order_cancelled', {
+      title: `Order Cancelled - #${id}`,
+      details: `Customer ${booking.customerName} (${booking.email}) cancelled order #${id}. Reason: ${reason}`,
+    });
 
     return res.status(200).json({
       success: true,

@@ -3,6 +3,7 @@ import { ChevronLeft, MapPin, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { cities } from '../data/sampleData';
 import { AnimatePresence, motion } from 'framer-motion';
+import { NotificationBell } from './notifications/NotificationBell';
 
 export function TopAppBar() {
   const location = useLocation();
@@ -19,6 +20,8 @@ export function TopAppBar() {
   // Determine Title based on path
   let title = 'HomeSeva';
   if (path === '/services') title = 'Explore';
+  else if (path === '/memberships') title = 'My Subscriptions';
+  else if (path === '/memberships-info') title = 'Membership Plans & Pricing';
   else if (path === '/dashboard') title = 'Dashboard';
   else if (path === '/about') title = 'About Us';
   else if (path === '/contact') title = 'Contact Us';
@@ -95,7 +98,9 @@ export function TopAppBar() {
         )}
       </div>
 
-      <div className="flex items-center justify-end gap-1.5 w-1/4"></div>
+      <div className="flex items-center justify-end gap-1.5 w-1/4">
+        <NotificationBell />
+      </div>
     </header>
   );
 }

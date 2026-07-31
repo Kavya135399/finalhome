@@ -26,8 +26,33 @@ export const apiClient = {
     return res.data;
   },
 
-  async register(name: string, email: string, password: string, role = 'customer') {
-    const res = await api.post('/auth/register', { name, email, password, role });
+  async register(name: string, email: string, password: string, role = 'customer', mobile = '') {
+    const res = await api.post('/auth/register', { name, email, password, role, mobile });
+    return res.data;
+  },
+
+  async verifyEmail(email: string, otp: string) {
+    const res = await api.post('/auth/verify-email', { email, otp });
+    return res.data;
+  },
+
+  async resendOtp(email: string, type = 'verification') {
+    const res = await api.post('/auth/resend-otp', { email, type });
+    return res.data;
+  },
+
+  async forgotPassword(email: string) {
+    const res = await api.post('/auth/forgot-password', { email });
+    return res.data;
+  },
+
+  async verifyResetOtp(email: string, otp: string) {
+    const res = await api.post('/auth/verify-reset-otp', { email, otp });
+    return res.data;
+  },
+
+  async resetPassword(email: string, otp: string, newPassword: string) {
+    const res = await api.post('/auth/reset-password', { email, otp, newPassword });
     return res.data;
   },
 

@@ -26,6 +26,8 @@ const StoreMyOrdersPage = lazy(() => import('./pages/StoreMyOrdersPage').then((m
 const StoreOrderTrackingPage = lazy(() => import('./pages/StoreOrderTrackingPage').then((m) => ({ default: m.StoreOrderTrackingPage })));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage').then((m) => ({ default: m.PaymentSuccessPage })));
 const PaymentFailedPage = lazy(() => import('./pages/PaymentFailedPage').then((m) => ({ default: m.PaymentFailedPage })));
+const MembershipsPage = lazy(() => import('./pages/MembershipsPage').then((m) => ({ default: m.MembershipsPage })));
+const MembershipsInfoPage = lazy(() => import('./pages/MembershipsInfoPage').then((m) => ({ default: m.MembershipsInfoPage })));
 
 function SuspenseWrap({ children }: { children: ReactNode }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
@@ -49,6 +51,8 @@ export const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: 'services', element: <ServicesPage /> },
       { path: 'services/:slug', element: <ServiceDetailsPage /> },
+      { path: 'memberships', element: <SuspenseWrap><MembershipsPage /></SuspenseWrap> },
+      { path: 'memberships-info', element: <SuspenseWrap><MembershipsInfoPage /></SuspenseWrap> },
       { path: 'about', element: <AboutPage /> },
       { path: 'contact', element: <ContactPage /> },
       { path: 'privacy', element: <PrivacyPage /> },
