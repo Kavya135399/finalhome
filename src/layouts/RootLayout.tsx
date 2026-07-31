@@ -147,7 +147,7 @@ export function RootLayout() {
   const activeTab = getActiveTab();
 
   return (
-    <div className="min-h-screen w-full bg-gray-50 dark:bg-slate-950 flex flex-col text-gray-900 dark:text-white antialiased">
+    <div className="h-screen h-[100dvh] w-full bg-gray-50 dark:bg-slate-950 flex flex-col text-gray-900 dark:text-white antialiased overflow-hidden">
       
       {/* Top App Bar */}
       <header className="fixed top-0 inset-x-0 h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-b border-gray-150 dark:border-slate-800/60 z-40 select-none">
@@ -344,7 +344,7 @@ export function RootLayout() {
       </header>
 
       {/* Main Content Area (Scrollable viewport) */}
-      <main className={`flex-1 flex flex-col pt-14 ${showBottomNav ? 'pb-16' : 'pb-0'}`}>
+      <main className={`flex-1 flex flex-col overflow-y-auto overflow-x-hidden scroll-smooth pt-14 ${showBottomNav ? 'pb-16' : 'pb-0'}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={pathname + location.search}
