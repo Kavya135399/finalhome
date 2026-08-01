@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Check, ArrowLeft, Loader2, Sparkles } from 'lucide-react';
+import { Check, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { MembershipCheckoutModal, type PlanDetails } from '../components/memberships/MembershipCheckoutModal';
 
 interface PricingPlan {
   id: string;
@@ -75,37 +76,23 @@ export function MembershipsInfoPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [submittingPlan, setSubmittingPlan] = useState<string | null>(null);
+  const [selectedPlanForModal, setSelectedPlanForModal] = useState<PlanDetails | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleSelectPlan = async (plan: PricingPlan) => {
+  const handleSelectPlan = (plan: PricingPlan) => {
     if (plan.id === 'elite') {
       navigate('/contact');
       return;
     }
 
-    try {
-      setSubmittingPlan(plan.id);
-      
-      // Save active membership in localStorage & trigger notification
-      const membershipData = {
-        planId: plan.id,
-        planName: plan.name,
-        price: plan.price,
-        subscribedAt: new Date().toISOString(),
-        expiryDate: new Date(Date.now() + 30 * 86400000).toISOString(),
-      };
-      
-      localStorage.setItem('homeseva_active_membership', JSON.stringify(membershipData));
-      
-      toast(`Successfully subscribed to ${plan.name}!`, 'success');
-      setTimeout(() => {
-        navigate('/memberships');
-      }, 1000);
-    } catch (err: any) {
-      toast('Failed to complete subscription', 'error');
-    } finally {
-      setSubmittingPlan(null);
+    if (!user) {
+      toast('Please sign in to select a membership plan', 'info');
+      navigate('/login');
+      return;
     }
+
+    setSelectedPlanForModal(plan);
+    setIsModalOpen(true);
   };
 
   return (
@@ -195,14 +182,12 @@ export function MembershipsInfoPage() {
               <div className="pt-8">
                 <button
                   onClick={() => handleSelectPlan(plan)}
-                  disabled={submittingPlan === plan.id}
                   className={`w-full py-3.5 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer ${
                     plan.popular
                       ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 active:scale-98'
                       : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white active:scale-98'
                   }`}
                 >
-                  {submittingPlan === plan.id && <Loader2 className="w-4 h-4 animate-spin" />}
                   <span>{plan.buttonText}</span>
                 </button>
               </div>
@@ -220,6 +205,14 @@ export function MembershipsInfoPage() {
         </div>
 
       </div>
+
+      {/* Razorpay Membership Checkout Modal */}
+      <MembershipCheckoutModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        plan={selectedPlanForModal}
+        onSuccess={() => navigate('/memberships')}
+      />
     </div>
   );
 }
