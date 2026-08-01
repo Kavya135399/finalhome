@@ -501,9 +501,11 @@ app.post('/api/auth/register', async (req, res) => {
     );
 
     // 3. Dispatch OTP Email
-    sendCustomerAccountNotification('verify_email', { name, email: cleanEmail, otp: otpStr }).catch((err) => {
-      console.error('[OTP Email Dispatch Warning]:', err.message);
-    });
+    try {
+      await sendCustomerAccountNotification('verify_email', { name, email: cleanEmail, otp: otpStr });
+    } catch (mailErr) {
+      console.error('[OTP Email Dispatch Warning]:', mailErr.message);
+    }
 
     await addAuditLog(userId, name, 'Register Account Pending', `Verification OTP sent to ${cleanEmail}`);
 
@@ -511,7 +513,6 @@ app.post('/api/auth/register', async (req, res) => {
       success: true,
       requiresVerification: true,
       email: cleanEmail,
-      otp: otpStr,
       message: 'Registration initiated. Please enter the 6-digit OTP sent to your email.',
     });
   } catch (err) {
@@ -641,11 +642,14 @@ app.post('/api/auth/resend-otp', async (req, res) => {
     );
 
     const templateKey = type === 'forgot_password' ? 'forgot_password_otp' : 'resend_otp';
-    sendCustomerAccountNotification(templateKey, { name: user.name, email: cleanEmail, otp: otpStr }).catch(() => {});
+    try {
+      await sendCustomerAccountNotification(templateKey, { name: user.name, email: cleanEmail, otp: otpStr });
+    } catch (mailErr) {
+      console.error('[Resend OTP Email Dispatch Warning]:', mailErr.message);
+    }
 
     return res.status(200).json({
       success: true,
-      otp: otpStr,
       message: 'A new 6-digit OTP has been sent to your email.',
     });
   } catch (err) {
@@ -709,13 +713,16 @@ app.post('/api/auth/login', async (req, res) => {
         [`otp_${Date.now()}`, user.id, cleanEmail, otpHash, expiresAt, lastSentAt, new Date().toISOString()]
       );
 
-      sendCustomerAccountNotification('verify_email', { name: user.name, email: cleanEmail, otp: otpStr }).catch(() => {});
+      try {
+        await sendCustomerAccountNotification('verify_email', { name: user.name, email: cleanEmail, otp: otpStr });
+      } catch (mailErr) {
+        console.error('[Login Verification Email Dispatch Warning]:', mailErr.message);
+      }
 
       return res.status(403).json({
         success: false,
         requiresVerification: true,
         email: cleanEmail,
-        otp: otpStr,
         error: 'Please verify your email before logging in. A verification OTP has been sent to your email.',
       });
     }
@@ -777,11 +784,14 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       [`otp_${Date.now()}`, user.id, cleanEmail, otpHash, expiresAt, lastSentAt, new Date().toISOString()]
     );
 
-    sendCustomerAccountNotification('forgot_password_otp', { name: user.name, email: cleanEmail, otp: otpStr }).catch(() => {});
+    try {
+      await sendCustomerAccountNotification('forgot_password_otp', { name: user.name, email: cleanEmail, otp: otpStr });
+    } catch (mailErr) {
+      console.error('[Forgot Password Email Dispatch Warning]:', mailErr.message);
+    }
 
     return res.status(200).json({
       success: true,
-      otp: otpStr,
       message: 'Password reset OTP sent to your email.',
     });
   } catch (err) {

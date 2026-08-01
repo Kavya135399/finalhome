@@ -6,9 +6,22 @@ const getFromEmail = () => process.env.EMAIL_FROM || 'HomeSeva <bhalepadharya.ap
 const getAdminEmail = () => process.env.ADMIN_EMAIL || 'bhalepadharya.app@gmail.com';
 
 /**
+ * Converts HTML string to clean plain text fallback for anti-spam rating
+ */
+const stripHtmlToText = (htmlString) => {
+  if (!htmlString) return '';
+  return htmlString
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+/**
  * Core Mail Dispatcher
  */
-export const dispatchEmail = async ({ to, subject, html, attachments = [] }) => {
+export const dispatchEmail = async ({ to, subject, html, text, attachments = [] }) => {
   try {
     const transporter = createTransporter();
     const mailOptions = {
@@ -16,6 +29,13 @@ export const dispatchEmail = async ({ to, subject, html, attachments = [] }) => 
       to,
       subject,
       html,
+      text: text || stripHtmlToText(html),
+      headers: {
+        'X-Priority': '1 (Highest)',
+        'X-MSMail-Priority': 'High',
+        'Importance': 'High',
+        'X-Mailer': 'HomeSeva Mailer v1.0',
+      },
       attachments,
     };
 
@@ -39,16 +59,16 @@ export const sendOrderNotification = async (templateKey, orderData) => {
   }
 
   const subjects = {
-    order_placed: `📦 Order Placed - ${orderData.bookingId || orderData.orderId}`,
-    order_confirmed: `✅ Order Confirmed & Tax Invoice - ${orderData.bookingId || orderData.orderId}`,
-    order_packed: `🎁 Order Packed - ${orderData.bookingId || orderData.orderId}`,
-    order_shipped: `🚚 Order Shipped - ${orderData.bookingId || orderData.orderId}`,
-    out_for_delivery: `🛵 Out for Delivery - ${orderData.bookingId || orderData.orderId}`,
-    delivered: `🎉 Order Delivered - ${orderData.bookingId || orderData.orderId}`,
-    order_cancelled: `❌ Order Cancelled - ${orderData.bookingId || orderData.orderId}`,
-    payment_failed: `⚠️ Payment Failed for Order - ${orderData.bookingId || orderData.orderId}`,
-    refund_initiated: `🔄 Refund Initiated - ${orderData.bookingId || orderData.orderId}`,
-    refund_completed: `💰 Refund Completed - ${orderData.bookingId || orderData.orderId}`,
+    order_placed: `Order Placed - ${orderData.bookingId || orderData.orderId}`,
+    order_confirmed: `Order Confirmed & Tax Invoice - ${orderData.bookingId || orderData.orderId}`,
+    order_packed: `Order Packed - ${orderData.bookingId || orderData.orderId}`,
+    order_shipped: `Order Shipped - ${orderData.bookingId || orderData.orderId}`,
+    out_for_delivery: `Out for Delivery - ${orderData.bookingId || orderData.orderId}`,
+    delivered: `Order Delivered - ${orderData.bookingId || orderData.orderId}`,
+    order_cancelled: `Order Cancelled - ${orderData.bookingId || orderData.orderId}`,
+    payment_failed: `Payment Failed for Order - ${orderData.bookingId || orderData.orderId}`,
+    refund_initiated: `Refund Initiated - ${orderData.bookingId || orderData.orderId}`,
+    refund_completed: `Refund Completed - ${orderData.bookingId || orderData.orderId}`,
   };
 
   const html = getTemplateHtml(templateKey, orderData);
@@ -91,21 +111,28 @@ export const sendCustomerAccountNotification = async (templateKey, userData) => 
   if (!recipient) return false;
 
   const subjects = {
-    welcome: 'Welcome to HomeSeva! 🎉',
-    verify_email: 'Verify Your HomeSeva Account Email 🔒',
-    resend_otp: 'Your New HomeSeva Verification OTP 🔒',
-    forgot_password: 'Reset Your HomeSeva Password 🔑',
-    forgot_password_otp: 'Password Reset OTP - HomeSeva 🔑',
-    password_changed: 'Security Alert: Password Changed Successfully 🛡️',
+    welcome: 'Welcome to HomeSeva',
+    verify_email: 'Verify your HomeSeva email address',
+    resend_otp: 'Your HomeSeva verification code',
+    forgot_password: 'Reset your HomeSeva password',
+    forgot_password_otp: 'Your HomeSeva password reset code',
+    password_changed: 'Security Alert: Password Changed Successfully',
     profile_updated: 'Security Alert: Profile Details Updated',
     address_changed: 'Security Alert: Address Book Updated',
   };
 
   const html = getTemplateHtml(templateKey, userData);
+  const plainText = templateKey === 'verify_email' || templateKey === 'resend_otp'
+    ? `Hello ${userData.name || 'User'},\n\nYour 6-digit verification code for HomeSeva is: ${userData.otp}\n\nThis OTP is valid for 10 minutes. If you did not request this code, please ignore this email.\n\nRegards,\nHomeSeva Team`
+    : templateKey === 'forgot_password_otp'
+    ? `Hello ${userData.name || 'User'},\n\nYour password reset code for HomeSeva is: ${userData.otp}\n\nThis OTP is valid for 10 minutes. Do not share this code with anyone.\n\nRegards,\nHomeSeva Team`
+    : stripHtmlToText(html);
+
   return await dispatchEmail({
     to: recipient,
     subject: subjects[templateKey] || 'HomeSeva Account Security Update',
     html,
+    text: plainText,
   });
 };
 

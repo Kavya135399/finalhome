@@ -64,8 +64,6 @@ export function RegisterPage() {
     return Object.keys(e).length === 0;
   };
 
-  const [currentOtp, setCurrentOtp] = useState('');
-
   // STEP 1: Submit Registration Details -> Generate & Send Email OTP
   const handleRegisterSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
@@ -76,8 +74,7 @@ export function RegisterPage() {
     try {
       const res = await signUp(name, email, password, role, mobile);
       if (res?.requiresVerification) {
-        if (res.otp) setCurrentOtp(res.otp);
-        toast(`OTP sent! Your code is: ${res.otp || ''}`, 'info');
+        toast('Verification OTP sent! Please check your email inbox.', 'info');
         setStep('verify');
         setCooldown(60);
       }
@@ -130,9 +127,8 @@ export function RegisterPage() {
     setError('');
 
     try {
-      const res = await apiClient.resendOtp(email, 'verification');
-      if (res.otp) setCurrentOtp(res.otp);
-      toast(`New OTP sent! Your code is: ${res.otp || ''}`, 'success');
+      await apiClient.resendOtp(email, 'verification');
+      toast('A new OTP has been sent! Please check your email inbox.', 'success');
       setCooldown(60); // Reset 60s cooldown
     } catch (err: any) {
       const msg = err.response?.data?.error || err.message || 'Failed to resend OTP.';
@@ -275,13 +271,9 @@ export function RegisterPage() {
             <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 font-mono mt-0.5 break-all">
               {email}
             </p>
-            {currentOtp && (
-              <div className="mt-3 pt-3 border-t border-indigo-200/60 dark:border-indigo-800/60">
-                <p className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">🔑 YOUR 6-DIGIT VERIFICATION CODE</p>
-                <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400 font-mono tracking-widest my-1">{currentOtp}</p>
-                <p className="text-[10px] text-indigo-500 dark:text-indigo-400">Sent to your email via Nodemailer</p>
-              </div>
-            )}
+            <p className="text-[11px] text-indigo-700 dark:text-indigo-300 mt-2 font-medium">
+              📩 Check your email inbox. If you don't see it, please check your <strong>Spam / Junk</strong> folder.
+            </p>
           </div>
 
           {/* 6 Digit Inputs */}
