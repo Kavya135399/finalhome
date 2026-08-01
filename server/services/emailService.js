@@ -2,7 +2,14 @@ import { createTransporter } from '../config/mailer.js';
 import { generateInvoicePDF } from './invoiceService.js';
 import { getTemplateHtml } from './emailTemplates.js';
 
-const getFromEmail = () => process.env.EMAIL_FROM || 'HomeSeva <bhalepadharya.app@gmail.com>';
+const getFromEmail = () => {
+  const from = process.env.EMAIL_FROM;
+  if (!from || from.includes('noreply@homeseva.com')) {
+    return 'HomeSeva <bhalepadharya.app@gmail.com>';
+  }
+  return from;
+};
+
 const getAdminEmail = () => process.env.ADMIN_EMAIL || 'bhalepadharya.app@gmail.com';
 
 /**
@@ -19,11 +26,17 @@ const stripHtmlToText = (htmlString) => {
 };
 
 /**
- * Core Mail Dispatcher
+ * Core Mail Dispatcher with Step-by-Step Logging
  */
 export const dispatchEmail = async ({ to, subject, html, text, attachments = [] }) => {
+  console.log(`\n==========================================`);
+  console.log(`[EMAIL STEP 1] Preparing email dispatch...`);
+  console.log(`[EMAIL STEP 1] Recipient: ${to}`);
+  console.log(`[EMAIL STEP 1] Subject: ${subject}`);
+  
   try {
     const transporter = createTransporter();
+    
     const mailOptions = {
       from: getFromEmail(),
       to,
@@ -39,17 +52,23 @@ export const dispatchEmail = async ({ to, subject, html, text, attachments = [] 
       attachments,
     };
 
+    console.log(`[EMAIL STEP 2] Sending email via SMTP Transporter...`);
     const result = await transporter.sendMail(mailOptions);
-    console.log(`[Email Dispatch Success] To: ${to} | Subject: "${subject}" | MsgID: ${result.messageId}`);
+    
+    console.log(`[EMAIL STEP 3 SUCCESS] Email Sent Successfully!`);
+    console.log(`[EMAIL STEP 3 SUCCESS] Message ID: ${result.messageId}`);
+    console.log(`==========================================\n`);
+    
     return { success: true, messageId: result.messageId };
   } catch (error) {
-    console.error(`[Email Dispatch Failure] To: ${to} | Error:`, error.message);
+    console.error(`[EMAIL STEP 3 ERROR] Email Sending Failed to ${to}:`, error.message);
+    console.log(`==========================================\n`);
     return { success: false, error: error.message };
   }
 };
 
 /**
- * Order Notifications (Placed, Confirmed, Shipped, Delivered, Cancelled, etc.)
+ * Order Notifications
  */
 export const sendOrderNotification = async (templateKey, orderData) => {
   const recipient = orderData.email || orderData.customerEmail;
@@ -74,7 +93,6 @@ export const sendOrderNotification = async (templateKey, orderData) => {
   const html = getTemplateHtml(templateKey, orderData);
   const attachments = [];
 
-  // Generate PDF Invoice attachment for confirmed or delivered orders
   if (['order_confirmed', 'delivered'].includes(templateKey)) {
     try {
       const pdfBuffer = await generateInvoicePDF(orderData);
@@ -96,15 +114,12 @@ export const sendOrderNotification = async (templateKey, orderData) => {
   });
 };
 
-/**
- * Backwards Compatible Helper for Booking Confirmation
- */
 export const sendBookingConfirmationEmail = async (bookingData) => {
   return await sendOrderNotification('order_confirmed', bookingData);
 };
 
 /**
- * Customer Account Notifications (Welcome, OTP, Password Reset, Profile Edit)
+ * Customer Account Notifications (Welcome, OTP, Password Reset)
  */
 export const sendCustomerAccountNotification = async (templateKey, userData) => {
   const recipient = userData.email;
@@ -181,7 +196,7 @@ export const sendMarketingBroadcast = async (promoData, recipientList = []) => {
 };
 
 /**
- * Admin Notifications (New Order, Cancelled Order, Low Stock, Contact Form)
+ * Admin Notifications
  */
 export const sendAdminNotification = async (alertType, alertData) => {
   const adminEmail = getAdminEmail();
@@ -200,9 +215,6 @@ export const sendAdminNotification = async (alertType, alertData) => {
   });
 };
 
-/**
- * Review Request Email
- */
 export const sendReviewRequestEmail = async (orderData) => {
   const recipient = orderData.email;
   if (!recipient) return false;
@@ -215,9 +227,6 @@ export const sendReviewRequestEmail = async (orderData) => {
   });
 };
 
-/**
- * Reminder Emails (Cart, Wishlist, Offer Expiry)
- */
 export const sendReminderEmail = async (templateKey, reminderData) => {
   const recipient = reminderData.email;
   if (!recipient) return false;

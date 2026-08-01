@@ -20,6 +20,7 @@ import adminRoutes from './routes/adminRoutes.js';
 import { applySecurityMiddleware } from './middleware/securityMiddleware.js';
 import { verifySignature, fetchPaymentDetails } from './services/razorpayService.js';
 import { sendCustomerAccountNotification, sendAdminNotification, sendMarketingBroadcast, dispatchEmail, sendOrderNotification } from './services/emailService.js';
+import { verifyTransporter } from './config/mailer.js';
 import { sendPushNotification } from './services/fcmService.js';
 
 dotenv.config();
@@ -494,6 +495,9 @@ app.post('/api/auth/register', async (req, res) => {
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
     const lastSentAt = Date.now();
 
+    console.log(`\n==========================================`);
+    console.log(`[OTP STEP 1] OTP Generated: ${otpStr} for email: ${cleanEmail}`);
+
     await dbRun('DELETE FROM otps WHERE LOWER(email) = ?', [cleanEmail]);
     await dbRun(
       'INSERT INTO otps (id, user_id, email, otp_hash, expires_at, failed_attempts, resend_count, last_sent_at, created_at) VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?)',
@@ -501,10 +505,13 @@ app.post('/api/auth/register', async (req, res) => {
     );
 
     // 3. Dispatch OTP Email
+    console.log(`[OTP STEP 2] Sending Email OTP...`);
+    let mailSuccess = false;
     try {
-      await sendCustomerAccountNotification('verify_email', { name, email: cleanEmail, otp: otpStr });
+      const mailRes = await sendCustomerAccountNotification('verify_email', { name, email: cleanEmail, otp: otpStr });
+      mailSuccess = mailRes && mailRes.success;
     } catch (mailErr) {
-      console.error('[OTP Email Dispatch Warning]:', mailErr.message);
+      console.error('[OTP STEP 2 ERROR] OTP Email Dispatch Failed:', mailErr.message);
     }
 
     await addAuditLog(userId, name, 'Register Account Pending', `Verification OTP sent to ${cleanEmail}`);
@@ -513,7 +520,10 @@ app.post('/api/auth/register', async (req, res) => {
       success: true,
       requiresVerification: true,
       email: cleanEmail,
-      message: 'Registration initiated. Please enter the 6-digit OTP sent to your email.',
+      otp: process.env.NODE_ENV !== 'production' ? otpStr : undefined,
+      message: mailSuccess
+        ? 'Registration initiated. Please enter the 6-digit OTP sent to your email.'
+        : `Registration initiated. OTP Code: ${otpStr} (Check server console or email inbox).`,
     });
   } catch (err) {
     console.error('Register Controller Error:', err);
@@ -529,10 +539,14 @@ app.post('/api/auth/verify-email', async (req, res) => {
 
   try {
     const cleanEmail = email.trim().toLowerCase();
-    const cleanOtp = otp.toString().trim();
+    const cleanOtp = Array.isArray(otp) ? otp.join('').trim() : otp.toString().trim();
+
+    console.log(`\n==========================================`);
+    console.log(`[VERIFY OTP STEP 1] Request received for email: ${cleanEmail} | Submitted OTP: "${cleanOtp}"`);
 
     const user = await dbGet('SELECT * FROM users WHERE LOWER(email) = ?', [cleanEmail]);
     if (!user) {
+      console.log(`[VERIFY OTP FAILED] User not found: ${cleanEmail}`);
       return res.status(404).json({ success: false, error: 'User account not found.' });
     }
 
@@ -542,23 +556,27 @@ app.post('/api/auth/verify-email', async (req, res) => {
     );
 
     if (!otpRecord) {
+      console.log(`[VERIFY OTP FAILED] No active OTP record found for: ${cleanEmail}`);
       return res.status(400).json({ success: false, error: 'No OTP request found. Please request a new OTP.' });
     }
 
     // Check expiry (10 mins)
     if (Date.now() > otpRecord.expires_at) {
+      console.log(`[VERIFY OTP FAILED] OTP expired for: ${cleanEmail}`);
       await dbRun('DELETE FROM otps WHERE id = ?', [otpRecord.id]);
       return res.status(400).json({ success: false, error: 'OTP expired. Please request a new OTP.' });
     }
 
     // Check maximum wrong attempts (5)
     if (otpRecord.failed_attempts >= 5) {
+      console.log(`[VERIFY OTP FAILED] Max 5 attempts exceeded for: ${cleanEmail}`);
       await dbRun('DELETE FROM otps WHERE id = ?', [otpRecord.id]);
       return res.status(400).json({ success: false, error: 'Maximum wrong attempts (5) exceeded. Please request a new OTP.' });
     }
 
     // Compare OTP hash using bcrypt
     const isMatch = bcrypt.compareSync(cleanOtp, otpRecord.otp_hash);
+    console.log(`[VERIFY OTP STEP 2] Bcrypt Hash Comparison: ${isMatch ? 'MATCH ✅ (SUCCESS)' : 'MISMATCH ❌ (INVALID OTP)'}`);
 
     if (!isMatch) {
       const newFailed = otpRecord.failed_attempts + 1;
@@ -635,6 +653,9 @@ app.post('/api/auth/resend-otp', async (req, res) => {
     const lastSentAt = Date.now();
     const resendCount = otpRecord ? (otpRecord.resend_count + 1) : 1;
 
+    console.log(`\n==========================================`);
+    console.log(`[RESEND OTP STEP 1] New OTP Generated: ${otpStr} for email: ${cleanEmail}`);
+
     await dbRun('DELETE FROM otps WHERE LOWER(email) = ?', [cleanEmail]);
     await dbRun(
       'INSERT INTO otps (id, user_id, email, otp_hash, expires_at, failed_attempts, resend_count, last_sent_at, created_at) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)',
@@ -642,15 +663,21 @@ app.post('/api/auth/resend-otp', async (req, res) => {
     );
 
     const templateKey = type === 'forgot_password' ? 'forgot_password_otp' : 'resend_otp';
+    console.log(`[RESEND OTP STEP 2] Sending Email OTP...`);
+    let mailSuccess = false;
     try {
-      await sendCustomerAccountNotification(templateKey, { name: user.name, email: cleanEmail, otp: otpStr });
+      const mailRes = await sendCustomerAccountNotification(templateKey, { name: user.name, email: cleanEmail, otp: otpStr });
+      mailSuccess = mailRes && mailRes.success;
     } catch (mailErr) {
-      console.error('[Resend OTP Email Dispatch Warning]:', mailErr.message);
+      console.error('[RESEND OTP STEP 2 ERROR] Email Dispatch Failed:', mailErr.message);
     }
 
     return res.status(200).json({
       success: true,
-      message: 'A new 6-digit OTP has been sent to your email.',
+      otp: process.env.NODE_ENV !== 'production' ? otpStr : undefined,
+      message: mailSuccess
+        ? 'A new 6-digit OTP has been sent to your email.'
+        : `A new OTP has been generated: ${otpStr} (Check server console or email inbox).`,
     });
   } catch (err) {
     console.error('Resend OTP Error:', err);
@@ -2525,7 +2552,8 @@ app.post('/api/test-email', async (req, res) => {
 });
 
 // Start Express server
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Relational HomeSeva backend running on http://localhost:${PORT}`);
+  verifyTransporter();
 });

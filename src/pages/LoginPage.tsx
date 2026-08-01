@@ -42,7 +42,7 @@ export function LoginPage() {
       } else if (loggedUser.role === 'professional') {
         navigate('/pro/dashboard');
       } else {
-        navigate('/dashboard');
+        navigate('/');
       }
     } catch (err: any) {
       if (err.requiresVerification || err.response?.data?.requiresVerification) {
@@ -64,7 +64,7 @@ export function LoginPage() {
     } else if (user?.role === 'professional') {
       navigate('/pro/dashboard');
     } else {
-      navigate('/dashboard');
+      navigate('/');
     }
   };
 

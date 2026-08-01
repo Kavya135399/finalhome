@@ -108,7 +108,7 @@ export function RegisterPage() {
         } else if (user?.role === 'professional') {
           navigate('/pro/dashboard');
         } else {
-          navigate('/dashboard');
+          navigate('/');
         }
       }, 600);
     } catch (err: any) {
