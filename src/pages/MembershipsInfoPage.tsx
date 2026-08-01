@@ -76,11 +76,35 @@ export function MembershipsInfoPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>(plans);
   const [selectedPlanForModal, setSelectedPlanForModal] = useState<PlanDetails | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  useEffect(() => {
+    fetch('/api/memberships')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const mapped = data.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            desc: item.desc,
+            price: item.price,
+            numericPrice: item.numeric_price || item.numericPrice,
+            badge: item.badge,
+            popular: item.popular,
+            features: Array.isArray(item.features) ? item.features : JSON.parse(item.features || '[]'),
+            buttonText: item.button_text || item.buttonText || 'Choose Plan',
+            buttonVariant: item.button_variant || item.buttonVariant || 'primary',
+          }));
+          setPricingPlans(mapped);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const handleSelectPlan = (plan: PricingPlan) => {
-    if (plan.id === 'elite') {
+    if (plan.id === 'elite' || plan.name.toLowerCase().includes('elite') || plan.price.toLowerCase().includes('custom')) {
       navigate('/contact');
       return;
     }
@@ -127,7 +151,7 @@ export function MembershipsInfoPage() {
 
         {/* 3 Pricing Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch pt-4">
-          {plans.map((plan) => (
+          {pricingPlans.map((plan) => (
             <div
               key={plan.id}
               className={`rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 ${

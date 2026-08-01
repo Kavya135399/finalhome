@@ -10,7 +10,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('homeseva.token');
+  const token = localStorage.getItem('homeseva.token') || localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -524,6 +524,86 @@ export const apiClient = {
     orderDetails: any;
   }) {
     const res = await api.post('/store/orders/verify-razorpay', data);
+    return res.data;
+  },
+
+  // 22. Memberships CRUD
+  async getMemberships() {
+    const res = await api.get('/memberships');
+    return res.data;
+  },
+  async getAdminMemberships() {
+    const res = await api.get('/admin/memberships');
+    return res.data;
+  },
+  async addMembership(data: any) {
+    const res = await api.post('/memberships', data);
+    return res.data;
+  },
+  async updateMembership(id: string, data: any) {
+    const res = await api.put(`/memberships/${id}`, data);
+    return res.data;
+  },
+  async deleteMembership(id: string) {
+    const res = await api.delete(`/memberships/${id}`);
+    return res.data;
+  },
+
+  // 23. Meals & Catering CRUD
+  async getMeals() {
+    const res = await api.get('/meals');
+    return res.data;
+  },
+  async addMeal(data: any) {
+    const res = await api.post('/meals', data);
+    return res.data;
+  },
+  async updateMeal(id: string, data: any) {
+    const res = await api.put(`/meals/${id}`, data);
+    return res.data;
+  },
+  async deleteMeal(id: string) {
+    const res = await api.delete(`/meals/${id}`);
+    return res.data;
+  },
+  async getCateringPackages() {
+    const res = await api.get('/catering/packages');
+    return res.data;
+  },
+  async addCateringPackage(data: any) {
+    const res = await api.post('/catering/packages', data);
+    return res.data;
+  },
+  async updateCateringPackage(id: string, data: any) {
+    const res = await api.put(`/catering/packages/${id}`, data);
+    return res.data;
+  },
+  async deleteCateringPackage(id: string) {
+    const res = await api.delete(`/catering/packages/${id}`);
+    return res.data;
+  },
+
+  // 24. Vehicles / Taxi Fleet CRUD
+  async getVehicles() {
+    const res = await api.get('/vehicles');
+    return res.data;
+  },
+  async addVehicle(data: any) {
+    const res = await api.post('/vehicles', data);
+    return res.data;
+  },
+  async updateVehicle(id: string, data: any) {
+    const res = await api.put(`/vehicles/${id}`, data);
+    return res.data;
+  },
+  async deleteVehicle(id: string) {
+    const res = await api.delete(`/vehicles/${id}`);
+    return res.data;
+  },
+
+  // 25. Categorized Payments
+  async getCategorizedAdminPayments() {
+    const res = await api.get('/admin/payments/categorized');
     return res.data;
   }
 };

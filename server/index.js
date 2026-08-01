@@ -343,11 +343,134 @@ const db = new sqlite3.Database(dbFile, (err) => {
               'INSERT OR IGNORE INTO catering_packages (id, title, category, description, pax, price, image, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)',
               [pkg.id, pkg.title, pkg.category, pkg.description, pkg.pax, pkg.price, pkg.image, new Date().toISOString()]
             );
+      // Initialize Store Products table and seeds
+      db.run(`
+        CREATE TABLE IF NOT EXISTS store_products (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          category TEXT NOT NULL,
+          description TEXT NOT NULL,
+          price REAL NOT NULL,
+          stock INTEGER DEFAULT 50,
+          image TEXT NOT NULL,
+          is_active INTEGER DEFAULT 1,
+          is_featured INTEGER DEFAULT 0,
+          is_popular INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL
+        )
+      `);
+
+      db.get('SELECT COUNT(*) as cnt FROM store_products', (err, row) => {
+        if (!err && row && row.cnt === 0) {
+          const defaultProducts = [
+            { id: 'sp_001', name: 'Cold-Brew Black Coffee', category: 'Beverages', description: '12-hour steeped organic Arabica cold brew in a 300ml bottle.', price: 180, stock: 15, image: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&q=80&w=400', is_active: 1, is_featured: 0, is_popular: 1 },
+            { id: 'sp_002', name: 'Heavy-Duty LED Flashlight', category: 'Emergency Supplies', description: '1000 lumen water-resistant aircraft-grade aluminium tactical torch.', price: 999, stock: 11, image: 'https://images.unsplash.com/photo-1567608346699-89d59c4e5b31?auto=format&fit=crop&q=80&w=400', is_active: 1, is_featured: 1, is_popular: 1 },
+            { id: 'sp_003', name: 'Organic Alphonso Mangoes', category: 'Fruits', description: 'Box of 6 handpicked, naturally ripened Ratnagiri Alphonso mangoes.', price: 899, stock: 12, image: 'https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&q=80&w=400', is_active: 1, is_featured: 1, is_popular: 1 },
+            { id: 'sp_004', name: 'Premium Aged Basmati Rice', category: 'Groceries', description: '5 kg bag of 2-year aged extra-long grain basmati.', price: 320, stock: 40, image: 'https://images.unsplash.com/photo-1536304929831-ee1ca9d44906?auto=format&fit=crop&q=80&w=400', is_active: 1, is_featured: 1, is_popular: 1 },
+            { id: 'sp_005', name: 'Premium Roasted Cashews', category: 'Snacks', description: 'Lightly salted whole cashews, slow-roasted in small batches. 200g pack.', price: 349, stock: 25, image: 'https://images.unsplash.com/photo-1567892737950-30c4db6e22aa?auto=format&fit=crop&q=80&w=400', is_active: 1, is_featured: 0, is_popular: 1 },
+            { id: 'sp_006', name: 'Masala Oats Breakfast Mix', category: 'Breakfast Items', description: 'Instant savoury oats with mixed vegetables. Ready in 3 minutes. 500g.', price: 220, stock: 30, image: 'https://images.unsplash.com/photo-1517673400267-0251440c45dc?auto=format&fit=crop&q=80&w=400', is_active: 1, is_featured: 1, is_popular: 0 },
+            { id: 'sp_007', name: 'Hand Sanitiser 500ml', category: 'Daily Essentials', description: '70% isopropyl alcohol gel sanitiser with aloe vera.', price: 149, stock: 60, image: 'https://images.unsplash.com/photo-1584820927498-cfe5211fd8bf?auto=format&fit=crop&q=80&w=400', is_active: 1, is_featured: 0, is_popular: 0 },
+            { id: 'sp_008', name: 'First Aid Kit', category: 'Emergency Supplies', description: 'Compact 32-piece first aid kit in a hard case.', price: 599, stock: 18, image: 'https://images.unsplash.com/photo-1603398938378-e54eab446dde?auto=format&fit=crop&q=80&w=400', is_active: 1, is_featured: 1, is_popular: 0 },
+            { id: 'sp_009', name: 'Fresh Toned Milk 1L', category: 'Daily Essentials', description: 'Pasteurised fresh dairy milk delivered chilled.', price: 64, stock: 50, image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=400', is_active: 1, is_featured: 0, is_popular: 1 },
+            { id: 'sp_010', name: 'Multigrain Brown Bread', category: 'Breakfast Items', description: 'Freshly baked 400g multigrain loaf rich in fiber.', price: 45, stock: 35, image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=400', is_active: 1, is_featured: 0, is_popular: 0 }
+          ];
+          defaultProducts.forEach(p => {
+            db.run(
+              'INSERT OR REPLACE INTO store_products (id, name, category, description, price, stock, image, is_active, is_featured, is_popular, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+              [p.id, p.name, p.category, p.description, p.price, p.stock, p.image, p.is_active, p.is_featured, p.is_popular, new Date().toISOString()]
+            );
           });
         }
       });
 
-      // Seed default demo accounts if missing
+      // Initialize Memberships table and seeds
+      db.run(`
+        CREATE TABLE IF NOT EXISTS memberships (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          desc TEXT NOT NULL,
+          price TEXT NOT NULL,
+          numeric_price INTEGER DEFAULT 0,
+          badge TEXT DEFAULT '',
+          popular INTEGER DEFAULT 0,
+          features TEXT NOT NULL,
+          button_text TEXT DEFAULT 'Choose Plan',
+          button_variant TEXT DEFAULT 'primary',
+          is_active INTEGER DEFAULT 1,
+          created_at TEXT NOT NULL
+        )
+      `);
+
+      db.get('SELECT COUNT(*) as cnt FROM memberships', (err, row) => {
+        if (!err && row && row.cnt === 0) {
+          const defaultMemberships = [
+            {
+              id: 'essential',
+              name: 'Essential Care',
+              desc: 'Fundamental property monitoring for unoccupied homes.',
+              price: '₹4,999',
+              numeric_price: 4999,
+              badge: '',
+              popular: 0,
+              features: JSON.stringify([
+                'Regular Property Inspections',
+                'Digital Property Monitoring',
+                'Maintenance Coordination',
+                'Utility & Bill Management',
+                'Monthly Health Report'
+              ]),
+              button_text: 'Choose Essential',
+              button_variant: 'secondary'
+            },
+            {
+              id: 'premium',
+              name: 'Premium Care',
+              desc: 'Comprehensive home management and active maintenance.',
+              price: '₹12,999',
+              numeric_price: 12999,
+              badge: 'MOST POPULAR',
+              popular: 1,
+              features: JSON.stringify([
+                'Bi-Weekly Physical Inspections',
+                'Scheduled Cleaning Visits',
+                'Priority Maintenance Coordination',
+                'Emergency Support',
+                'Festival Preparation Setup',
+                'Live Video Transparency'
+              ]),
+              button_text: 'Choose Premium',
+              button_variant: 'primary'
+            },
+            {
+              id: 'elite',
+              name: 'Elite Concierge',
+              desc: 'Bespoke property care with personal concierge services.',
+              price: '₹24,999',
+              numeric_price: 24999,
+              badge: 'VIP CONCIERGE',
+              popular: 0,
+              features: JSON.stringify([
+                'Weekly Physical Inspections',
+                'Dedicated Property Manager',
+                'On-Demand Cleaning Visits',
+                '24/7 VIP Emergency Support',
+                'Custom Errand Concierge',
+                'Airport Transfers & Logistics'
+              ]),
+              button_text: 'Choose Elite',
+              button_variant: 'secondary'
+            }
+          ];
+          defaultMemberships.forEach((m) => {
+            db.run(
+              'INSERT OR IGNORE INTO memberships (id, name, desc, price, numeric_price, badge, popular, features, button_text, button_variant, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)',
+              [m.id, m.name, m.desc, m.price, m.numeric_price, m.badge, m.popular, m.features, m.button_text, m.button_variant, new Date().toISOString()]
+            );
+          });
+        }
+      });
+
+      // Seed default demo accounts if missing & ensure admin accounts are verified
       const hashedDemoPwd = bcrypt.hashSync('password', 10);
       const demoAccounts = [
         { id: 'usr3', name: 'Admin User', email: 'admin@example.com', role: 'admin' },
@@ -356,10 +479,12 @@ const db = new sqlite3.Database(dbFile, (err) => {
       ];
       demoAccounts.forEach((acc) => {
         db.run(
-          `INSERT OR IGNORE INTO users (id, name, email, password, role, status, created_at) VALUES (?, ?, ?, ?, ?, 'active', ?)`,
+          `INSERT OR IGNORE INTO users (id, name, email, password, role, is_verified, status, created_at) VALUES (?, ?, ?, ?, ?, 1, 'active', ?)`,
           [acc.id, acc.name, acc.email, hashedDemoPwd, acc.role, new Date().toISOString()]
         );
       });
+      // Ensure admin & demo accounts are verified in database
+      db.run("UPDATE users SET is_verified = 1, status = 'active' WHERE role = 'admin' OR email IN ('admin@example.com', 'vikram@example.com', 'rajesh@example.com')");
     });
   }
 });
@@ -726,8 +851,9 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid email or password.' });
     }
 
-    // Check if Email Verification is complete
-    if (!user.is_verified || user.status === 'pending') {
+    // Check if Email Verification is complete (Admin accounts & demo accounts bypass verification block)
+    const isDemoAccount = ['admin@example.com', 'vikram@example.com', 'rajesh@example.com'].includes(cleanEmail);
+    if (user.role !== 'admin' && !isDemoAccount && (!user.is_verified || user.status === 'pending')) {
       // Generate & send OTP
       const otpStr = generateSecureOTP();
       const otpHash = bcrypt.hashSync(otpStr, 10);
@@ -2338,6 +2464,27 @@ app.post('/api/catering/packages', authenticateToken, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.put('/api/catering/packages/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, category, description, pax, price, image } = req.body;
+    await dbRun(
+      'UPDATE catering_packages SET title = ?, category = ?, description = ?, pax = ?, price = ?, image = ? WHERE id = ?',
+      [title, category, description, pax, Number(price), image, id]
+    );
+    const updated = await dbGet('SELECT * FROM catering_packages WHERE id = ?', [id]);
+    res.json(updated);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/catering/packages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await dbRun('DELETE FROM catering_packages WHERE id = ?', [id]);
+    res.json({ message: 'Catering package deleted successfully', id });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/catering/requests/my', authenticateToken, async (req, res) => {
   try {
     const userId = req.user ? req.user.id : 'customer_default';
@@ -2548,6 +2695,173 @@ app.post('/api/test-email', async (req, res) => {
     res.json({ success: true, message: `Test email (${type}) dispatched to ${to}`, result });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==========================================
+// MEMBERSHIPS CRUD API ENDPOINTS
+// ==========================================
+app.get('/api/memberships', async (req, res) => {
+  try {
+    const plans = await dbAll('SELECT * FROM memberships WHERE is_active = 1 ORDER BY numeric_price ASC');
+    const parsed = plans.map(p => ({
+      ...p,
+      features: typeof p.features === 'string' ? JSON.parse(p.features || '[]') : p.features,
+      popular: Boolean(p.popular)
+    }));
+    res.json(parsed);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/memberships', authenticateToken, async (req, res) => {
+  try {
+    const plans = await dbAll('SELECT * FROM memberships ORDER BY numeric_price ASC');
+    const parsed = plans.map(p => ({
+      ...p,
+      features: typeof p.features === 'string' ? JSON.parse(p.features || '[]') : p.features,
+      popular: Boolean(p.popular)
+    }));
+    res.json(parsed);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/memberships', authenticateToken, async (req, res) => {
+  try {
+    const { name, desc, price, numeric_price, badge, popular, features, button_text, button_variant, is_active } = req.body;
+    const id = 'mem_' + Date.now();
+    const featuresStr = Array.isArray(features) ? JSON.stringify(features) : (features || '[]');
+    await dbRun(
+      'INSERT INTO memberships (id, name, desc, price, numeric_price, badge, popular, features, button_text, button_variant, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, name, desc, price, numeric_price || 0, badge || '', popular ? 1 : 0, featuresStr, button_text || 'Choose Plan', button_variant || 'primary', is_active !== false ? 1 : 0, new Date().toISOString()]
+    );
+    const plan = await dbGet('SELECT * FROM memberships WHERE id = ?', [id]);
+    res.json({
+      ...plan,
+      features: JSON.parse(plan.features || '[]'),
+      popular: Boolean(plan.popular)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/memberships/:id', authenticateToken, async (req, res) => {
+  try {
+    const { name, desc, price, numeric_price, badge, popular, features, button_text, button_variant, is_active } = req.body;
+    const featuresStr = Array.isArray(features) ? JSON.stringify(features) : (features || '[]');
+    await dbRun(
+      'UPDATE memberships SET name=?, desc=?, price=?, numeric_price=?, badge=?, popular=?, features=?, button_text=?, button_variant=?, is_active=? WHERE id=?',
+      [name, desc, price, numeric_price || 0, badge || '', popular ? 1 : 0, featuresStr, button_text || 'Choose Plan', button_variant || 'primary', is_active !== false ? 1 : 0, req.params.id]
+    );
+    const plan = await dbGet('SELECT * FROM memberships WHERE id = ?', [req.params.id]);
+    res.json({
+      ...plan,
+      features: JSON.parse(plan.features || '[]'),
+      popular: Boolean(plan.popular)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/memberships/:id', authenticateToken, async (req, res) => {
+  try {
+    await dbRun('DELETE FROM memberships WHERE id = ?', [req.params.id]);
+    res.json({ success: true, message: 'Membership plan deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// CATEGORIZED ADMIN PAYMENTS ENDPOINT
+// ==========================================
+app.get('/api/admin/payments/categorized', authenticateToken, async (req, res) => {
+  try {
+    // 1. Fetch Service Bookings
+    const bookings = await dbAll('SELECT * FROM bookings ORDER BY created_at DESC');
+    // 2. Fetch Store Orders
+    const storeOrders = await dbAll('SELECT * FROM store_orders ORDER BY created_at DESC');
+    // 3. Fetch Catering Requests
+    const cateringRequests = await dbAll('SELECT * FROM catering_requests ORDER BY created_at DESC');
+
+    const formattedPayments = [];
+
+    // Map Service Bookings
+    bookings.forEach(b => {
+      let category = 'services';
+      if (b.service_name && b.service_name.toLowerCase().includes('taxi')) category = 'taxi';
+      if (b.service_name && b.service_name.toLowerCase().includes('meal')) category = 'meal';
+      if (b.service_name && b.service_name.toLowerCase().includes('membership')) category = 'membership';
+
+      formattedPayments.push({
+        id: b.id,
+        booking_id: b.id,
+        category: category,
+        customer_name: b.customer_name || 'Customer',
+        customer_email: b.customer_email || b.email || 'customer@example.com',
+        customer_phone: b.customer_phone || b.mobile || '+91 98765 43210',
+        item_name: b.service_name || 'Home Service',
+        amount: b.amount || b.final_amount || 0,
+        status: (b.payment_status || b.status || 'paid').toLowerCase(),
+        payment_method: (b.payment_method || 'Online Payment').toUpperCase(),
+        transaction_id: b.transaction_id || b.razorpay_payment_id || `TXN_${b.id.slice(-6)}`,
+        utr_number: b.utr_number || '',
+        date: b.date || b.created_at || new Date().toISOString()
+      });
+    });
+
+    // Map Store Orders
+    storeOrders.forEach(so => {
+      let itemsSummary = 'Store Purchase';
+      try {
+        const items = JSON.parse(so.items || '[]');
+        if (items.length) itemsSummary = items.map(i => `${i.name} (x${i.quantity || 1})`).join(', ');
+      } catch (e) {}
+
+      formattedPayments.push({
+        id: so.id,
+        booking_id: so.order_number || so.id,
+        category: 'store',
+        customer_name: so.customer_name || 'Store Customer',
+        customer_email: so.customer_email || 'customer@example.com',
+        customer_phone: so.customer_phone || '+91 98765 43210',
+        item_name: itemsSummary,
+        amount: so.total_amount || so.final_amount || 0,
+        status: (so.payment_status || 'paid').toLowerCase(),
+        payment_method: (so.payment_method || 'Razorpay UPI').toUpperCase(),
+        transaction_id: so.razorpay_payment_id || so.transaction_id || `ORD_${so.id.slice(-6)}`,
+        utr_number: so.utr_number || '',
+        date: so.created_at || new Date().toISOString()
+      });
+    });
+
+    // Map Catering Requests
+    cateringRequests.forEach(cr => {
+      formattedPayments.push({
+        id: cr.id,
+        booking_id: cr.id,
+        category: 'catering',
+        customer_name: cr.user_name || 'Catering Customer',
+        customer_email: cr.user_email || 'customer@example.com',
+        customer_phone: cr.contact_phone || '+91 98765 43210',
+        item_name: `${cr.package_title || 'Catering Package'} (${cr.guest_count} Guests)`,
+        amount: cr.total_estimated_price || 0,
+        status: (cr.status === 'confirmed' ? 'paid' : cr.status === 'pending' ? 'pending' : 'refunded'),
+        payment_method: 'BANK TRANSFER / UPI',
+        transaction_id: `CAT_${cr.id.slice(-6)}`,
+        utr_number: '',
+        date: cr.created_at || new Date().toISOString()
+      });
+    });
+
+    res.json(formattedPayments);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

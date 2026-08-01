@@ -176,9 +176,12 @@ export function StorePage() {
     setLoading(true);
     try {
       const data = await apiClient.getStoreProducts();
-      setProducts(Array.isArray(data) && data.length > 0 ? data : FALLBACK);
-    } catch { setProducts(FALLBACK); }
-    finally { setLoading(false); }
+      setProducts(Array.isArray(data) ? data : []);
+    } catch {
+      setProducts(FALLBACK);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchAddresses = async () => {

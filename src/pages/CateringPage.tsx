@@ -234,40 +234,18 @@ const SAMPLE_MEALS: MealItem[] = [
 
 const CATEGORIES = [
   'All',
-  'Daily Meals',
-  'Healthy Meals',
-  'Family Pack',
-  'Catering',
-  'Birthday',
-  'Wedding',
-  'Corporate',
-  'Tiffin',
-  'Gujarati',
-  'Fast Food',
-  'Diet Meals',
-  'South Indian',
-  'North Indian',
-  'Chinese',
-  'Jain',
+  'Festival Specials',
+  'Party Packages',
+  'Wedding Banquets',
+  'Family Packages',
 ];
 
 const CAT_EMOJI: Record<string, string> = {
-  All: '🛒',
-  'Daily Meals': '🍛',
-  'Healthy Meals': '🥗',
-  'Family Pack': '👨‍👩‍👧',
-  Catering: '🎉',
-  Birthday: '🥳',
-  Wedding: '💍',
-  Corporate: '🏢',
-  Tiffin: '🍱',
-  Gujarati: '🥘',
-  'Fast Food': '🍕',
-  'Diet Meals': '🥗',
-  'South Indian': '🍛',
-  'North Indian': '🥙',
-  Chinese: '🍜',
-  Jain: '🟡',
+  All: '🍽️',
+  'Festival Specials': '🎉',
+  'Party Packages': '🥳',
+  'Wedding Banquets': '💍',
+  'Family Packages': '👨‍👩‍👧‍👦',
   Favorites: '❤️',
 };
 
@@ -286,13 +264,77 @@ const INITIAL_ADDRESSES: SavedAddress[] = [
   },
 ];
 
+const DEFAULT_CATERING_PACKAGES: CateringPackage[] = [
+  {
+    id: 'cat_1',
+    title: 'Festival Food Package',
+    category: 'Festival Specials',
+    description: 'Festive buffet menu for up to 15 guests including sweets, savouries & drinks.',
+    pax: '15 Pax',
+    price: 5000,
+    image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=800',
+    menuHighlights: ['Live Chaat Counter', 'Gujarati Sweets & Farsan', 'Basmati Pulao', 'Fresh Masala Chaas']
+  },
+  {
+    id: 'cat_2',
+    title: 'Guest Catering Package',
+    category: 'Party Packages',
+    description: 'Complete catering setup with live food counter for 50 guests.',
+    pax: '50 Pax',
+    price: 15000,
+    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800',
+    menuHighlights: ['3 Main Course Curry Dishes', 'Live Tandoor Naan & Roti', '2 Desserts & Ice Cream', 'Personal Serving Staff']
+  },
+  {
+    id: 'cat_3',
+    title: 'Gujarati Thali Banquet',
+    category: 'Daily Meals',
+    description: 'Authentic 12-item Gujarati feast for family gatherings.',
+    pax: '1 Pax',
+    price: 250,
+    image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=800',
+    menuHighlights: ['3 Rotlis', '2 Seasonal Shaaks', 'Gujarati Dal & Kadhi', 'Basmati Rice & Sweet']
+  },
+  {
+    id: 'cat_4',
+    title: 'Premium Family Meal',
+    category: 'Family Packages',
+    description: 'A comprehensive family meal for 4-5 persons.',
+    pax: '4 Pax',
+    price: 1200,
+    image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&q=80&w=800',
+    menuHighlights: ['Paneer Tikka Starter', '8 Butter Phulkas', '2 Punjabi Sabjis', 'Gulab Jamun']
+  },
+  {
+    id: 'cat_5',
+    title: 'Grand Wedding Banquet',
+    category: 'Catering',
+    description: 'Exquisite royal buffet setup featuring live chaat counter, mocktail bar, 5 lavish main dishes.',
+    pax: '100 Pax',
+    price: 35000,
+    image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=800',
+    menuHighlights: ['Mocktail Bar', 'Live Tandoor Counter', 'Royal Sweets Bar', '5 Main Courses']
+  },
+  {
+    id: 'cat_6',
+    title: 'Executive Daily Tiffin',
+    category: 'Daily Meals',
+    description: 'Nutritious lunch box delivered hot to your office or home with 4 soft rotis, dal tadka, shaak, rice, salad.',
+    pax: '1 Pax',
+    price: 160,
+    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800',
+    menuHighlights: ['4 Soft Phulkas', 'Homestyle Dal Tadka', 'Seasonal Sabji', 'Jeera Rice & Salad']
+  }
+];
+
 export function CateringPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'MEALS' | 'CATERING PACKAGES' | 'MY REQUESTS'>('MEALS');
+  const [activeTab, setActiveTab] = useState<'CATERING PACKAGES' | 'MEALS' | 'MY REQUESTS'>('CATERING PACKAGES');
+  const [cateringPackages, setCateringPackages] = useState<CateringPackage[]>(DEFAULT_CATERING_PACKAGES);
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [foodTypeFilter, setFoodTypeFilter] = useState<'all' | 'veg' | 'nonveg' | 'jain'>('all');
@@ -398,7 +440,32 @@ export function CateringPage() {
 
   useEffect(() => {
     fetchMealsFromApi();
+    fetchCateringPackagesFromApi();
   }, [activeCategory, foodTypeFilter]);
+
+  const fetchCateringPackagesFromApi = async () => {
+    try {
+      const res = await fetch('/api/catering/packages');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped = data.map((pkg: any) => ({
+            id: pkg.id,
+            title: pkg.title,
+            category: pkg.category || 'Catering',
+            description: pkg.description,
+            pax: pkg.pax || '15 Pax',
+            price: Number(pkg.price) || 5000,
+            image: pkg.image || 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=800',
+            menuHighlights: ['Live Food Counter', 'Authentic Taste', 'Hygiene Assured']
+          }));
+          setCateringPackages(mapped);
+        }
+      }
+    } catch (e) {
+      console.error('API fetch error for catering packages:', e);
+    }
+  };
 
   const fetchMealsFromApi = async () => {
     try {
@@ -409,7 +476,7 @@ export function CateringPage() {
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setDbMeals(data);
         }
       }
@@ -423,6 +490,20 @@ export function CateringPage() {
       fetchMyRequests();
     }
   }, [activeTab]);
+
+  const filteredCateringPackages = cateringPackages.filter((pkg) => {
+    const matchesSearch =
+      !searchQuery ||
+      pkg.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      pkg.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesCategory =
+      activeCategory === 'All' ||
+      activeCategory === 'Favorites' ||
+      pkg.category.toLowerCase().includes(activeCategory.toLowerCase());
+
+    return matchesSearch && matchesCategory;
+  });
 
   const fetchMyRequests = async () => {
     try {
@@ -701,6 +782,13 @@ export function CateringPage() {
             {/* Right Action Buttons */}
             <div className="flex items-center gap-2.5">
               <button
+                onClick={() => navigate('/meals')}
+                className="px-3.5 py-2 rounded-xl border border-emerald-200 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition shadow-2xs flex items-center gap-1.5"
+              >
+                <Utensils className="w-4 h-4 text-emerald-600" />
+                <span>Daily Meals Page</span>
+              </button>
+              <button
                 onClick={() => setActiveTab('MY REQUESTS')}
                 className="px-3.5 py-2 rounded-xl border border-amber-200 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 transition shadow-2xs flex items-center gap-1.5"
               >
@@ -766,45 +854,97 @@ export function CateringPage() {
 
       {/* ── Main Content Grid matching StorePage ── */}
       <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12 py-6 flex-1 w-full">
-        {activeTab === 'MEALS' && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider">
-                {activeCategory} Dishes ({filteredMeals.length})
-              </h3>
-
-              {/* Dietary Filter Pill */}
-              <div className="flex items-center gap-1.5">
-                {(['all', 'veg', 'nonveg', 'jain'] as const).map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setFoodTypeFilter(type)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase transition ${
-                      foodTypeFilter === type
-                        ? 'bg-amber-600 text-white shadow-xs'
-                        : 'bg-white dark:bg-slate-900 text-gray-500 border border-gray-200 dark:border-slate-800'
-                    }`}
-                  >
-                    {type === 'veg' ? '🟢 Veg' : type === 'nonveg' ? '🔴 Non-Veg' : type === 'jain' ? '🟡 Jain' : 'All'}
-                  </button>
-                ))}
+        {activeTab === 'CATERING PACKAGES' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 p-6 rounded-3xl text-white shadow-lg">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full border border-white/20 mb-2 inline-block">
+                  ✨ Premium Event Buffets & Banquets
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black">Catering & Event Packages</h3>
+                <p className="text-xs text-amber-100 mt-1 max-w-xl">
+                  Book complete buffet setups, live tandoor & chaat counters, and custom event menus for 10 to 500+ guests.
+                </p>
               </div>
+              <button
+                onClick={() => openRequestForm(null)}
+                className="px-5 py-3 bg-white text-amber-700 hover:bg-amber-50 text-xs font-black rounded-2xl transition active:scale-95 shadow-md shrink-0 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> Custom Catering Calculator
+              </button>
             </div>
 
-            {filteredMeals.length === 0 ? (
-              <div className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center border border-gray-150 dark:border-slate-800">
-                <Utensils className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                <p className="text-xs font-bold text-gray-500">No dishes found in this category.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
-                {filteredMeals.map((meal) => (
-                  <MealCard key={meal.id} meal={meal} />
-                ))}
-              </div>
-            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredCateringPackages.map((pkg) => (
+                <motion.div
+                  key={pkg.id}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-150 dark:border-slate-800 overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col group"
+                >
+                  <div className="relative h-48 sm:h-52 overflow-hidden">
+                    <img
+                      src={pkg.image}
+                      alt={pkg.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=600';
+                      }}
+                    />
+                    <span className="absolute top-3 left-3 bg-amber-600 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md">
+                      {pkg.category}
+                    </span>
+                    <span className="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-xs font-extrabold px-3 py-1 rounded-full border border-white/20">
+                      👥 {pkg.pax}
+                    </span>
+                  </div>
+
+                  <div className="p-5 sm:p-6 flex flex-col flex-1">
+                    <h4 className="text-base sm:text-lg font-black text-gray-900 dark:text-white mb-1.5">
+                      {pkg.title}
+                    </h4>
+                    <p className="text-xs text-gray-500 mb-4 line-clamp-2 leading-relaxed">
+                      {pkg.description}
+                    </p>
+
+                    {pkg.menuHighlights && pkg.menuHighlights.length > 0 && (
+                      <div className="mb-5 space-y-2 bg-amber-50/60 dark:bg-amber-950/20 p-3.5 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-400 block mb-1">
+                          ✨ Package Menu Highlights
+                        </span>
+                        {pkg.menuHighlights.map((item, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="mt-auto pt-4 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] font-bold text-gray-400 block uppercase tracking-wider">
+                          Package Rate
+                        </span>
+                        <span className="text-xl font-black text-amber-600">₹{pkg.price.toLocaleString()}</span>
+                      </div>
+                      <button
+                        onClick={() => openRequestForm(pkg)}
+                        className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black rounded-xl transition active:scale-95 shadow-md flex items-center gap-1.5"
+                      >
+                        <span>Book Package</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         )}
+
+
 
         {/* Catering Requests List */}
         {activeTab === 'MY REQUESTS' && (

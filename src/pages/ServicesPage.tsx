@@ -115,9 +115,11 @@ export function ServicesPage() {
   useEffect(() => {
     apiClient.getServices()
       .then((data: Service[]) => {
-        const existingIds = new Set(data.map((s) => s.id));
-        const missingFromApi = catalogServices.filter((s) => !existingIds.has(s.id));
-        setServicesList([...data, ...missingFromApi]);
+        if (Array.isArray(data) && data.length > 0) {
+          setServicesList(data);
+        } else {
+          setServicesList(catalogServices);
+        }
       })
       .catch(() => setServicesList(catalogServices));
   }, []);

@@ -21,6 +21,8 @@ import { NotificationBell } from './notifications/NotificationBell';
 const navLinks = [
   { to: '/', label: 'Home' },
   { to: '/services', label: 'Services' },
+  { to: '/meals', label: 'Daily Meals' },
+  { to: '/catering', label: 'Catering' },
   { to: '/memberships-info', label: 'Membership' },
   { to: '/about', label: 'About' },
   { to: '/contact', label: 'Contact' },

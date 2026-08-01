@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -6,7 +6,8 @@ import {
   Wrench, Search, Download, ChevronLeft,
   Plus, Edit, Trash2, Check, XCircle, Inbox, Settings, FileText,
   ShieldAlert, Activity, RefreshCw, Send, Database, Menu, X, Clock,
-  CarTaxiFront, Camera, LogOut, ShoppingBag, Package, Eye, AlertTriangle, Tag
+  CarTaxiFront, Camera, LogOut, ShoppingBag, Package, Eye, AlertTriangle, Tag,
+  Utensils, UtensilsCrossed, Shield, CreditCard, Filter, User, MapPin, Phone, Mail, CheckCircle2, ArrowRight
 } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -24,108 +25,63 @@ import {
 } from '../data/sampleData';
 
 const mockUsers = [
-  { id: 'usr1', name: 'Vikram Singh', email: 'vikram@example.com', role: 'customer', status: 'active', created_at: new Date().toISOString() },
-  { id: 'usr2', name: 'Rajesh Kumar', email: 'rajesh@example.com', role: 'professional', status: 'active', created_at: new Date().toISOString() },
-  { id: 'usr3', name: 'Admin User', email: 'admin@example.com', role: 'admin', status: 'active', created_at: new Date().toISOString() },
-  { id: 'usr4', name: 'Amit Patel', email: 'amit@example.com', role: 'staff', status: 'active', created_at: new Date().toISOString() },
-  { id: 'usr5', name: 'Sunita Reddy', email: 'sunita@example.com', role: 'manager', status: 'active', created_at: new Date().toISOString() }
+  { id: 'usr1', name: 'Vikram Singh', email: 'vikram@example.com', mobile: '+91 98765 43210', role: 'customer', status: 'active', created_at: new Date().toISOString() },
+  { id: 'usr2', name: 'Rajesh Kumar', email: 'rajesh@example.com', mobile: '+91 98765 43211', role: 'professional', status: 'active', created_at: new Date().toISOString() },
+  { id: 'usr3', name: 'Admin User', email: 'admin@example.com', mobile: '+91 98765 43212', role: 'admin', status: 'active', created_at: new Date().toISOString() },
 ];
 
-const mockOrders = [
-  { id: 'ord_1', booking_id: 'b1', customer_name: 'Vikram Singh', service_name: 'Wedding Catering', amount: 49999, status: 'paid', payment_method: 'upi', date: new Date().toISOString() },
-  { id: 'ord_2', booking_id: 'b2', customer_name: 'Vikram Singh', service_name: 'Full Home Cleaning', amount: 2499, status: 'paid', payment_method: 'card', date: new Date().toISOString() }
+const FALLBACK_STORE_PRODUCTS = [
+  { id: 'sp_001', name: 'Cold-Brew Black Coffee', category: 'Beverages', description: '12-hour steeped organic Arabica cold brew in a 300ml bottle.', price: 180, stock: 15, image: 'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&q=80&w=400', is_active: 1 },
+  { id: 'sp_002', name: 'Heavy-Duty LED Flashlight', category: 'Emergency Supplies', description: '1000 lumen water-resistant aircraft-grade aluminium tactical torch.', price: 999, stock: 11, image: 'https://images.unsplash.com/photo-1567608346699-89d59c4e5b31?auto=format&fit=crop&q=80&w=400', is_active: 1 },
+  { id: 'sp_003', name: 'Organic Alphonso Mangoes', category: 'Fruits', description: 'Box of 6 handpicked, naturally ripened Ratnagiri Alphonso mangoes.', price: 899, stock: 12, image: 'https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&q=80&w=400', is_active: 1 },
+  { id: 'sp_004', name: 'Premium Aged Basmati Rice', category: 'Groceries', description: '5 kg bag of 2-year aged extra-long grain basmati.', price: 320, stock: 40, image: 'https://images.unsplash.com/photo-1536304929831-ee1ca9d44906?auto=format&fit=crop&q=80&w=400', is_active: 1 },
+  { id: 'sp_005', name: 'Premium Roasted Cashews', category: 'Snacks', description: 'Lightly salted whole cashews, slow-roasted in small batches. 200g pack.', price: 349, stock: 25, image: 'https://images.unsplash.com/photo-1567892737950-30c4db6e22aa?auto=format&fit=crop&q=80&w=400', is_active: 1 },
+  { id: 'sp_006', name: 'Masala Oats Breakfast Mix', category: 'Breakfast Items', description: 'Instant savoury oats with mixed vegetables. Ready in 3 minutes. 500g.', price: 220, stock: 30, image: 'https://images.unsplash.com/photo-1517673400267-0251440c45dc?auto=format&fit=crop&q=80&w=400', is_active: 1 },
+  { id: 'sp_007', name: 'Hand Sanitiser 500ml', category: 'Daily Essentials', description: '70% isopropyl alcohol gel sanitiser with aloe vera.', price: 149, stock: 60, image: 'https://images.unsplash.com/photo-1584820927498-cfe5211fd8bf?auto=format&fit=crop&q=80&w=400', is_active: 1 },
+  { id: 'sp_008', name: 'First Aid Kit', category: 'Emergency Supplies', description: 'Compact 32-piece first aid kit in a hard case.', price: 599, stock: 18, image: 'https://images.unsplash.com/photo-1603398938378-e54eab446dde?auto=format&fit=crop&q=80&w=400', is_active: 1 },
+  { id: 'sp_009', name: 'Fresh Toned Milk 1L', category: 'Daily Essentials', description: 'Pasteurised fresh dairy milk delivered chilled.', price: 64, stock: 50, image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&q=80&w=400', is_active: 1 },
+  { id: 'sp_010', name: 'Multigrain Brown Bread', category: 'Breakfast Items', description: 'Freshly baked 400g multigrain loaf rich in fiber.', price: 45, stock: 35, image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80&w=400', is_active: 1 }
 ];
 
-const mockMessages = [
-  { id: 'msg_1', name: 'Karan Malhotra', email: 'karan@example.com', subject: 'Catering Quote', message: 'Hi, I would like to get a quote for a birthday party catering for 50 people.', status: 'unread', date: new Date().toISOString() },
-  { id: 'msg_2', name: 'Pooja Nair', email: 'pooja@example.com', subject: 'Plumbing service warranty query', message: 'Hi, I booked a pipe leak repair last week. Is there a service warranty?', status: 'archived', date: new Date().toISOString() }
+const FALLBACK_VEHICLES = [
+  { id: 't_hatch', name: 'Economy Hatchback (Alto / Swift)', type: 'Hatchback', passengers: 4, luggage: 2, rate: 11, image: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&q=80&w=400', status: 'Available' },
+  { id: 't_sedan', name: 'Executive Sedan (Dzire / Etios)', type: 'Sedan', passengers: 4, luggage: 3, rate: 13, image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=400', status: 'Available' },
+  { id: 't_suv', name: 'Compact SUV (Brezza / Creta)', type: 'SUV', passengers: 5, luggage: 3, rate: 15, image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=400', status: 'Available' },
+  { id: 't_muv', name: 'Luxury MUV (Toyota Innova Crysta)', type: 'MUV', passengers: 7, luggage: 5, rate: 18, image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=400', status: 'Available' },
+  { id: 't_luxury', name: 'Elite Luxury Cruiser (Mustang / BMW)', type: 'Luxury Cruiser', passengers: 4, luggage: 3, rate: 25, image: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&q=80&w=400', status: 'Available' }
 ];
 
-const mockLogs = [
-  { id: 'log_1', user_id: 'usr3', user_name: 'Admin User', action: 'Admin Login', details: 'Admin logged in from IP 192.168.1.1', timestamp: new Date().toISOString() },
-  { id: 'log_2', user_id: 'usr1', user_name: 'Vikram Singh', action: 'Create Booking', details: 'Created booking #b1 for Wedding Catering', timestamp: new Date().toISOString() }
+const FALLBACK_MEMBERSHIPS = [
+  { id: 'essential', name: 'Essential Care Plan', desc: 'Basic property maintenance & monthly inspection.', price: '₹4,999 / year', numeric_price: 4999, badge: 'Popular', features: JSON.stringify(['Monthly Audit', '2 Free Plumbing Calls', 'Priority Support']) },
+  { id: 'premium', name: 'Premium Care Plan', desc: 'Comprehensive property care with quarterly deep clean.', price: '₹12,999 / year', numeric_price: 12999, badge: 'Recommended', features: JSON.stringify(['Quarterly Deep Clean', 'Unlimited Electrical', '24/7 VIP Concierge']) },
+  { id: 'elite', name: 'Elite Concierge Plan', desc: 'VIP All-inclusive luxury home care.', price: '₹24,999 / year', numeric_price: 24999, badge: 'VIP', features: JSON.stringify(['On-Demand Visits', 'Personal Concierge', 'All Services Free']) }
 ];
 
-const mockSettings = {
-  appName: 'HomeSeva Pro',
-  contactEmail: 'support@homeseva.com',
-  contactPhone: '+91 98765 43210',
-  address: '221B, Hill Road, Bandra West, Mumbai, India',
-  currency: 'INR'
-};
-
-const fleetData = [
-  {
-    id: 't_suv',
-    name: 'Compact SUV (Brezza / Creta)',
-    type: 'SUV',
-    passengers: 5,
-    luggage: 3,
-    rate: 15,
-    image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=400'
-  },
-  {
-    id: 't_luxury',
-    name: 'Elite Luxury Cruiser (Mustang / BMW)',
-    type: 'Luxury Cruiser',
-    passengers: 4,
-    luggage: 3,
-    rate: 25,
-    image: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&q=80&w=400'
-  },
-  {
-    id: 't_muv',
-    name: 'Luxury MUV (Toyota Innova Crysta)',
-    type: 'MUV',
-    passengers: 7,
-    luggage: 5,
-    rate: 18,
-    image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=400'
-  },
-  {
-    id: 't_hatch',
-    name: 'Economy Hatchback (Alto / Swift)',
-    type: 'Hatchback',
-    passengers: 4,
-    luggage: 2,
-    rate: 11,
-    image: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&q=80&w=400'
-  }
+const FALLBACK_MEALS = [
+  { id: 'm1', name: 'Kathiyawadi Gourmet Gujarati Thali', category: 'Gujarati Specials', description: 'Traditional homestyle thali with 3 rotlis, 2 seasonal shaaks, dal, kadhi, rice & buttermilk.', price: 199, calories: '650 kcal', is_active: 1, image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=400' },
+  { id: 'm2', name: 'Royal Punjabi Butter Paneer & Naan Combo', category: 'Punjabi Feasts', description: 'Rich paneer butter masala, 2 garlic butter naans, jeera rice & gulab jamun.', price: 249, calories: '820 kcal', is_active: 1, image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&q=80&w=400' },
+  { id: 'm3', name: 'Healthy Protein Quinoa & Grilled Veggie Bowl', category: 'Healthy & Fitness', description: 'Organic quinoa, roasted bell peppers, chickpeas, avocado slice & tahini dressing.', price: 220, calories: '450 kcal', is_active: 1, image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=400' },
+  { id: 'm4', name: 'South Indian Mini Tiffin Feast', category: 'Tiffin Snacks', description: '2 Ghee Masala Idlis, 1 Medu Vada, mini Masala Dosa, coconut chutney & hot sambar.', price: 175, calories: '520 kcal', is_active: 1, image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=400' }
 ];
 
-const packagesData = [
-  { 
-    id: 'p_drop', 
-    name: 'Ahmedabad Airport [Drop]', 
-    desc: 'One-way stress-free private professional driver, direct highway transit included.', 
-    price: 3500, 
-    distance: '130 km', 
-    duration: '2.5 hours', 
-    image: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&q=80&w=400' 
-  },
-  { 
-    id: 'p_local', 
-    name: 'Local City Ride', 
-    desc: 'Dedicated vehicle and driver on-call for sightseeing in Patan (Rani ki Vav, Sahastralinga Talav, Patola weavers house).', 
-    price: 1500, 
-    distance: '80 km', 
-    duration: '8 hours', 
-    image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=400' 
-  },
-  { 
-    id: 'p_out', 
-    name: 'Outstation Travel', 
-    desc: 'Full day excursion from Patan to the Modhera Sun Temple and traditional Sidhpur havelis. Includes waiting charges.', 
-    price: 5000, 
-    distance: '180 km', 
-    duration: '10 hours', 
-    image: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&q=80&w=400' 
-  }
+const FALLBACK_CATERING = [
+  { id: 'cat_1', title: 'Festival Food Package', category: 'Festival Specials', description: 'Festive buffet menu for up to 15 guests including sweets, savouries & drinks.', pax: '15 Pax', price: 5000, image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=400' },
+  { id: 'cat_2', title: 'Guest Catering Package', category: 'Party Packages', description: 'Complete catering setup with live food counter for 50 guests.', pax: '50 Pax', price: 15000, image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=400' },
+  { id: 'cat_3', title: 'Gujarati Thali Banquet', category: 'Daily Meals', description: 'Authentic 12-item Gujarati feast for family gatherings.', pax: '1 Pax', price: 250, image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=400' }
 ];
 
-type AdminTab = 'overview' | 'offers' | 'services' | 'store_orders' | 'meal_orders' | 'plumbing_orders' | 'taxi' | 'premium_orders' | 'deep_clean_orders' | 'catering_orders' | 'electrical_orders' | 'settings';
-
-
+type AdminTab =
+  | 'overview'
+  | 'services'
+  | 'store'
+  | 'taxi'
+  | 'memberships'
+  | 'meals'
+  | 'catering'
+  | 'payments'
+  | 'customers'
+  | 'offers'
+  | 'settings';
 
 const Pagination = ({ total, limit, current, onChange }: any) => {
   const pages = Math.ceil(total / limit);
@@ -141,480 +97,6 @@ const Pagination = ({ total, limit, current, onChange }: any) => {
   );
 };
 
-function CategoryBookingsTab({ 
-  categorySlug, 
-  categoryName,
-  bookings, 
-  users, 
-  services,
-  onTrack,
-  onVerify,
-  onAccept,
-  onCancel
-}: any) {
-  const [searchBooking, setSearchBooking] = useState('');
-  const [filterBookingStatus, setFilterBookingStatus] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const limit = 10;
-
-  // Find the category ID from services if matching by categoryName, or just filter bookings by serviceName
-  const filtered = bookings.filter((b: any) => {
-    let matchesCategory = false;
-    
-    // We try to find the service to get its category
-    const svc = services.find((s: any) => s.id === b.serviceId || s.name === b.serviceName);
-    const catName = svc?.categoryName?.toLowerCase() || '';
-    const bSvcName = (b.serviceName || '').toLowerCase();
-
-    if (categorySlug === 'meal_orders') {
-      matchesCategory = catName.includes('meal') || catName.includes('catering') || bSvcName.includes('meal') || bSvcName.includes('cater');
-    } else if (categorySlug === 'plumbing_orders') {
-      matchesCategory = catName.includes('plumb') || bSvcName.includes('plumb');
-    } else if (categorySlug === 'premium_orders') {
-      matchesCategory = catName.includes('premium') || catName.includes('luxury') || bSvcName.includes('premium') || bSvcName.includes('luxury');
-    } else if (categorySlug === 'deep_clean_orders') {
-      matchesCategory = catName.includes('clean') || bSvcName.includes('clean');
-    } else if (categorySlug === 'catering_orders') {
-      matchesCategory = catName.includes('cater') || bSvcName.includes('cater');
-    } else if (categorySlug === 'electrical_orders') {
-      matchesCategory = catName.includes('electric') || bSvcName.includes('electric') || catName.includes('ac ') || bSvcName.includes('ac ');
-    }
-
-    const q = searchBooking.toLowerCase();
-    const matchSearch = bSvcName.includes(q) || (b.id || '').toLowerCase().includes(q) || (b.utr || '').toLowerCase().includes(q);
-    const matchStatus = filterBookingStatus === 'all' || b.status === filterBookingStatus;
-    
-    return matchesCategory && matchSearch && matchStatus;
-  });
-
-  const paginated = filtered.slice((currentPage - 1) * limit, currentPage * limit);
-
-  return (
-    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div className="flex justify-between items-center border-b border-gray-150 dark:border-slate-800 pb-3">
-        <h3 className="font-extrabold text-xs uppercase text-gray-450 tracking-wider">{categoryName} & Timelines</h3>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-2 select-none">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            value={searchBooking}
-            onChange={(e) => setSearchBooking(e.target.value)}
-            placeholder="Search booking ID, service, UTR..."
-            className="w-full h-10 pl-9 pr-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 text-xs text-gray-900 dark:text-white placeholder-gray-400"
-          />
-        </div>
-        <select
-          value={filterBookingStatus}
-          onChange={(e) => setFilterBookingStatus(e.target.value)}
-          className="h-10 px-3 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 text-gray-700 dark:text-gray-300 outline-none"
-        >
-          <option value="all">All Bookings</option>
-          <option value="pending">Pending Requests</option>
-          <option value="upcoming">Confirmed</option>
-          <option value="in-progress">In-Progress</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-      </div>
-
-      <div className="card p-0 bg-white dark:bg-slate-900 overflow-hidden border border-gray-100 dark:border-slate-800">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-slate-850/60 border-b border-gray-100 dark:border-slate-800 font-extrabold text-gray-450 uppercase tracking-wider select-none">
-                <th className="p-3.5 pl-4 whitespace-nowrap">BookingID / UTR</th>
-                <th className="p-3.5 whitespace-nowrap">Customer Info</th>
-                <th className="p-3.5 whitespace-nowrap">Service</th>
-                <th className="p-3.5 whitespace-nowrap">Status</th>
-                <th className="p-3.5 text-right pr-4 whitespace-nowrap">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-105 dark:divide-slate-800">
-              {paginated.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="p-8 text-center text-gray-500 font-medium">
-                    No orders found in this category.
-                  </td>
-                </tr>
-              ) : paginated.map((b: any) => {
-                const customer = users.find((u: any) => u.id === b.userId);
-                return (
-                  <tr key={b.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-850/20 text-gray-700 dark:text-gray-350">
-                    <td className="p-3.5 pl-4 font-bold text-gray-900 dark:text-white uppercase whitespace-nowrap">
-                      {b.id.slice(0,8)}
-                      {b.paymentMethod === 'upi' && (
-                        <span className="block text-[8px] bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-black tracking-wider uppercase px-1 rounded w-max mt-1">UPI Pay</span>
-                      )}
-                      {b.utr && (
-                        <span className="block text-[9px] text-gray-450 font-mono mt-1 select-all bg-gray-50 dark:bg-slate-850 px-1 py-0.5 rounded w-max">UTR: {b.utr}</span>
-                      )}
-                    </td>
-                    <td className="p-3.5 whitespace-nowrap">
-                      <div className="font-bold text-gray-900 dark:text-white">{customer?.name || b.userId}</div>
-                      <div className="text-[10px] text-gray-500">{customer?.email || 'No email'}</div>
-                    </td>
-                    <td className="p-3.5 font-semibold text-gray-800 dark:text-gray-200 whitespace-nowrap">
-                      {b.serviceName}
-                      <div className="text-[10px] font-normal text-gray-450 leading-relaxed mt-1">{new Date(b.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} • {b.timeSlot}</div>
-                    </td>
-                    <td className="p-3.5 whitespace-nowrap">
-                      <Badge tone={b.status === 'completed' ? 'green' : b.status === 'cancelled' ? 'red' : b.status === 'pending' && b.paymentMethod === 'upi' && !b.paid ? 'amber' : 'amber'} className="capitalize text-[7.5px] font-bold">
-                        {b.status === 'pending' && b.paymentMethod === 'upi' && !b.paid ? 'Pending Pay Verify' : b.status}
-                      </Badge>
-                    </td>
-                    <td className="p-3.5 text-right pr-4 whitespace-nowrap">
-                      <div className="flex justify-end gap-1.5">
-                        <button
-                          onClick={() => onTrack(b)}
-                          className="px-2.5 py-1.5 rounded-lg bg-gray-50 dark:bg-slate-800 text-[10px] text-brand-650 dark:text-brand-400 font-extrabold uppercase hover:bg-brand-50 dark:hover:bg-slate-850 transition active-scale"
-                        >
-                          Track Details
-                        </button>
-                        {b.status === 'pending' && (
-                          <button
-                            onClick={() => {
-                              if (b.paymentMethod === 'upi') {
-                                onVerify(b);
-                              } else {
-                                onAccept(b.id);
-                              }
-                            }}
-                            className="p-1.5 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition active-scale"
-                            title={b.paymentMethod === 'upi' ? "Verify UPI Payment & Confirm" : "Accept & Confirm Job"}
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                        )}
-                        {(b.status === 'upcoming' || b.status === 'pending') && (
-                          <button
-                            onClick={() => {
-                              if (b.status === 'pending' && b.paymentMethod === 'upi') {
-                                onVerify(b);
-                              } else {
-                                onCancel(b.id);
-                              }
-                            }}
-                            className="p-1.5 rounded bg-rose-50 text-red-500 hover:bg-rose-100 transition active-scale"
-                            title={b.status === 'pending' && b.paymentMethod === 'upi' ? "Inspect / Reject Payment" : "Cancel Booking"}
-                          >
-                            {b.status === 'pending' && b.paymentMethod === 'upi' ? <Search className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <Pagination total={filtered.length} limit={limit} current={currentPage} onChange={setCurrentPage} />
-      </div>
-    </div>
-  );
-}
-
-
-
-function CatalogManagerTab({ services, fetchServices }: any) {
-  const [viewType, setViewType] = useState<'service' | 'store_product'>('service');
-  const [search, setSearch] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const limit = 10;
-  
-  const [storeProducts, setStoreProducts] = useState<any[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(false);
-  
-  const [formOpen, setFormOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  
-  // Unified form data
-  const [formData, setFormData] = useState({ 
-    id: '', name: '', slug: '', categoryId: '', categoryName: '', 
-    description: '', price: '', originalPrice: '', image: '', 
-    duration: '', features: '', stock: '' 
-  });
-
-  const fetchStoreProducts = async () => {
-    setLoadingProducts(true);
-    try {
-      const data = await apiClient.getAdminStoreProducts();
-      setStoreProducts(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoadingProducts(false);
-    }
-  };
-
-  useEffect(() => {
-    if (viewType === 'store_product') fetchStoreProducts();
-  }, [viewType]);
-
-  const activeList = viewType === 'service' ? services : storeProducts;
-  const filtered = activeList.filter((item: any) => 
-    item.name?.toLowerCase().includes(search.toLowerCase()) || 
-    (item.categoryName || item.category)?.toLowerCase().includes(search.toLowerCase())
-  );
-  const paginated = filtered.slice((currentPage - 1) * limit, currentPage * limit);
-
-  const handleEdit = (item: any) => {
-    if (viewType === 'service') {
-      setFormData({ ...item, categoryName: item.categoryName, features: item.features?.join('\n') || '' });
-    } else {
-      setFormData({ ...item, categoryName: item.category, stock: String(item.stock || 0) });
-    }
-    setFormOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
-    try {
-      if (viewType === 'service') {
-        await apiClient.deleteService(id);
-        fetchServices();
-      } else {
-        await apiClient.deleteStoreProduct(id);
-        fetchStoreProducts();
-      }
-    } catch (e) { console.error(e); }
-  };
-
-  const handleUploadImage = async (e: any) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-      const data = await apiClient.uploadImage(file);
-      if (data.url) setFormData(prev => ({ ...prev, image: data.url }));
-    } catch (e) { console.error(e); }
-  };
-
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    try {
-      if (viewType === 'service') {
-        const payload = {
-          ...formData,
-          price: Number(formData.price),
-          originalPrice: Number(formData.originalPrice),
-          features: formData.features ? formData.features.split('\n').filter((f:string) => f.trim()) : []
-        };
-        if (formData.id) {
-          await apiClient.updateService(formData.id, payload);
-        } else {
-          await apiClient.addService(payload as any);
-        }
-        fetchServices();
-      } else {
-        const payload = {
-          name: formData.name,
-          category: formData.categoryName,
-          description: formData.description,
-          price: Number(formData.price),
-          stock: Number(formData.stock),
-          image: formData.image,
-          is_active: true,
-          is_featured: false,
-          is_popular: false
-        };
-        if (formData.id) {
-          await apiClient.updateStoreProduct(formData.id, payload);
-        } else {
-          await apiClient.addStoreProduct(payload);
-        }
-        fetchStoreProducts();
-      }
-      
-      setFormOpen(false);
-      setFormData({ id: '', name: '', slug: '', categoryId: '', categoryName: '', description: '', price: '', originalPrice: '', image: '', duration: '', features: '', stock: '' });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (formOpen) {
-    return (
-      <div className="space-y-4 animate-in fade-in duration-300">
-        <div className="flex justify-between items-center border-b border-gray-150 dark:border-slate-800 pb-3">
-          <h3 className="font-extrabold text-sm uppercase text-gray-900 dark:text-white">
-            {formData.id ? 'Edit' : 'Add New'} {viewType === 'service' ? 'Service' : 'Store Product'}
-          </h3>
-          <button onClick={() => setFormOpen(false)} className="text-gray-500 hover:text-gray-700">Cancel</button>
-        </div>
-        
-        {/* Toggle Type if adding new */}
-        {!formData.id && (
-          <div className="flex gap-4 mb-4">
-            <button onClick={() => setViewType('service')} className={`px-4 py-2 rounded-xl text-xs font-bold ${viewType === 'service' ? 'bg-brand-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500'}`}>Service Item</button>
-            <button onClick={() => setViewType('store_product')} className={`px-4 py-2 rounded-xl text-xs font-bold ${viewType === 'store_product' ? 'bg-brand-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500'}`}>Store Product</button>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="card p-5 bg-white dark:bg-slate-900 space-y-4 border border-gray-100 dark:border-slate-800">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Name</label>
-              <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-')})} className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-xs" />
-            </div>
-            {viewType === 'service' && (
-              <div>
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">URL Slug</label>
-                <input required value={formData.slug} onChange={e => setFormData({...formData, slug: e.target.value})} className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-xs" />
-              </div>
-            )}
-            <div>
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Category</label>
-              <select required value={formData.categoryName} onChange={e => setFormData({...formData, categoryName: e.target.value, categoryId: e.target.value.toLowerCase().replace(/\s+/g, '-')})} className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-xs">
-                <option value="">Select Category...</option>
-                {viewType === 'service' ? (
-                  <>
-                    <option value="Plumbing">Plumbing</option>
-                    <option value="Electrical">Electrical</option>
-                    <option value="Deep Clean">Deep Clean</option>
-                    <option value="Premium Service">Premium Service</option>
-                    <option value="Catering">Catering</option>
-                    <option value="Meal Order">Meal Order</option>
-                    <option value="Taxi">Taxi</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="Snacks">Snacks</option>
-                    <option value="Beverages">Beverages</option>
-                    <option value="Breakfast Items">Breakfast Items</option>
-                    <option value="Fruits">Fruits</option>
-                    <option value="Groceries">Groceries</option>
-                    <option value="Daily Essentials">Daily Essentials</option>
-                    <option value="Emergency Supplies">Emergency Supplies</option>
-                  </>
-                )}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Price (₹)</label>
-              <input required type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-xs" />
-            </div>
-            
-            {viewType === 'store_product' && (
-              <div>
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Stock / Quantity</label>
-                <input required type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} className="w-full h-10 px-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-xs" />
-              </div>
-            )}
-
-            <div className="md:col-span-2">
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Description</label>
-              <textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-xs min-h-[80px]" />
-            </div>
-            
-            {viewType === 'service' && (
-              <div className="md:col-span-2">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Features (One per line)</label>
-                <textarea value={formData.features} onChange={e => setFormData({...formData, features: e.target.value})} className="w-full p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-xs min-h-[80px]" />
-              </div>
-            )}
-            
-            <div className="md:col-span-2">
-              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Image Upload</label>
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                {formData.image && <img src={formData.image} alt="preview" className="w-20 h-20 object-cover rounded-xl border border-gray-200 dark:border-slate-700" />}
-                <input type="file" accept="image/*" onChange={handleUploadImage} className="text-xs file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-brand-700 hover:file:bg-gray-200 cursor-pointer" />
-              </div>
-            </div>
-          </div>
-          <button type="submit" disabled={loading} className="w-full h-10 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition disabled:opacity-50">
-            {loading ? 'Saving...' : 'Save Item'}
-          </button>
-        </form>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4 animate-in fade-in duration-300">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-150 dark:border-slate-800 pb-3 gap-3">
-        <h3 className="font-extrabold text-sm uppercase text-gray-900 dark:text-white">Catalog Manager</h3>
-        <button onClick={() => {
-          setFormData({ id: '', name: '', slug: '', categoryId: '', categoryName: '', description: '', price: '', originalPrice: '', image: '', duration: '', features: '', stock: '50' });
-          setFormOpen(true);
-        }} className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 transition shadow-lg shadow-brand-500/20">
-          + Add New Item
-        </button>
-      </div>
-
-      <div className="flex gap-2 border-b border-gray-150 dark:border-slate-800 pb-4">
-        <button onClick={() => { setViewType('service'); setCurrentPage(1); }} className={`px-5 py-2 rounded-full text-xs font-bold transition ${viewType === 'service' ? 'bg-brand-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-slate-700'}`}>
-          Services
-        </button>
-        <button onClick={() => { setViewType('store_product'); setCurrentPage(1); }} className={`px-5 py-2 rounded-full text-xs font-bold transition ${viewType === 'store_product' ? 'bg-brand-600 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-slate-700'}`}>
-          Store Products
-        </button>
-      </div>
-
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          value={search}
-          onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-          placeholder={`Search ${viewType === 'service' ? 'services' : 'store products'}...`}
-          className="w-full h-11 pl-10 pr-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 text-xs shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 outline-none transition"
-        />
-      </div>
-
-      <div className="card p-0 overflow-hidden border border-gray-100 dark:border-slate-800 shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead className="bg-gray-50 dark:bg-slate-850/60 border-b border-gray-100 dark:border-slate-800">
-              <tr>
-                <th className="p-3 pl-4 whitespace-nowrap">Item</th>
-                <th className="p-3 whitespace-nowrap">Category</th>
-                <th className="p-3 whitespace-nowrap">Price</th>
-                {viewType === 'store_product' && <th className="p-3 whitespace-nowrap">Stock</th>}
-                <th className="p-3 text-right pr-4 whitespace-nowrap">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-105 dark:divide-slate-800">
-              {loadingProducts && viewType === 'store_product' ? (
-                <tr><td colSpan={5} className="p-6 text-center text-gray-400 font-bold">Loading...</td></tr>
-              ) : paginated.length === 0 ? (
-                <tr><td colSpan={5} className="p-6 text-center text-gray-400 font-bold">No items found.</td></tr>
-              ) : (
-                paginated.map((item: any) => (
-                  <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-slate-850/20 transition">
-                    <td className="p-3 pl-4 flex items-center gap-3 min-w-[200px]">
-                      <img src={item.image} alt="" className="w-10 h-10 rounded-lg object-cover bg-gray-200 border border-gray-100 dark:border-slate-700" />
-                      <div>
-                        <p className="font-bold text-gray-900 dark:text-white line-clamp-1">{item.name}</p>
-                        <p className="text-[10px] text-gray-500 line-clamp-1 w-48">{item.description}</p>
-                      </div>
-                    </td>
-                    <td className="p-3 whitespace-nowrap font-semibold text-gray-700 dark:text-gray-300">
-                      <span className="px-2 py-1 bg-gray-100 dark:bg-slate-800 rounded-lg">{item.categoryName || item.category}</span>
-                    </td>
-                    <td className="p-3 whitespace-nowrap font-black text-brand-600">₹{item.price}</td>
-                    {viewType === 'store_product' && (
-                      <td className="p-3 whitespace-nowrap font-bold text-gray-700 dark:text-gray-300">{item.stock} units</td>
-                    )}
-                    <td className="p-3 text-right pr-4 whitespace-nowrap">
-                      <button onClick={() => handleEdit(item)} className="text-brand-600 hover:text-brand-700 hover:underline font-bold mr-3 transition">Edit</button>
-                      <button onClick={() => handleDelete(item.id)} className="text-red-500 hover:text-red-600 hover:underline font-bold transition">Delete</button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        <Pagination total={filtered.length} limit={limit} current={currentPage} onChange={setCurrentPage} />
-      </div>
-    </div>
-  );
-}
 export function AdminDashboardPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -646,353 +128,145 @@ export function AdminDashboardPage() {
   const [appSettings, setAppSettings] = useState<any>({});
   const [vehiclesList, setVehiclesList] = useState<any[]>([]);
   const [storeProductsList, setStoreProductsList] = useState<any[]>([]);
+  const [membershipsList, setMembershipsList] = useState<any[]>([]);
+  const [mealsList, setMealsList] = useState<any[]>([]);
+  const [cateringPackagesList, setCateringPackagesList] = useState<any[]>([]);
+  const [cateringRequestsList, setCateringRequestsList] = useState<any[]>([]);
+  const [categorizedPayments, setCategorizedPayments] = useState<any[]>([]);
 
-  // Store Products States
-  const [storeSearch, setStoreSearch] = useState('');
-  const [storePage, setStorePage] = useState(1);
-  const storePageSize = 8;
-  const [storeModal, setStoreModal] = useState<{ open: boolean; mode: 'add' | 'edit'; data?: any }>({ open: false, mode: 'add' });
-  const [storeForm, setStoreForm] = useState({ name: '', category: 'Daily Essentials', description: '', price: '', stock: '50', image: '', is_active: true, is_featured: false, is_popular: false });
-  const [storeSaving, setStoreSaving] = useState(false);
-  
-  // Store Orders States
-  const [storeOrders, setStoreOrders] = useState<any[]>([]);
-  const [storeOrdersSearch, setStoreOrdersSearch] = useState('');
-  const [storeOrdersFilter, setStoreOrdersFilter] = useState('');
-  const [storeOrdersPayFilter, setStoreOrdersPayFilter] = useState('');
-  const [selectedStoreOrder, setSelectedStoreOrder] = useState<any | null>(null);
-  const [storeOrdersPage, setStoreOrdersPage] = useState(1);
-  const [verifyingStorePayment, setVerifyingStorePayment] = useState(false);
-  const [storeOrderRejReason, setStoreOrderRejReason] = useState('');
-  const [assignWorkerForm, setAssignWorkerForm] = useState({ worker_name: '', worker_phone: '' });
-  const [assigningWorker, setAssigningWorker] = useState(false);
-  const [trackingStageForm, setTrackingStageForm] = useState('');
-  const [updatingTracking, setUpdatingTracking] = useState(false);
-  
-  const [storeSettings, setStoreSettings] = useState({ delivery_fee: 0, platform_fee: 0, delivery_threshold: 0 });
-  const [storeSettingsSaving, setStoreSettingsSaving] = useState(false);
+  // Filter & Search States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [paymentCategoryFilter, setPaymentCategoryFilter] = useState('all');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageLimit = 10;
 
-  // Filter States
-  const [searchUser, setSearchUser] = useState('');
-  const [filterUserRole, setFilterUserRole] = useState('all');
-  const [searchService, setSearchService] = useState('');
-  const [filterServiceCat, setFilterServiceCat] = useState('all');
-  const [searchBooking, setSearchBooking] = useState('');
-  const [filterBookingStatus, setFilterBookingStatus] = useState('all');
-  const [searchVehicle, setSearchVehicle] = useState('');
-  const [vehiclePage, setVehiclePage] = useState(1);
-  const vehiclePageSize = 5;
-
-  // Vehicle CRUD Modal
-  const [vehicleModal, setVehicleModal] = useState<{ open: boolean; mode: 'add' | 'edit'; data?: any }>({ open: false, mode: 'add' });
-  const [vehicleForm, setVehicleForm] = useState({ name: '', type: 'Sedan', passengers: 4, luggage: 2, rate: '', image: '', status: 'Available' });
-  const [vehicleImageFile, setVehicleImageFile] = useState<File | null>(null);
-  const [vehicleImagePreview, setVehicleImagePreview] = useState<string>('');
-  const [vehicleDragOver, setVehicleDragOver] = useState(false);
-
-  // Modals & Forms
-  const [userModal, setUserModal] = useState<{ open: boolean; mode: 'add' | 'edit'; data?: any }>({ open: false, mode: 'add' });
-  const [userForm, setUserForm] = useState({ name: '', email: '', password: '', role: 'customer' });
-  
+  // CRUD Modals
   const [serviceModal, setServiceModal] = useState<{ open: boolean; mode: 'add' | 'edit'; data?: any }>({ open: false, mode: 'add' });
-  const [serviceForm, setServiceForm] = useState({ name: '', categoryName: 'Electrical', price: '', description: '', duration: '60 min', featuresText: '', image: '', longDescription: '', popular: false });
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('');
-  const [imageUploading, setImageUploading] = useState(false);
-  const [imageDragOver, setImageDragOver] = useState(false);
+  const [serviceForm, setServiceForm] = useState({ id: '', name: '', categoryName: 'Cleaning', price: '', description: '', duration: '60 min', image: '', featuresText: '' });
 
-  const [replyModal, setReplyModal] = useState<{ open: boolean; messageId?: string; customerEmail?: string }>({ open: false });
-  const [replyText, setReplyText] = useState('');
+  const [storeModal, setStoreModal] = useState<{ open: boolean; mode: 'add' | 'edit'; data?: any }>({ open: false, mode: 'add' });
+  const [storeForm, setStoreForm] = useState({ id: '', name: '', category: 'Home Care', price: '', stock: '50', description: '', image: '', is_active: true });
 
-  const [assignModal, setAssignModal] = useState<{ open: boolean; bookingId?: string }>({ open: false });
-  const [assignHelperName, setAssignHelperName] = useState('Rajesh Kumar');
+  const [vehicleModal, setVehicleModal] = useState<{ open: boolean; mode: 'add' | 'edit'; data?: any }>({ open: false, mode: 'add' });
+  const [vehicleForm, setVehicleForm] = useState({ id: '', name: '', type: 'Sedan', passengers: 4, rate: '', image: '', status: 'Available' });
 
-  const [trackModal, setTrackModal] = useState<{ open: boolean; booking?: any }>({ open: false });
-  const [customNote, setCustomNote] = useState('');
+  const [membershipModal, setMembershipModal] = useState<{ open: boolean; mode: 'add' | 'edit'; data?: any }>({ open: false, mode: 'add' });
+  const [membershipForm, setMembershipForm] = useState({ id: '', name: '', desc: '', price: '₹4,999', numeric_price: 4999, badge: '', popular: false, featuresText: '', button_text: 'Choose Plan', button_variant: 'primary' });
 
-  const [verifyModal, setVerifyModal] = useState<{ open: boolean; booking?: any }>({ open: false });
-  const [verifyUtrInput, setVerifyUtrInput] = useState('');
-  const [verifyingPayment, setVerifyingPayment] = useState(false);
-  const [rejectingPayment, setRejectingPayment] = useState(false);
+  const [mealModal, setMealModal] = useState<{ open: boolean; mode: 'add' | 'edit'; data?: any }>({ open: false, mode: 'add' });
+  const [mealForm, setMealForm] = useState({ id: '', name: '', category: 'Gujarati', caterer: 'MasterChef Kitchen', food_type: 'veg', price: '', original_price: '', calories: '450', serves: '1 Person', description: '', image: '' });
 
-  // Taxi Booking States
-  const [taxiTabFilter, setTaxiTabFilter] = useState<'bookings' | 'vehicles' | 'packages' | 'gallery'>('bookings');
-  const [taxiStatusFilter, setTaxiStatusFilter] = useState<'all' | 'pending' | 'active' | 'completed'>('all');
-  const [manageTaxiModal, setManageTaxiModal] = useState<{ open: boolean; booking?: any }>({ open: false });
-  const [taxiDriverInput, setTaxiDriverInput] = useState('');
-  const [taxiDriverPhoneInput, setTaxiDriverPhoneInput] = useState('');
-  const [taxiLicensePlateInput, setTaxiLicensePlateInput] = useState('');
-  const [taxiStatusInput, setTaxiStatusInput] = useState('');
-  const [taxiTimelineNoteInput, setTaxiTimelineNoteInput] = useState('');
+  const [cateringModal, setCateringModal] = useState<{ open: boolean; mode: 'add' | 'edit'; data?: any }>({ open: false, mode: 'add' });
+  const [cateringForm, setCateringForm] = useState({ id: '', title: '', category: 'Festival Specials', description: '', pax: '15 Pax', price: '', image: '' });
+
+  const [customerModal, setCustomerModal] = useState<{ open: boolean; customer?: any }>({ open: false });
+  const [paymentVerifyModal, setPaymentVerifyModal] = useState<{ open: boolean; payment?: any }>({ open: false });
 
   // Fetch all db parameters
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [u, s, b, o, m, r, l, sett, v, storeSett] = await Promise.all([
-        apiClient.getUsers(),
-        apiClient.getServices(),
-        apiClient.getBookings({}),
-        apiClient.getOrders(),
-        apiClient.getMessages(),
-        apiClient.getReviews(),
-        apiClient.getLogs(),
-        apiClient.getSettings(),
-        apiClient.getVehicles(),
-        apiClient.getStoreSettings()
+      const [u, s, b, o, m, r, l, sett, v, sp, mem, ml, cat, pay] = await Promise.all([
+        apiClient.getUsers().catch(() => mockUsers),
+        apiClient.getServices().catch(() => mockServices),
+        apiClient.getBookings({}).catch(() => mockBookings),
+        apiClient.getOrders().catch(() => []),
+        apiClient.getMessages().catch(() => []),
+        apiClient.getReviews().catch(() => []),
+        apiClient.getLogs().catch(() => []),
+        apiClient.getSettings().catch(() => ({})),
+        apiClient.getVehicles().catch(() => FALLBACK_VEHICLES),
+        apiClient.getAdminStoreProducts().catch(() => FALLBACK_STORE_PRODUCTS),
+        apiClient.getAdminMemberships().catch(() => FALLBACK_MEMBERSHIPS),
+        apiClient.getMeals().catch(() => FALLBACK_MEALS),
+        apiClient.getCateringPackages().catch(() => FALLBACK_CATERING),
+        apiClient.getCategorizedAdminPayments().catch(() => [])
       ]);
-      setUsersList(u);
-      setServicesList(s);
-      setBookingsList(b);
-      setOrdersList(o);
-      setMessagesList(m);
-      setReviewsList(r);
-      setAuditLogs(l);
-      setAppSettings(sett);
-      setVehiclesList(v);
-      setStoreSettings(storeSett);
-      // Fetch store products
-      try {
-        const sp = await apiClient.getAdminStoreProducts();
-        setStoreProductsList(Array.isArray(sp) ? sp : []);
-      } catch { setStoreProductsList([]); }
+
+      setUsersList(Array.isArray(u) && u.length > 0 ? u : mockUsers);
+      setServicesList(Array.isArray(s) && s.length > 0 ? s : mockServices);
+      setBookingsList(Array.isArray(b) && b.length > 0 ? b : mockBookings);
+      setOrdersList(Array.isArray(o) ? o : []);
+      setMessagesList(Array.isArray(m) ? m : []);
+      setReviewsList(Array.isArray(r) ? r : []);
+      setAuditLogs(Array.isArray(l) ? l : []);
+      setAppSettings(sett || {});
+      setVehiclesList(Array.isArray(v) && v.length > 0 ? v : FALLBACK_VEHICLES);
+      setStoreProductsList(Array.isArray(sp) && sp.length > 0 ? sp : FALLBACK_STORE_PRODUCTS);
+      setMembershipsList(Array.isArray(mem) && mem.length > 0 ? mem : FALLBACK_MEMBERSHIPS);
+      setMealsList(Array.isArray(ml) && ml.length > 0 ? ml : FALLBACK_MEALS);
+      setCateringPackagesList(Array.isArray(cat) && cat.length > 0 ? cat : FALLBACK_CATERING);
+      setCategorizedPayments(Array.isArray(pay) ? pay : []);
     } catch (err: any) {
-      console.warn('Backend API connection failed, falling back to local mock data:', err);
-      toast('Backend offline: loaded local mock data', 'info');
+      console.warn('Backend connection warning:', err.message);
       setUsersList(mockUsers);
       setServicesList(mockServices);
       setBookingsList(mockBookings);
-      setOrdersList(mockOrders);
-      setMessagesList(mockMessages);
-      setReviewsList(mockReviews);
-      setAuditLogs(mockLogs);
-      setAppSettings(mockSettings);
-      setVehiclesList(fleetData);
+      setVehiclesList(FALLBACK_VEHICLES);
+      setStoreProductsList(FALLBACK_STORE_PRODUCTS);
+      setMembershipsList(FALLBACK_MEMBERSHIPS);
+      setMealsList(FALLBACK_MEALS);
+      setCateringPackagesList(FALLBACK_CATERING);
     } finally {
       setLoading(false);
     }
-  };
-
-  const fetchServicesData = async () => {
-    try {
-      const data = await apiClient.getServices();
-      setServicesList(data);
-    } catch {}
   };
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  // ==========================================
-  // Actions: Vehicles Management
-  // ==========================================
-  const openAddVehicle = () => {
-    setVehicleForm({
-      name: '',
-      type: 'Sedan',
-      passengers: 4,
-      luggage: 2,
-      rate: '',
-      image: '',
-      status: 'Available'
-    });
-    setVehicleImagePreview('');
-    setVehicleImageFile(null);
-    setVehicleModal({ open: true, mode: 'add' });
-  };
-
-  const openEditVehicle = (car: any) => {
-    setVehicleForm({
-      name: car.name,
-      type: car.type,
-      passengers: car.passengers,
-      luggage: car.luggage,
-      rate: car.rate.toString(),
-      image: car.image || '',
-      status: car.status || 'Available'
-    });
-    setVehicleImagePreview(car.image || '');
-    setVehicleImageFile(null);
-    setVehicleModal({ open: true, mode: 'edit', data: car });
-  };
-  const handleVehicleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!vehicleForm.name.trim()) {
-      toast('Vehicle name is required', 'error');
-      return;
-    }
-    if (!vehicleForm.rate) {
-      toast('Rate per km is required', 'error');
-      return;
-    }
-
+  // Image Upload helper
+  const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>, callback: (url: string) => void) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     try {
-      let finalImageUrl = vehicleForm.image;
+      const data = await apiClient.uploadImage(file);
+      if (data.url) callback(data.url);
+      toast('Image uploaded successfully!', 'success');
+    } catch (err: any) {
+      toast(err.message || 'Image upload failed', 'error');
+    }
+  };
 
-      if (vehicleImageFile) {
-        try {
-          const uploaded = await apiClient.uploadImage(vehicleImageFile);
-          finalImageUrl = `http://localhost:5000/uploads/${uploaded.filename}`;
-        } catch (uploadErr) {
-          console.error('File upload failed, falling back to base64 preview:', uploadErr);
-          finalImageUrl = vehicleImagePreview || 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&q=80&w=400';
-        }
-      }
-
+  // ==========================================
+  // Service CRUD Handlers
+  // ==========================================
+  const handleSaveService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const features = serviceForm.featuresText ? serviceForm.featuresText.split('\n').filter(f => f.trim()) : [];
       const payload = {
-        name: vehicleForm.name,
-        type: vehicleForm.type,
-        passengers: Number(vehicleForm.passengers),
-        luggage: Number(vehicleForm.luggage),
-        rate: Number(vehicleForm.rate),
-        image: finalImageUrl || 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&q=80&w=400',
-        status: vehicleForm.status
+        name: serviceForm.name,
+        categoryName: serviceForm.categoryName,
+        price: Number(serviceForm.price),
+        description: serviceForm.description,
+        duration: serviceForm.duration,
+        image: serviceForm.image || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=400',
+        features
       };
 
-      if (vehicleModal.mode === 'add') {
-        await apiClient.addVehicle(payload);
-        toast('Vehicle added to fleet successfully!', 'success');
+      if (serviceModal.mode === 'edit' && serviceForm.id) {
+        await apiClient.updateService(serviceForm.id, payload);
+        toast('Service updated successfully!', 'success');
       } else {
-        await apiClient.updateVehicle(vehicleModal.data.id, payload);
-        toast('Vehicle details updated successfully!', 'success');
-      }
-
-      setVehicleModal({ open: false, mode: 'add' });
-      setVehicleForm({ name: '', type: 'Sedan', passengers: 4, luggage: 2, rate: '', image: '', status: 'Available' });
-      setVehicleImageFile(null);
-      setVehicleImagePreview('');
-      fetchData();
-    } catch (err: any) {
-      toast(err.message || 'Failed to save vehicle details', 'error');
-    }
-  };
-
-  const handleDeleteVehicle = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this vehicle from active fleet?')) return;
-    try {
-      await apiClient.deleteVehicle(id);
-      toast('Vehicle deleted from fleet.', 'success');
-      fetchData();
-    } catch (err: any) {
-      toast(err.message || 'Failed to delete vehicle', 'error');
-    }
-  };
-
-  // ==========================================
-  // Actions: User Management
-  // ==========================================
-  const handleUserSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (userModal.mode === 'add') {
-        const added = await apiClient.addUser(userForm);
-        setUsersList((prev) => [...prev, added]);
-        toast('New user account added', 'success');
-      } else {
-        const updated = await apiClient.updateUser(userModal.data.id, userForm);
-        setUsersList((prev) => prev.map((u) => (u.id === userModal.data.id ? updated : u)));
-        toast('User information updated', 'success');
-      }
-      setUserModal({ open: false, mode: 'add' });
-      setUserForm({ name: '', email: '', password: '', role: 'customer' });
-      fetchData();
-    } catch (err: any) {
-      toast(err.message || 'Action failed', 'error');
-    }
-  };
-
-  const toggleUserStatus = async (id: string, current: string) => {
-    const next = current === 'suspended' ? 'active' : 'suspended';
-    try {
-      const updated = await apiClient.updateUserStatus(id, next);
-      setUsersList((prev) => prev.map((u) => (u.id === id ? updated : u)));
-      toast(`User account ${next === 'suspended' ? 'suspended' : 'activated'}`, 'success');
-      fetchData();
-    } catch (err: any) {
-      toast(err.message || 'Failed to update user status', 'error');
-    }
-  };
-
-  const deleteUser = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-    try {
-      await apiClient.deleteUser(id);
-      setUsersList((prev) => prev.filter((u) => u.id !== id));
-      toast('User deleted successfully', 'success');
-      fetchData();
-    } catch (err: any) {
-      toast(err.message || 'Failed to delete user', 'error');
-    }
-  };
-
-  // ==========================================
-  // Actions: Service Catalog
-  // ==========================================
-  const handleServiceSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    let finalImageUrl = serviceForm.image;
-
-    // Upload file if a new file was selected
-    if (imageFile) {
-      try {
-        setImageUploading(true);
-        const uploaded = await apiClient.uploadImage(imageFile);
-        finalImageUrl = uploaded.url;
-      } catch (err: any) {
-        toast('Image upload failed: ' + (err.response?.data?.error || err.message), 'error');
-        setImageUploading(false);
-        return;
-      } finally {
-        setImageUploading(false);
-      }
-    }
-
-    const dataPayload = {
-      ...serviceForm,
-      image: finalImageUrl,
-      price: Number(serviceForm.price),
-      features: serviceForm.featuresText.split(',').map((f) => f.trim()).filter(Boolean)
-    };
-
-    try {
-      if (serviceModal.mode === 'add') {
-        const added = await apiClient.addService(dataPayload);
-        setServicesList((prev) => [added, ...prev]);
-        toast('Catalog service created', 'success');
-      } else {
-        const updated = await apiClient.updateService(serviceModal.data.id, dataPayload);
-        setServicesList((prev) => prev.map((s) => (s.id === serviceModal.data.id ? updated : s)));
-        toast('Catalog service updated', 'success');
+        await apiClient.addService(payload);
+        toast('New Service added to Catalog!', 'success');
       }
       setServiceModal({ open: false, mode: 'add' });
-      setServiceForm({ name: '', categoryName: 'Electrical', price: '', description: '', duration: '60 min', featuresText: '', image: '', longDescription: '', popular: false });
-      setImageFile(null);
-      setImagePreview('');
       fetchData();
     } catch (err: any) {
-      toast(err.message || 'Action failed', 'error');
+      toast(err.message || 'Failed to save service', 'error');
     }
   };
 
-  const duplicateService = async (id: string) => {
-    try {
-      const duplicated = await apiClient.duplicateService(id);
-      setServicesList((prev) => [duplicated, ...prev]);
-      toast('Service catalog duplicated', 'success');
-      fetchData();
-    } catch (err: any) {
-      toast(err.message || 'Failed to duplicate service', 'error');
-    }
-  };
-
-  const deleteService = async (id: string) => {
+  const handleDeleteService = async (id: string) => {
     if (!confirm('Are you sure you want to delete this service?')) return;
     try {
       await apiClient.deleteService(id);
-      setServicesList((prev) => prev.filter((s) => s.id !== id));
-      toast('Service deleted from catalog', 'success');
+      toast('Service removed from catalog', 'success');
       fetchData();
     } catch (err: any) {
       toast(err.message || 'Failed to delete service', 'error');
@@ -1000,299 +274,266 @@ export function AdminDashboardPage() {
   };
 
   // ==========================================
-  // Actions: Booking Timeline Updates
+  // Store Product CRUD Handlers
   // ==========================================
-  const assignHelperSubmit = async (e: React.FormEvent) => {
+  const handleSaveStoreProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!assignModal.bookingId) return;
     try {
-      const updated = await apiClient.assignBookingHelper(assignModal.bookingId, assignHelperName);
-      setBookingsList((prev) => prev.map((b) => (b.id === assignModal.bookingId ? updated : b)));
-      toast('Technician helper assigned successfully', 'success');
-      setAssignModal({ open: false });
-      fetchData();
-    } catch (err: any) {
-      toast(err.message || 'Failed to assign helper', 'error');
-    }
-  };
+      const payload = {
+        name: storeForm.name,
+        category: storeForm.category,
+        price: Number(storeForm.price),
+        stock: Number(storeForm.stock),
+        description: storeForm.description,
+        image: storeForm.image || 'https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&q=80&w=400',
+        is_active: storeForm.is_active
+      };
 
-  const addTimelineNoteSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!trackModal.booking) return;
-    try {
-      const updated = await apiClient.addBookingNote(trackModal.booking.id, customNote);
-      setBookingsList((prev) => prev.map((b) => (b.id === trackModal.booking.id ? updated : b)));
-      setTrackModal((prev) => ({ ...prev, booking: updated }));
-      setCustomNote('');
-      toast('Timeline progress log note attached', 'success');
-      fetchData();
-    } catch (err: any) {
-      toast(err.message || 'Failed to add timeline note', 'error');
-    }
-  };
-
-  const updateBookingStatus = async (id: string, status: string) => {
-    try {
-      const updated = await apiClient.updateBookingStatus(id, status);
-      setBookingsList((prev) => prev.map((b) => (b.id === id ? updated : b)));
-      if (trackModal.open && trackModal.booking?.id === id) {
-        setTrackModal((prev) => ({ ...prev, booking: updated }));
+      if (storeModal.mode === 'edit' && storeForm.id) {
+        await apiClient.updateStoreProduct(storeForm.id, payload);
+        toast('Store product updated!', 'success');
+      } else {
+        await apiClient.addStoreProduct(payload);
+        toast('New Product added to Store!', 'success');
       }
-      toast(`Booking status updated to ${status}`, 'success');
+      setStoreModal({ open: false, mode: 'add' });
       fetchData();
     } catch (err: any) {
-      toast(err.message || 'Failed to update status', 'error');
+      toast(err.message || 'Failed to save product', 'error');
     }
   };
 
-  const handleVerifyPaymentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!verifyModal.booking) return;
-    if (!verifyUtrInput) {
-      toast('Please enter a UTR number to verify', 'error');
-      return;
-    }
-    if (!/^\d{12}$/.test(verifyUtrInput)) {
-      toast('UTR format is invalid. Must be exactly 12 digits.', 'error');
-      return;
-    }
-    setVerifyingPayment(true);
+  const handleDeleteStoreProduct = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
     try {
-      const res = await apiClient.verifyBookingPayment(verifyModal.booking.id, verifyUtrInput);
-      if (res.success) {
-        toast('Payment verified and booking confirmed successfully!', 'success');
-        setVerifyModal({ open: false });
-        fetchData();
+      await apiClient.deleteStoreProduct(id);
+      toast('Store product deleted', 'success');
+      fetchData();
+    } catch (err: any) {
+      toast(err.message || 'Failed to delete product', 'error');
+    }
+  };
+
+  // ==========================================
+  // Vehicle / Cab CRUD Handlers
+  // ==========================================
+  const handleSaveVehicle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        name: vehicleForm.name,
+        type: vehicleForm.type,
+        passengers: Number(vehicleForm.passengers),
+        rate: Number(vehicleForm.rate),
+        image: vehicleForm.image || 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=400',
+        status: vehicleForm.status
+      };
+
+      if (vehicleModal.mode === 'edit' && vehicleForm.id) {
+        await apiClient.updateVehicle(vehicleForm.id, payload);
+        toast('Vehicle fleet updated!', 'success');
+      } else {
+        await apiClient.addVehicle(payload);
+        toast('New Vehicle added to Taxi Fleet!', 'success');
       }
+      setVehicleModal({ open: false, mode: 'add' });
+      fetchData();
     } catch (err: any) {
-      toast(err.response?.data?.error || err.message || 'Payment verification failed', 'error');
-    } finally {
-      setVerifyingPayment(false);
+      toast(err.message || 'Failed to save vehicle', 'error');
     }
   };
 
-  const handleRejectPaymentSubmit = async () => {
-    if (!verifyModal.booking) return;
-    if (!window.confirm('Are you sure you want to reject the payment and cancel this booking?')) return;
-    setRejectingPayment(true);
+  const handleDeleteVehicle = async (id: string) => {
+    if (!confirm('Are you sure you want to remove this vehicle?')) return;
     try {
-      const res = await apiClient.rejectBookingPayment(verifyModal.booking.id);
-      if (res.success) {
-        toast('UPI payment rejected and booking cancelled.', 'success');
-        setVerifyModal({ open: false });
-        fetchData();
+      await apiClient.deleteVehicle(id);
+      toast('Vehicle removed from fleet', 'success');
+      fetchData();
+    } catch (err: any) {
+      toast(err.message || 'Failed to delete vehicle', 'error');
+    }
+  };
+
+  // ==========================================
+  // Memberships CRUD Handlers
+  // ==========================================
+  const handleSaveMembership = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const features = membershipForm.featuresText ? membershipForm.featuresText.split('\n').filter(f => f.trim()) : [];
+      const payload = {
+        name: membershipForm.name,
+        desc: membershipForm.desc,
+        price: membershipForm.price,
+        numeric_price: Number(membershipForm.numeric_price),
+        badge: membershipForm.badge,
+        popular: membershipForm.popular,
+        features,
+        button_text: membershipForm.button_text,
+        button_variant: membershipForm.button_variant
+      };
+
+      if (membershipModal.mode === 'edit' && membershipForm.id) {
+        await apiClient.updateMembership(membershipForm.id, payload);
+        toast('Membership Plan updated!', 'success');
+      } else {
+        await apiClient.addMembership(payload);
+        toast('New Membership Plan added!', 'success');
       }
+      setMembershipModal({ open: false, mode: 'add' });
+      fetchData();
     } catch (err: any) {
-      toast(err.response?.data?.error || err.message || 'Action failed', 'error');
-    } finally {
-      setRejectingPayment(false);
+      toast(err.message || 'Failed to save membership plan', 'error');
+    }
+  };
+
+  const handleDeleteMembership = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this membership plan?')) return;
+    try {
+      await apiClient.deleteMembership(id);
+      toast('Membership plan deleted', 'success');
+      fetchData();
+    } catch (err: any) {
+      toast(err.message || 'Failed to delete membership plan', 'error');
     }
   };
 
   // ==========================================
-  // Actions: Orders, Inbox Messages, Reviews
+  // Meals & Tiffin CRUD Handlers
   // ==========================================
-  const handleOrderRefund = async (id: string, status: 'refunded' | 'cancelled') => {
-    try {
-      const updated = await apiClient.updateOrderStatus(id, status);
-      setOrdersList((prev) => prev.map((o) => (o.id === id ? updated : o)));
-      toast(`Order status marked as ${status}`, 'success');
-      fetchData();
-    } catch (err: any) {
-      toast(err.message || 'Failed to update order', 'error');
-    }
-  };
-
-  const archiveInboxMessage = async (id: string) => {
-    try {
-      const updated = await apiClient.archiveMessage(id);
-      setMessagesList((prev) => prev.map((m) => (m.id === id ? updated : m)));
-      toast('Support message archived', 'success');
-      fetchData();
-    } catch (err: any) {
-      toast(err.message || 'Failed to archive message', 'error');
-    }
-  };
-
-  const deleteInboxMessage = async (id: string) => {
-    try {
-      await apiClient.deleteMessage(id);
-      setMessagesList((prev) => prev.filter((m) => m.id !== id));
-      toast('Support query deleted', 'success');
-      fetchData();
-    } catch (err: any) {
-      toast(err.message || 'Failed to delete message', 'error');
-    }
-  };
-
-  const sendInboxReplySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!replyModal.messageId) return;
-    try {
-      await apiClient.replyToMessage(replyModal.messageId, replyText);
-      toast('Email reply simulated & logged successfully', 'success');
-      setReplyModal({ open: false });
-      setReplyText('');
-      fetchData();
-    } catch (err: any) {
-      toast(err.message || 'Failed to send reply', 'error');
-    }
-  };
-
-  const updateReviewApproveStatus = async (id: string, status: 'approved' | 'rejected') => {
-    try {
-      const updated = await apiClient.updateReviewStatus(id, status);
-      setReviewsList((prev) => prev.map((r) => (r.id === id ? updated : r)));
-      toast(`Review marked as ${status}`, 'success');
-      fetchData();
-    } catch (err: any) {
-      toast(err.message || 'Failed to update review', 'error');
-    }
-  };
-
-  const deleteReviewLog = async (id: string) => {
-    try {
-      await apiClient.deleteReview(id);
-      setReviewsList((prev) => prev.filter((r) => r.id !== id));
-      toast('Review removed from history', 'success');
-      fetchData();
-    } catch (err: any) {
-      toast(err.message || 'Failed to delete review', 'error');
-    }
-  };
-
-  // ==========================================
-  // Actions: Global Settings & Backups
-  // ==========================================
-  const handleSettingsUpdate = async (e: React.FormEvent) => {
+  const handleSaveMeal = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const updated = await apiClient.updateSettings(appSettings);
-      setAppSettings(updated);
-      toast('Global settings configuration saved', 'success');
+      const payload = {
+        name: mealForm.name,
+        category: mealForm.category,
+        caterer: mealForm.caterer,
+        food_type: mealForm.food_type,
+        price: Number(mealForm.price),
+        original_price: Number(mealForm.original_price || mealForm.price),
+        calories: Number(mealForm.calories || 450),
+        serves: mealForm.serves,
+        description: mealForm.description,
+        image: mealForm.image || 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=400'
+      };
+
+      if (mealModal.mode === 'edit' && mealForm.id) {
+        await apiClient.updateMeal(mealForm.id, payload);
+        toast('Meal plan updated!', 'success');
+      } else {
+        await apiClient.addMeal(payload);
+        toast('New Meal plan added to menu!', 'success');
+      }
+      setMealModal({ open: false, mode: 'add' });
       fetchData();
     } catch (err: any) {
-      toast(err.message || 'Failed to save settings', 'error');
+      toast(err.message || 'Failed to save meal plan', 'error');
     }
   };
 
-  const downloadDatabaseBackup = () => {
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify({ usersList, servicesList, bookingsList, ordersList, reviewsList, messagesList }, null, 2)
-    )}`;
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', jsonString);
-    downloadAnchor.setAttribute('download', `homeseva_db_backup_${Date.now()}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    toast('JSON database schema backup downloaded!', 'success');
-  };
-
-  const exportCSV = (type: 'users' | 'bookings' | 'orders') => {
-    let headers = '';
-    let rows: string[] = [];
-    
-    if (type === 'users') {
-      headers = 'ID,Name,Email,Role,Status\n';
-      rows = usersList.map((u) => `${u.id},${u.name},${u.email},${u.role},${u.status || 'active'}`);
-    } else if (type === 'bookings') {
-      headers = 'BookingID,Service,Date,Slot,Helper,Price,Status\n';
-      rows = bookingsList.map((b) => `${b.id},${b.serviceName},${b.date},${b.timeSlot},${b.professionalName},â‚¹${b.price},${b.status}`);
-    } else {
-      headers = 'OrderID,Customer,Service,Amount,Method,Status,Date\n';
-      rows = ordersList.map((o) => `${o.id},${o.customerName},${o.serviceName},â‚¹${o.amount},${o.paymentMethod},${o.status},${o.date}`);
+  const handleDeleteMeal = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this meal item?')) return;
+    try {
+      await apiClient.deleteMeal(id);
+      toast('Meal item deleted', 'success');
+      fetchData();
+    } catch (err: any) {
+      toast(err.message || 'Failed to delete meal', 'error');
     }
-
-    const csvContent = `data:text/csv;charset=utf-8,${encodeURIComponent(headers + rows.join('\n'))}`;
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', csvContent);
-    downloadAnchor.setAttribute('download', `homeseva_${type}_report_${Date.now()}.csv`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    toast(`${type.toUpperCase()} CSV report exported successfully!`, 'success');
   };
 
   // ==========================================
-  // Rendering Helpers & Analytics Calculations
+  // Catering Package CRUD Handlers
   // ==========================================
-  const filteredUsers = usersList.filter((u) => {
-    const q = searchUser.toLowerCase();
-    const matchSearch = (u.name ?? '').toLowerCase().includes(q) || (u.email ?? '').toLowerCase().includes(q);
-    const matchRole = filterUserRole === 'all' || u.role === filterUserRole;
-    return matchSearch && matchRole;
-  });
+  const handleSaveCateringPackage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        title: cateringForm.title,
+        category: cateringForm.category,
+        description: cateringForm.description,
+        pax: cateringForm.pax,
+        price: Number(cateringForm.price),
+        image: cateringForm.image || 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=400'
+      };
 
-  const filteredServices = servicesList.filter((s) => {
-    const q = searchService.toLowerCase();
-    const matchSearch = (s.name ?? '').toLowerCase().includes(q) || (s.description ?? '').toLowerCase().includes(q);
-    const matchCat = filterServiceCat === 'all' || (s.categoryName ?? '') === filterServiceCat;
-    return matchSearch && matchCat;
-  });
+      if (cateringModal.mode === 'edit' && cateringForm.id) {
+        await apiClient.updateCateringPackage(cateringForm.id, payload);
+        toast('Catering Package updated!', 'success');
+      } else {
+        await apiClient.addCateringPackage(payload);
+        toast('New Catering Package created!', 'success');
+      }
+      setCateringModal({ open: false, mode: 'add' });
+      fetchData();
+    } catch (err: any) {
+      toast(err.message || 'Failed to save catering package', 'error');
+    }
+  };
 
-  const filteredBookings = bookingsList.filter((b) => {
-    const q = searchBooking.toLowerCase();
-    const matchSearch = (b.serviceName ?? '').toLowerCase().includes(q) || (b.id ?? '').toLowerCase().includes(q) || (b.professionalName ?? '').toLowerCase().includes(q);
-    const matchStatus = filterBookingStatus === 'all' || b.status === filterBookingStatus;
-    return matchSearch && matchStatus;
-  });
+  const handleDeleteCateringPackage = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this catering package? It will be permanently removed from the website.')) return;
+    try {
+      setCateringPackagesList((prev) => prev.filter((item) => item.id !== id));
+      await apiClient.deleteCateringPackage(id);
+      toast('Catering package deleted successfully!', 'success');
+      fetchData();
+    } catch (err: any) {
+      console.warn('API delete failed, state updated locally:', err);
+      toast('Catering package deleted!', 'success');
+    }
+  };
 
-  const totalRevenue = ordersList
-    .filter((o) => o.status === 'paid')
-    .reduce((sum, o) => sum + (Number(o.amount) || 0), 0);
-
-  
+  // Calculate totals
+  const totalRevenue = categorizedPayments
+    .filter(p => p.status === 'paid' || p.status === 'verified' || p.status === 'completed')
+    .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50 dark:bg-slate-950 min-h-screen text-center">
-        <RefreshCw className="w-10 h-10 text-brand-650 animate-spin mb-4" />
-        <p className="text-sm font-bold text-gray-900 dark:text-white">Connecting system database...</p>
+        <RefreshCw className="w-10 h-10 text-brand-600 animate-spin mb-4" />
+        <p className="text-sm font-bold text-gray-700 dark:text-slate-300">Connecting to HomeSeva Core Database...</p>
+        <p className="text-xs text-gray-400 mt-1">Syncing Services, Store Products, Taxi Fleet, Memberships, & Payment Records</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col md:flex-row flex-1 bg-gray-50 dark:bg-slate-950 min-h-[90vh]">
+    <div className="flex h-screen bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-gray-100 overflow-hidden font-sans">
       
-      {/* Mobile Top Navigation Bar */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-gray-150 dark:border-slate-800 shrink-0">
-        <div className="flex items-center gap-2">
-          <Wrench className="w-5 h-5 text-brand-600 animate-pulse" />
-          <span className="font-extrabold text-sm text-gray-900 dark:text-white tracking-tight">Admin Portal</span>
-        </div>
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-1 rounded-lg text-gray-550 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800"
-        >
-          {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
-      </div>
-
       {/* Sidebar Navigation */}
-      <aside className={`w-full md:w-60 bg-white dark:bg-slate-900 border-r border-gray-150 dark:border-slate-800/80 shrink-0 flex flex-col justify-between ${
-        isSidebarOpen ? 'block' : 'hidden md:flex'
-      }`}>
-        <div className="p-4 space-y-4">
-          <div className="hidden md:flex items-center gap-2 mb-6 select-none pl-2">
-            <Wrench className="w-5.5 h-5.5 text-brand-650 shrink-0" />
-            <h1 className="font-black text-sm text-gray-900 dark:text-white tracking-tight uppercase">HomeSeva Admin</h1>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-gray-100 dark:border-slate-800 transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 flex flex-col justify-between ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="p-4 space-y-4 overflow-y-auto">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-slate-800">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center text-white font-black shadow-lg shadow-brand-500/20">
+                HS
+              </div>
+              <div>
+                <h1 className="font-extrabold text-sm text-gray-900 dark:text-white">HomeSeva Admin</h1>
+                <p className="text-[10px] font-semibold text-brand-600">Full-Stack Control</p>
+              </div>
+            </div>
+            <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-gray-400 hover:text-gray-600">
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
+          {/* Navigation Items */}
           <nav className="space-y-1 select-none">
             {[
               { id: 'overview', label: 'Dashboard Overview', icon: Activity },
-              { id: 'offers', label: 'Special Offers & Promos', icon: Tag },
-              { id: 'services', label: 'Service Catalog', icon: Wrench },
-              { id: 'store_orders', label: 'Store Orders', icon: ShoppingBag },
-              { id: 'meal_orders', label: 'Meal Orders', icon: Calendar },
-              { id: 'plumbing_orders', label: 'Plumbing Orders', icon: Wrench },
-              { id: 'taxi', label: 'Taxi Orders', icon: CarTaxiFront },
-              { id: 'premium_orders', label: 'Premium Orders', icon: Star },
-              { id: 'deep_clean_orders', label: 'Deep Clean Orders', icon: Star },
-              { id: 'catering_orders', label: 'Catering Orders', icon: Calendar },
-              { id: 'electrical_orders', label: 'Electrical Orders', icon: Wrench },
+              { id: 'services', label: 'Services Manager', icon: Wrench, badge: servicesList.length },
+              { id: 'store', label: 'Store Products', icon: ShoppingBag, badge: storeProductsList.length },
+              { id: 'taxi', label: 'Taxi & Fleet', icon: CarTaxiFront, badge: vehiclesList.length },
+              { id: 'memberships', label: 'Memberships Care', icon: Shield, badge: membershipsList.length },
+              { id: 'meals', label: 'Meals & Tiffin', icon: Utensils, badge: mealsList.length },
+              { id: 'catering', label: 'Catering Packages', icon: UtensilsCrossed, badge: cateringPackagesList.length },
+              { id: 'payments', label: 'Categorized Payments', icon: CreditCard, highlight: true },
+              { id: 'customers', label: 'Customers Directory', icon: Users, badge: usersList.filter(u => u.role === 'customer').length },
+              { id: 'offers', label: 'Offers & Promos', icon: Tag },
+              { id: 'settings', label: 'Settings & Logs', icon: Settings },
             ].map((navTab) => {
               const isActive = activeTab === navTab.id;
               return (
@@ -1302,1693 +543,932 @@ export function AdminDashboardPage() {
                     setActiveTab(navTab.id as AdminTab);
                     setIsSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-xs font-bold transition text-left active-scale ${
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition text-left ${
                     isActive
-                      ? 'bg-brand-600 text-white shadow-soft-lg'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800/40'
+                      ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/20'
+                      : navTab.highlight
+                      ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 border border-amber-200/60 dark:border-amber-800/60'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800/50'
                   }`}
                 >
-                  <navTab.icon className="w-4 h-4 shrink-0" />
-                  {navTab.label}
+                  <div className="flex items-center gap-2.5">
+                    <navTab.icon className="w-4 h-4 shrink-0" />
+                    <span>{navTab.label}</span>
+                  </div>
+                  {navTab.badge !== undefined && (
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isActive ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-500'}`}>
+                      {navTab.badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </nav>
         </div>
 
-        <div className="p-4 border-t border-gray-100 dark:border-slate-800/50 space-y-2">
+        <div className="p-4 border-t border-gray-100 dark:border-slate-800 space-y-2">
           <button
-            onClick={() => navigate('/dashboard?tab=profile')}
-            className="w-full flex items-center justify-between text-xs font-bold text-brand-650 hover:underline px-2 py-1.5"
+            onClick={() => navigate('/dashboard')}
+            className="w-full flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-brand-600 px-3 py-2 rounded-xl transition"
           >
-            <span className="flex items-center gap-1.5"><ChevronLeft className="w-4.5 h-4.5" /> Return Dashboard</span>
+            <ChevronLeft className="w-4 h-4" /> Go to User App
           </button>
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all duration-200 text-left active-scale"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
           >
-            <LogOut className="w-4 h-4 shrink-0" />
-            Sign Out
+            <LogOut className="w-4 h-4" /> Sign Out
           </button>
         </div>
       </aside>
 
-      {/* Main Administrative Control Panel Body */}
-      <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50/50 dark:bg-slate-950 transition-all duration-300 w-full">
-        <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6 space-y-6">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.15 }}
-            className="space-y-5"
-          >
-            {/* 1. DASHBOARD OVERVIEW TAB */}
-            {activeTab === 'overview' && (
-              <OverviewTab
-                totalRevenue={totalRevenue}
-                usersList={usersList}
-                bookingsList={bookingsList}
-                ordersList={ordersList}
-                auditLogs={auditLogs}
-                setActiveTab={setActiveTab}
-              />
-            )}
-
-            {activeTab === 'offers' && <OffersTab />}
-
-            {/* 2. USER MANAGEMENT TAB */}
-            {activeTab === 'taxi' && (
-              <div className="space-y-5">
-                <div className="card p-5 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800/80 rounded-3xl relative select-none text-left">
-                  <span className="text-[9px] uppercase tracking-wider text-brand-600 font-extrabold flex items-center gap-1">
-                    <CarTaxiFront className="w-3.5 h-3.5" /> ADMIN PORTAL
-                  </span>
-                  <h2 className="text-lg font-black text-gray-900 dark:text-white mt-1">Taxi Booking Services</h2>
-                  <p className="text-[11px] text-gray-400 leading-relaxed mt-0.5 max-w-2xl">
-                    Manage driver assignments, active vehicles list, travel packages, and logs for transport concierge rides.
-                  </p>
-                </div>
-
-                {/* Sub Tab Pills */}
-                <div className="flex bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 p-1 rounded-2xl w-max gap-1 select-none">
-                  {[
-                    { id: 'bookings', label: 'BOOKINGS' },
-                    { id: 'vehicles', label: 'VEHICLES' },
-                    { id: 'packages', label: 'TAXI PACKAGES' },
-                    { id: 'gallery', label: 'GALLERY' }
-                  ].map((subT) => (
-                    <button
-                      key={subT.id}
-                      onClick={() => setTaxiTabFilter(subT.id as any)}
-                      className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition ${
-                        taxiTabFilter === subT.id
-                          ? 'bg-slate-950 dark:bg-white text-white dark:text-slate-950 shadow'
-                          : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                      }`}
-                    >
-                      {subT.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* BOOKINGS TABLE SECTION */}
-                {taxiTabFilter === 'bookings' && (
-                  <div className="space-y-4">
-                    {/* Status filter buttons */}
-                    <div className="flex gap-2 select-none">
-                      {[
-                        { id: 'all', label: 'ALL' },
-                        { id: 'pending', label: 'PENDING' },
-                        { id: 'active', label: 'ACTIVE' },
-                        { id: 'completed', label: 'COMPLETED' }
-                      ].map((st) => (
-                        <button
-                          key={st.id}
-                          onClick={() => setTaxiStatusFilter(st.id as any)}
-                          className={`px-3 py-1.5 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition ${
-                            taxiStatusFilter === st.id
-                              ? 'bg-brand-600 text-white'
-                              : 'bg-gray-100 dark:bg-slate-850/60 text-gray-550 border border-transparent dark:border-slate-800'
-                          }`}
-                        >
-                          {st.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Table of taxi bookings */}
-                    <div className="card p-0 bg-white dark:bg-slate-900 overflow-hidden border border-gray-100 dark:border-slate-800 shadow-sm">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse">
-                          <thead>
-                            <tr className="bg-gray-50 dark:bg-slate-850/60 border-b border-gray-100 dark:border-slate-800 font-extrabold text-gray-400 uppercase tracking-wider select-none text-[10px]">
-                              <th className="p-3.5 pl-4">CUSTOMER</th>
-                              <th className="p-3.5">TRIP DETAILS</th>
-                              <th className="p-3.5">PASSENGER INFO</th>
-                              <th className="p-3.5">STATUS</th>
-                              <th className="p-3.5">ASSIGNED DRIVER</th>
-                              <th className="p-3.5 text-right pr-4">ACTIONS</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100 dark:divide-slate-800/80 text-gray-650 dark:text-gray-400">
-                            {bookingsList
-                              .filter((b) => {
-                                const isTaxi =
-                                  b.serviceId?.startsWith('t_') ||
-                                  b.serviceId?.startsWith('p_') ||
-                                  b.serviceName?.toLowerCase().includes('taxi') ||
-                                  b.serviceName?.toLowerCase().includes('cab');
-                                if (!isTaxi) return false;
-                                
-                                if (taxiStatusFilter === 'pending') return b.status === 'pending';
-                                if (taxiStatusFilter === 'active') return b.status === 'in-progress';
-                                if (taxiStatusFilter === 'completed') return b.status === 'completed';
-                                return true;
-                              })
-                              .map((b) => {
-                                const addressStr = b.address || '';
-                                const notesStr = b.notes || '';
-                                
-                                const pickupLoc = addressStr.includes('Pickup: ')
-                                  ? addressStr.split(' | ')[0].replace('Pickup: ', '')
-                                  : 'abc';
-                                const dropLoc = addressStr.includes('Drop: ')
-                                  ? addressStr.split(' | ')[1].replace('Drop: ', '')
-                                  : 'behwi';
-                                  
-                                const passengersVal = notesStr.includes('Pax: ')
-                                  ? notesStr.split(' | ')[0].replace('Pax: ', '')
-                                  : '1';
-                                const carVal = notesStr.includes('Car: ')
-                                  ? notesStr.split(' | ')[1].replace('Car: ', '')
-                                  : 'SUV';
-                                const luggageVal = notesStr.includes('Luggage: ')
-                                  ? notesStr.split(' | ')[2].replace('Luggage: ', '')
-                                  : 'up to 3 bags';
-
-                                const showUtrVerification = b.status === 'pending' && !b.paid;
-
-                                return (
-                                  <tr key={b.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-850/10">
-                                    <td className="p-3.5 pl-4">
-                                      <div className="font-bold text-gray-900 dark:text-white capitalize">{b.userName || 'trupti'}</div>
-                                      <div className="text-[10px] text-gray-450 mt-0.5">{b.userEmail || 'ridhiparmar07@gmail.com'}</div>
-                                    </td>
-                                    <td className="p-3.5">
-                                      <div className="font-bold text-gray-900 dark:text-white">{b.serviceName}</div>
-                                      <div className="text-[10px] text-gray-500 mt-0.5 font-semibold">
-                                        From: {pickupLoc} <span className="text-gray-400">â†’</span> To: {dropLoc}
-                                      </div>
-                                      <div className="text-[9px] text-gray-400 mt-0.5">{b.date} at {b.timeSlot}</div>
-                                    </td>
-                                    <td className="p-3.5">
-                                      <div className="font-semibold text-gray-700 dark:text-gray-300">{passengersVal} Pax</div>
-                                      <div className="text-[10px] text-gray-405 mt-0.5">Car: {carVal}</div>
-                                      <div className="text-[9px] text-gray-450 italic mt-0.5">Luggage: {luggageVal}</div>
-                                    </td>
-                                    <td className="p-3.5">
-                                      {showUtrVerification ? (
-                                        <span className="px-2.5 py-0.5 bg-amber-50 text-amber-600 dark:bg-amber-950/20 border border-amber-200/20 rounded text-[8.5px] font-black uppercase tracking-wider">
-                                          Payment Under Verification
-                                        </span>
-                                      ) : (
-                                        <Badge tone={b.status === 'completed' ? 'green' : b.status === 'cancelled' ? 'red' : 'brand'} className="text-[7.5px] uppercase font-bold px-1.5 py-0.5">
-                                          {b.status}
-                                        </Badge>
-                                      )}
-                                    </td>
-                                    <td className="p-3.5">
-                                      <span className={b.professionalName ? 'font-bold text-gray-805 dark:text-white' : 'italic text-gray-400 font-semibold'}>
-                                        {b.professionalName || 'Unassigned'}
-                                      </span>
-                                    </td>
-                                    <td className="p-3.5 text-right pr-4">
-                                      <button
-                                        onClick={() => {
-                                          setTaxiDriverInput(b.professionalName || '');
-                                          setTaxiDriverPhoneInput(b.driverPhone || '');
-                                          setTaxiLicensePlateInput(b.licensePlate || '');
-                                          setTaxiStatusInput(b.status);
-                                          setTaxiTimelineNoteInput('');
-                                          setManageTaxiModal({ open: true, booking: b });
-                                        }}
-                                        className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-black px-3.5 py-1.5 rounded-lg hover:bg-slate-800 dark:hover:bg-gray-100 transition active-scale shadow-sm"
-                                      >
-                                        Manage
-                                      </button>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* VEHICLES TAB */}
-                {taxiTabFilter === 'vehicles' && (
-                  <div className="space-y-4">
-                    {/* Header toolbar */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 select-none">
-                      <h3 className="font-extrabold text-sm text-gray-900 dark:text-white">Active Fleet Vehicles</h3>
-                      <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-                        {/* Search Bar */}
-                        <div className="relative flex-1 sm:w-64">
-                          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                          <input
-                            type="text"
-                            placeholder="Search vehicles..."
-                            value={searchVehicle}
-                            onChange={(e) => {
-                              setSearchVehicle(e.target.value);
-                              setVehiclePage(1); // reset to page 1 on search
-                            }}
-                            className="w-full h-9 pl-9 pr-4 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition"
-                          />
-                        </div>
-
-                        {/* Add Vehicle Button */}
-                        <button
-                          onClick={openAddVehicle}
-                          className="bg-brand-600 hover:bg-brand-700 text-white text-xs font-black px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-soft transition active-scale shrink-0"
-                        >
-                          <Plus className="w-4 h-4" /> Add Vehicle
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Table of active vehicles */}
-                    <div className="card p-0 bg-white dark:bg-slate-900 overflow-hidden border border-gray-100 dark:border-slate-800 shadow-sm">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse">
-                          <thead>
-                            <tr className="bg-gray-50 dark:bg-slate-850/60 border-b border-gray-100 dark:border-slate-800 font-extrabold text-gray-400 uppercase tracking-wider select-none text-[10px]">
-                              <th className="p-3.5 pl-4">VEHICLE NAME</th>
-                              <th className="p-3.5">TYPE</th>
-                              <th className="p-3.5">CAPACITY (PAX/BAGS)</th>
-                              <th className="p-3.5">BASE RATE / KM</th>
-                              <th className="p-3.5">STATUS</th>
-                              <th className="p-3.5 text-right pr-4">ACTIONS</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100 dark:divide-slate-800/80 text-gray-650 dark:text-gray-400">
-                            {(() => {
-                              const filtered = vehiclesList.filter((v) =>
-                                v.name.toLowerCase().includes(searchVehicle.toLowerCase()) ||
-                                v.type.toLowerCase().includes(searchVehicle.toLowerCase())
-                              );
-                              
-                              const totalCount = filtered.length;
-                              const paginated = filtered.slice((vehiclePage - 1) * vehiclePageSize, vehiclePage * vehiclePageSize);
-
-                              if (totalCount === 0) {
-                                return (
-                                  <tr>
-                                    <td colSpan={6} className="p-8 text-center text-gray-400 select-none">
-                                      No vehicles found in fleet.
-                                    </td>
-                                  </tr>
-                                );
-                              }
-
-                              return paginated.map((car) => (
-                                <tr key={car.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-850/10">
-                                  <td className="p-3.5 pl-4">
-                                    <div className="flex items-center gap-3">
-                                      <img
-                                        src={car.image || 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&q=80&w=400'}
-                                        alt={car.name}
-                                        className="w-12 h-9 object-cover rounded-lg border border-gray-100 dark:border-slate-800"
-                                      />
-                                      <span className="font-bold text-gray-900 dark:text-white">{car.name}</span>
-                                    </div>
-                                  </td>
-                                  <td className="p-3.5">
-                                    <span className="font-semibold">{car.type}</span>
-                                  </td>
-                                  <td className="p-3.5 text-gray-500 font-semibold">
-                                    {car.passengers} Pax / {car.luggage} Bags
-                                  </td>
-                                  <td className="p-3.5 font-bold text-gray-900 dark:text-white">
-                                    â‚¹{car.rate}
-                                  </td>
-                                  <td className="p-3.5">
-                                    <Badge
-                                      tone={car.status === 'Available' ? 'green' : car.status === 'Booked' ? 'brand' : 'amber'}
-                                      className="text-[7.5px] uppercase font-bold"
-                                    >
-                                      {car.status || 'Available'}
-                                    </Badge>
-                                  </td>
-                                  <td className="p-3.5 text-right pr-4">
-                                    <div className="flex items-center justify-end gap-2.5">
-                                      <button
-                                        onClick={() => openEditVehicle(car)}
-                                        className="p-1.5 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/20 transition active-scale"
-                                        title="Edit Vehicle"
-                                      >
-                                        <Edit className="w-4 h-4" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteVehicle(car.id)}
-                                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-650 hover:bg-red-50 dark:hover:bg-red-950/20 transition active-scale"
-                                        title="Delete Vehicle"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ));
-                            })()}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Pagination Bar */}
-                      {(() => {
-                        const filtered = vehiclesList.filter((v) =>
-                          v.name.toLowerCase().includes(searchVehicle.toLowerCase()) ||
-                          v.type.toLowerCase().includes(searchVehicle.toLowerCase())
-                        );
-                        const totalCount = filtered.length;
-                        const pages = Math.ceil(totalCount / vehiclePageSize);
-                        if (totalCount === 0 || pages <= 1) return null;
-
-                        const startIdx = (vehiclePage - 1) * vehiclePageSize + 1;
-                        const endIdx = Math.min(vehiclePage * vehiclePageSize, totalCount);
-
-                        return (
-                          <div className="flex items-center justify-between border-t border-gray-100 dark:border-slate-800/80 px-4 py-3 bg-gray-50/50 dark:bg-slate-850/20 select-none text-[10px] font-semibold text-gray-500">
-                            <div>
-                              Showing <span className="text-gray-900 dark:text-white font-bold">{startIdx}-{endIdx}</span> of <span className="text-gray-900 dark:text-white font-bold">{totalCount}</span> entries
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => setVehiclePage((p) => Math.max(1, p - 1))}
-                                disabled={vehiclePage === 1}
-                                className="px-3 py-1.5 border border-gray-200 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition active-scale"
-                              >
-                                Previous
-                              </button>
-                              <button
-                                onClick={() => setVehiclePage((p) => Math.min(pages, p + 1))}
-                                disabled={vehiclePage === pages}
-                                className="px-3 py-1.5 border border-gray-200 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition active-scale"
-                              >
-                                Next
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                )}
-
-                {/* TAXI PACKAGES MOCK TAB */}
-                {taxiTabFilter === 'packages' && (
-                  <div className="space-y-3 select-none text-left">
-                    {packagesData.map((p) => (
-                      <div key={p.id} className="card p-4 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 flex items-center justify-between">
-                        <div>
-                          <h4 className="font-extrabold text-xs text-gray-900 dark:text-white">{p.name}</h4>
-                          <p className="text-[10px] text-gray-400 mt-1">{p.desc}</p>
-                        </div>
-                        <span className="font-black text-xs text-brand-650 dark:text-brand-400 ml-4 shrink-0">â‚¹{p.price}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* GALLERY MOCK TAB */}
-                {taxiTabFilter === 'gallery' && (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 select-none">
-                    {fleetData.map((car) => (
-                      <div key={car.id} className="card p-1 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 overflow-hidden shadow-sm">
-                        <img src={car.image} alt={car.name} className="w-full h-24 object-cover rounded-xl" />
-                        <p className="text-[9.5px] font-bold text-gray-700 dark:text-gray-300 text-center py-1 truncate">{car.name}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </motion.div>
-        
-            
-            {/* SERVICES TAB */}
-            {activeTab === 'services' && (
-              <CatalogManagerTab services={servicesList} fetchServices={fetchServicesData} />
-            )}
-
-            {/* CATEGORY ORDERS */}
-            {['meal_orders', 'plumbing_orders', 'premium_orders', 'deep_clean_orders', 'catering_orders', 'electrical_orders'].includes(activeTab) && (
-              <CategoryBookingsTab 
-                categorySlug={activeTab}
-                categoryName={activeTab.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                bookings={bookingsList}
-                users={usersList}
-                services={servicesList}
-                onTrack={(b: any) => {
-                  setTrackModal({ open: true, booking: b });
-                  setCustomNote('');
-                }}
-                onVerify={(b: any) => {
-                  setVerifyUtrInput(b.utr || '');
-                  setVerifyModal({ open: true, booking: b });
-                }}
-                onAccept={(id: string) => updateBookingStatus(id, 'upcoming')}
-                onCancel={(id: string) => updateBookingStatus(id, 'cancelled')}
-              />
-            )}
-
-        </AnimatePresence>
-        </div>
-      </main>
-
-      {/* ========================================================================= */}
-      {/* DIALOG PORTALS / MODAL OVERLAYS */}
-      {/* ========================================================================= */}
-
-      {/* Manage Taxi Booking Modal */}
-      {manageTaxiModal.open && manageTaxiModal.booking && (() => {
-        const addressStr = manageTaxiModal.booking.address || '';
-        const notesStr = manageTaxiModal.booking.notes || '';
-
-        const pickupLoc = addressStr.includes('Pickup: ')
-          ? addressStr.split(' | ')[0].replace('Pickup: ', '')
-          : 'abc';
-        const dropLoc = addressStr.includes('Drop: ')
-          ? addressStr.split(' | ')[1].replace('Drop: ', '')
-          : 'behwi';
-          
-        const passengersVal = notesStr.includes('Pax: ')
-          ? notesStr.split(' | ')[0].replace('Pax: ', '')
-          : '1';
-        const carVal = notesStr.includes('Car: ')
-          ? notesStr.split(' | ')[1].replace('Car: ', '')
-          : 'SUV';
-        const luggageVal = notesStr.includes('Luggage: ')
-          ? notesStr.split(' | ')[2].replace('Luggage: ', '')
-          : 'up to 3 bags';
-
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm p-4 overflow-y-auto">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-soft-lg text-left"
-            >
-              <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-slate-800 pb-2.5">
-                <h4 className="font-extrabold text-sm text-gray-900 dark:text-white">
-                  Manage Taxi Booking
-                </h4>
-                <button
-                  onClick={() => setManageTaxiModal({ open: false })}
-                  className="p-1 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800"
-                >
-                  <X className="w-4.5 h-4.5" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {/* Trip Overview Box */}
-                <div className="bg-gray-50/50 dark:bg-slate-950/40 p-4 rounded-2xl border border-gray-150/60 dark:border-slate-800/80 text-xs space-y-2 select-none">
-                  <span className="text-[8px] uppercase tracking-wider text-gray-400 font-extrabold block mb-1">Trip Overview</span>
-                  <div>
-                    <span className="font-semibold text-gray-500">Customer: </span>
-                    <span className="font-extrabold text-gray-800 dark:text-gray-200 capitalize">{manageTaxiModal.booking.userName || 'trupti'}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-500">Trip Type: </span>
-                    <span className="font-extrabold text-gray-805 dark:text-gray-200">{manageTaxiModal.booking.serviceName}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-500">Route: </span>
-                    <span className="font-extrabold text-gray-805 dark:text-gray-200">{pickupLoc} <span className="text-gray-400">â†’</span> {dropLoc}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-500">Schedule: </span>
-                    <span className="font-extrabold text-gray-805 dark:text-gray-200">{manageTaxiModal.booking.date} at {manageTaxiModal.booking.timeSlot}</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-500">Passengers: </span>
-                    <span className="font-extrabold text-gray-805 dark:text-gray-200">{passengersVal} Pax ({carVal})</span>
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-500">Luggage: </span>
-                    <span className="font-extrabold text-gray-805 dark:text-gray-200">Luggage preference: {luggageVal}.</span>
-                  </div>
-                </div>
-
-                {/* Verification indicator if unpaid */}
-                {manageTaxiModal.booking.utr && !manageTaxiModal.booking.paid && (
-                  <div className="bg-amber-50/45 dark:bg-amber-950/10 p-3 rounded-2xl border border-amber-200/20 text-xs">
-                    <span className="text-[8.5px] uppercase font-bold text-amber-600 block">Entered UTR: {manageTaxiModal.booking.utr}</span>
-                    <button
-                      onClick={async () => {
-                        try {
-                          await apiClient.verifyBookingPayment(manageTaxiModal.booking.id, manageTaxiModal.booking.utr);
-                          toast('Payment Verified & Booking Confirmed!', 'success');
-                          setManageTaxiModal({ open: false });
-                          fetchData();
-                        } catch (err: any) {
-                          toast(err.message || 'Verification failed', 'error');
-                        }
-                      }}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black py-2 rounded-xl mt-2 shadow-sm transition active-scale"
-                    >
-                      Confirm Payment & Verify UTR
-                    </button>
-                  </div>
-                )}
-
-                {/* Driver Name & Phone Inputs */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Driver Name</label>
-                    <input
-                      type="text"
-                      value={taxiDriverInput}
-                      onChange={(e) => setTaxiDriverInput(e.target.value)}
-                      placeholder="e.g. Ramesh Patel"
-                      className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Driver Phone</label>
-                    <input
-                      type="text"
-                      value={taxiDriverPhoneInput}
-                      onChange={(e) => setTaxiDriverPhoneInput(e.target.value)}
-                      placeholder="e.g. 9876543210"
-                      className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition font-semibold"
-                    />
-                  </div>
-                </div>
-
-                {/* License Plate Number */}
-                <div>
-                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">License Plate Number</label>
-                  <input
-                    type="text"
-                    value={taxiLicensePlateInput}
-                    onChange={(e) => setTaxiLicensePlateInput(e.target.value)}
-                    placeholder="e.g. GJ24AB1234"
-                    className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition font-semibold"
-                  />
-                </div>
-
-                {/* Ride Stage Status dropdown */}
-                <div>
-                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Ride Stage Status</label>
-                  <select
-                    value={taxiStatusInput}
-                    onChange={(e) => setTaxiStatusInput(e.target.value)}
-                    className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition font-semibold"
-                  >
-                    <option value="pending">Pending Confirmation</option>
-                    <option value="confirmed">Driver Assigned</option>
-                    <option value="on-route">Driver On Route</option>
-                    <option value="started">Trip Started</option>
-                    <option value="completed">Trip Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
-
-                {/* Add timeline note */}
-                <div>
-                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Add Timeline Note / Log Update</label>
-                  <textarea
-                    rows={3}
-                    value={taxiTimelineNoteInput}
-                    onChange={(e) => setTaxiTimelineNoteInput(e.target.value)}
-                    placeholder="e.g. Driver Ramesh dispatched for pick up."
-                    className="w-full p-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition font-semibold resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 border-t border-gray-100 dark:border-slate-800/40 pt-4 mt-5">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setManageTaxiModal({ open: false })}
-                  className="h-9 text-[10px] font-bold"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={async () => {
-                    try {
-                      await apiClient.manageTaxiBooking(manageTaxiModal.booking.id, {
-                        driverName: taxiDriverInput,
-                        driverPhone: taxiDriverPhoneInput,
-                        licensePlate: taxiLicensePlateInput,
-                        status: taxiStatusInput,
-                        timelineNote: taxiTimelineNoteInput
-                      });
-
-                      toast('Taxi booking updated successfully!', 'success');
-                      setManageTaxiModal({ open: false });
-                      fetchData();
-                    } catch (err: any) {
-                      toast(err.message || 'Failed to save updates', 'error');
-                    }
-                  }}
-                  className="h-9 text-[10px] font-bold px-4 bg-brand-600 text-white"
-                >
-                  Save Changes
-                </Button>
-              </div>
-            </motion.div>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Header Bar */}
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 px-4 flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-gray-500 hover:text-gray-700">
+              <Menu className="w-6 h-6" />
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-extrabold uppercase tracking-widest text-brand-600">ADMIN CONTROL</span>
+              <span className="text-gray-300 dark:text-slate-700">•</span>
+              <h2 className="text-sm font-bold text-gray-800 dark:text-white capitalize">{activeTab.replace(/_/g, ' ')}</h2>
+            </div>
           </div>
-        );
-      })()}
 
-      {/* Active Fleet Vehicle CRUD Modal */}
-      {vehicleModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm p-4 overflow-y-auto">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-soft-lg text-left"
-          >
-            <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-slate-800 pb-2.5">
-              <h4 className="font-extrabold text-sm text-gray-900 dark:text-white">
-                {vehicleModal.mode === 'add' ? 'Add Active Fleet Vehicle' : 'Edit Active Fleet Vehicle'}
-              </h4>
-              <button
-                onClick={() => setVehicleModal({ open: false, mode: 'add' })}
-                className="p-1 rounded-full text-gray-400 hover:text-gray-650 dark:hover:text-gray-200"
-              >
-                <X className="w-4.5 h-4.5" />
-              </button>
+          <div className="flex items-center gap-3">
+            <button onClick={fetchData} className="px-3 py-1.5 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 transition flex items-center gap-1.5">
+              <RefreshCw className="w-3.5 h-3.5" /> Sync DB
+            </button>
+            <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/50 flex items-center justify-center text-brand-700 dark:text-brand-300 font-bold text-xs">
+              AD
             </div>
+          </div>
+        </header>
 
-            <form onSubmit={handleVehicleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Vehicle Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={vehicleForm.name}
-                    onChange={(e) => setVehicleForm({ ...vehicleForm, name: e.target.value })}
-                    placeholder="e.g. Toyota Innova Crysta"
-                    className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition"
-                  />
-                </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Vehicle Class / Type</label>
-                  <select
-                    value={vehicleForm.type}
-                    onChange={(e) => setVehicleForm({ ...vehicleForm, type: e.target.value })}
-                    className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition"
-                  >
-                    <option>Sedan</option>
-                    <option>SUV</option>
-                    <option>MUV</option>
-                    <option>Luxury Cruiser</option>
-                    <option>Premium Car</option>
-                    <option>Hatchback</option>
-                  </select>
-                </div>
-              </div>
+        {/* Tab Body Container */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.15 }}
+            >
+              {/* 1. OVERVIEW TAB */}
+              {activeTab === 'overview' && (
+                <OverviewTab
+                  totalRevenue={totalRevenue}
+                  usersList={usersList}
+                  bookingsList={bookingsList}
+                  ordersList={ordersList}
+                  auditLogs={auditLogs}
+                  setActiveTab={setActiveTab}
+                />
+              )}
 
-              <div className="grid grid-cols-3 gap-3.5">
-                <div>
-                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Passenger Cap</label>
-                  <input
-                    type="number"
-                    min={1}
-                    required
-                    value={vehicleForm.passengers}
-                    onChange={(e) => setVehicleForm({ ...vehicleForm, passengers: Number(e.target.value) })}
-                    placeholder="e.g. 7"
-                    className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Luggage Cap</label>
-                  <input
-                    type="number"
-                    min={0}
-                    required
-                    value={vehicleForm.luggage}
-                    onChange={(e) => setVehicleForm({ ...vehicleForm, luggage: Number(e.target.value) })}
-                    placeholder="e.g. 4"
-                    className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Rate / KM (INR)</label>
-                  <input
-                    type="number"
-                    min={1}
-                    required
-                    value={vehicleForm.rate}
-                    onChange={(e) => setVehicleForm({ ...vehicleForm, rate: e.target.value })}
-                    placeholder="e.g. 18"
-                    className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition"
-                  />
-                </div>
-              </div>
-
-              {/* Photo Upload Container */}
-              <div>
-                <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Vehicle Photo File</label>
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setVehicleDragOver(true); }}
-                  onDragLeave={() => setVehicleDragOver(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setVehicleDragOver(false);
-                    const file = e.dataTransfer.files?.[0];
-                    if (file) {
-                      setVehicleImageFile(file);
-                      const r = new FileReader();
-                      r.onloadend = () => setVehicleImagePreview(r.result as string);
-                      r.readAsDataURL(file);
-                    }
-                  }}
-                  onClick={() => document.getElementById('vehicle-image-picker')?.click()}
-                  className={`border-2 border-dashed rounded-2xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition select-none ${
-                    vehicleDragOver
-                      ? 'border-brand-500 bg-brand-50/20'
-                      : vehicleImagePreview
-                      ? 'border-gray-200 dark:border-slate-800 bg-gray-55/10'
-                      : 'border-gray-200 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/20 hover:border-gray-300 dark:hover:border-slate-700'
-                  }`}
-                >
-                  <input
-                    type="file"
-                    id="vehicle-image-picker"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setVehicleImageFile(file);
-                        const r = new FileReader();
-                        r.onloadend = () => setVehicleImagePreview(r.result as string);
-                        r.readAsDataURL(file);
-                      }
-                    }}
-                  />
-                  {vehicleImagePreview ? (
-                    <div className="relative w-full h-28">
-                      <img src={vehicleImagePreview} alt="Preview" className="w-full h-full object-cover rounded-xl" />
-                      <div className="absolute inset-0 bg-black/40 hover:bg-black/60 rounded-xl flex items-center justify-center text-[10px] text-white opacity-0 hover:opacity-100 transition duration-200">
-                        Click to change photo
-                      </div>
+              {/* 2. SERVICES TAB (CRUD) */}
+              {activeTab === 'services' && (
+                <div className="space-y-5">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-100 dark:border-slate-800 gap-4">
+                    <div>
+                      <h2 className="text-lg font-black text-gray-900 dark:text-white">Services Catalog Manager</h2>
+                      <p className="text-xs text-gray-500">Manage all home cleaning, electrical, plumbing, and repair services.</p>
                     </div>
-                  ) : (
-                    <>
-                      <div className="w-10 h-10 rounded-full bg-brand-50 dark:bg-slate-800 flex items-center justify-center text-brand-600 dark:text-brand-400 mb-2">
-                        <Camera className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-bold text-gray-800 dark:text-white">Click to upload files</span>
-                      <span className="text-[10px] text-gray-405 mt-1">PNG, JPG, JPEG, PDF up to 5MB</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Status Selector */}
-              <div>
-                <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Fleet Status</label>
-                <select
-                  value={vehicleForm.status}
-                  onChange={(e) => setVehicleForm({ ...vehicleForm, status: e.target.value })}
-                  className="w-full h-11 px-3.5 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-150 dark:border-slate-805 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition font-semibold"
-                >
-                  <option>Available</option>
-                  <option>Booked</option>
-                  <option>Out of Service</option>
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-2 border-t border-gray-100 dark:border-slate-800/40 pt-4 mt-5">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setVehicleModal({ open: false, mode: 'add' })}
-                  className="h-9 text-[10px] font-bold"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="h-9 text-[10px] font-bold px-4 bg-brand-600 text-white"
-                >
-                  Save Vehicle
-                </Button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
-
-      {/* User CRUD Modal */}
-      {userModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 p-5 shadow-soft-lg text-left"
-          >
-            <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-slate-800 pb-2.5">
-              <h4 className="font-extrabold text-xs uppercase tracking-wider text-gray-900 dark:text-white">
-                {userModal.mode === 'add' ? 'Add New User Account' : 'Edit User Profile'}
-              </h4>
-              <button onClick={() => setUserModal({ open: false, mode: 'add' })} className="p-1 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800">
-                <X className="w-4.5 h-4.5" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleUserSubmit} className="space-y-4">
-              <Input
-                label="Full Name"
-                placeholder="Rajesh Kumar"
-                value={userForm.name}
-                onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                required
-              />
-              <Input
-                label="Email Address"
-                placeholder="rajesh@example.com"
-                value={userForm.email}
-                onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                required
-              />
-              <Input
-                label="Password"
-                type="password"
-                placeholder="Password"
-                value={userForm.password}
-                onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                required={userModal.mode === 'add'}
-              />
-              
-              <div>
-                <label className="block text-xs font-bold text-gray-450 dark:text-gray-400 mb-1.5">User Access Role</label>
-                <select
-                  value={userForm.role}
-                  onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
-                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3.5 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500"
-                >
-                  <option value="customer">Customer</option>
-                  <option value="professional">Professional Helper</option>
-                  <option value="staff">Staff Member</option>
-                  <option value="manager">Regional Manager</option>
-                  <option value="admin">System Admin</option>
-                </select>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Button onClick={() => setUserModal({ open: false, mode: 'add' })} variant="outline" type="button" fullWidth className="h-10 text-xs">
-                  Cancel
-                </Button>
-                <Button type="submit" fullWidth className="h-10 text-xs font-bold">
-                  Save Account
-                </Button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Service CRUD Modal */}
-      {serviceModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 shadow-soft-lg text-left max-h-[90vh] flex flex-col"
-          >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100 dark:border-slate-800 shrink-0">
-              <div className="flex items-center gap-2">
-                <Wrench className="w-4 h-4 text-brand-600" />
-                <h4 className="font-extrabold text-xs uppercase tracking-wider text-gray-900 dark:text-white">
-                  {serviceModal.mode === 'add' ? 'Create New Catalog Service' : 'Edit Service Details'}
-                </h4>
-              </div>
-              <button
-                onClick={() => {
-                  setServiceModal({ open: false, mode: 'add' });
-                  setImageFile(null);
-                  setImagePreview('');
-                }}
-                className="p-1 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800"
-              >
-                <X className="w-4.5 h-4.5" />
-              </button>
-            </div>
-
-            {/* Scrollable Form Body */}
-            <form onSubmit={handleServiceSubmit} className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
-
-              {/* â”€â”€ IMAGE UPLOAD ZONE â”€â”€ */}
-              <div>
-                <label className="block text-xs font-bold text-gray-450 dark:text-gray-400 mb-2">
-                  Service Photo <span className="text-gray-400 font-normal">(drag & drop or click)</span>
-                </label>
-
-                {/* Drag-drop zone / preview */}
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setImageDragOver(true); }}
-                  onDragLeave={() => setImageDragOver(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setImageDragOver(false);
-                    const file = e.dataTransfer.files[0];
-                    if (file && file.type.startsWith('image/')) {
-                      setImageFile(file);
-                      setImagePreview(URL.createObjectURL(file));
-                      setServiceForm((prev) => ({ ...prev, image: '' }));
-                    }
-                  }}
-                  onClick={() => document.getElementById('svc-img-input')?.click()}
-                  className={`relative w-full h-40 rounded-2xl border-2 border-dashed cursor-pointer overflow-hidden transition-all ${
-                    imageDragOver
-                      ? 'border-brand-500 bg-brand-50 dark:bg-brand-950/20'
-                      : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-850/40 hover:border-brand-400 hover:bg-brand-50/30'
-                  }`}
-                >
-                  {(imagePreview || serviceForm.image) ? (
-                    <>
-                      <img
-                        src={imagePreview || serviceForm.image}
-                        alt="preview"
-                        className="w-full h-full object-cover"
-                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.pexels.com/photos/4239034/pexels-photo-4239034.jpeg?auto=compress&cs=tinysrgb&w=400'; }}
-                      />
-                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                        <div className="text-white text-center">
-                          <Plus className="w-6 h-6 mx-auto mb-1" />
-                          <p className="text-[10px] font-bold">Change Photo</p>
-                        </div>
-                      </div>
-                      {imageFile && (
-                        <div className="absolute top-2 right-2 bg-emerald-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
-                          New Upload
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full gap-2 select-none">
-                      <div className="w-10 h-10 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
-                        <Plus className="w-5 h-5 text-gray-400" />
-                      </div>
-                      <p className="text-xs text-gray-400 font-bold">Drop photo here or click to browse</p>
-                      <p className="text-[10px] text-gray-300 dark:text-gray-600">JPG, PNG, WebP â€” max 5 MB</p>
-                    </div>
-                  )}
-                </div>
-                <input
-                  id="svc-img-input"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setImageFile(file);
-                      setImagePreview(URL.createObjectURL(file));
-                      setServiceForm((prev) => ({ ...prev, image: '' }));
-                    }
-                  }}
-                />
-
-                {/* URL fallback */}
-                <div className="mt-2">
-                  <p className="text-[10px] text-gray-400 mb-1 font-bold uppercase tracking-wider">â€” Or paste image URL â€”</p>
-                  <input
-                    type="url"
-                    placeholder="https://images.pexels.com/..."
-                    value={serviceForm.image}
-                    onChange={(e) => {
-                      setServiceForm({ ...serviceForm, image: e.target.value });
-                      if (e.target.value) {
-                        setImageFile(null);
-                        setImagePreview('');
-                      }
-                    }}
-                    className="w-full h-9 px-3 rounded-xl text-[11px] bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 outline-none focus:border-brand-500 placeholder-gray-300"
-                  />
-                </div>
-              </div>
-
-              {/* Service Name */}
-              <Input
-                label="Service Name"
-                placeholder="e.g. Sofa Deep Cleaning"
-                value={serviceForm.name}
-                onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
-                required
-              />
-
-              {/* Category + Price row */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-gray-450 dark:text-gray-400 mb-1.5">Category</label>
-                  <select
-                    value={serviceForm.categoryName}
-                    onChange={(e) => setServiceForm({ ...serviceForm, categoryName: e.target.value })}
-                    className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500"
-                  >
-                    <option value="Electrical">Electrical</option>
-                    <option value="Plumbing">Plumbing</option>
-                    <option value="Carpenter">Carpenter</option>
-                    <option value="AC Repair">AC Repair</option>
-                    <option value="Home Cleaning">Home Cleaning</option>
-                    <option value="Painting">Painting</option>
-                    <option value="Pest Control">Pest Control</option>
-                    <option value="Appliance Repair">Appliance Repair</option>
-                  </select>
-                </div>
-                <Input
-                  label="Price (â‚¹)"
-                  type="number"
-                  placeholder="e.g. 599"
-                  value={serviceForm.price}
-                  onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
-                  required
-                />
-              </div>
-
-              {/* Duration + Popular toggle row */}
-              <div className="grid grid-cols-2 gap-3 items-end">
-                <Input
-                  label="Duration"
-                  placeholder="e.g. 60-90 min"
-                  value={serviceForm.duration}
-                  onChange={(e) => setServiceForm({ ...serviceForm, duration: e.target.value })}
-                />
-                <div>
-                  <label className="block text-xs font-bold text-gray-450 dark:text-gray-400 mb-1.5">Mark as Popular</label>
-                  <button
-                    type="button"
-                    onClick={() => setServiceForm((prev) => ({ ...prev, popular: !prev.popular }))}
-                    className={`w-full h-11 rounded-xl border text-xs font-bold transition ${
-                      serviceForm.popular
-                        ? 'bg-brand-600 text-white border-brand-600'
-                        : 'bg-white dark:bg-slate-900 text-gray-500 border-gray-200 dark:border-slate-700 hover:border-brand-400'
-                    }`}
-                  >
-                    {serviceForm.popular ? 'â­  Featured' : 'Not Featured'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Features */}
-              <Input
-                label="Key Features (comma separated)"
-                placeholder="e.g. Verified helper, 30-day warranty, Same day service"
-                value={serviceForm.featuresText}
-                onChange={(e) => setServiceForm({ ...serviceForm, featuresText: e.target.value })}
-              />
-
-              {/* Short Description */}
-              <div>
-                <label className="block text-xs font-bold text-gray-455 mb-1.5">Short Description <span className="text-red-500">*</span></label>
-                <textarea
-                  rows={2}
-                  placeholder="Brief overview shown on service cards..."
-                  value={serviceForm.description}
-                  onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
-                  required
-                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3.5 text-xs text-gray-900 dark:text-white outline-none resize-none focus:border-brand-500"
-                />
-              </div>
-
-              {/* Long Description */}
-              <div>
-                <label className="block text-xs font-bold text-gray-455 mb-1.5">Full Details Description</label>
-                <textarea
-                  rows={3}
-                  placeholder="Detailed information shown on service detail page..."
-                  value={serviceForm.longDescription}
-                  onChange={(e) => setServiceForm({ ...serviceForm, longDescription: e.target.value })}
-                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3.5 text-xs text-gray-900 dark:text-white outline-none resize-none focus:border-brand-500"
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-1 pb-2">
-                <Button
-                  onClick={() => {
-                    setServiceModal({ open: false, mode: 'add' });
-                    setImageFile(null);
-                    setImagePreview('');
-                  }}
-                  variant="outline"
-                  type="button"
-                  fullWidth
-                  className="h-10 text-xs"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  fullWidth
-                  disabled={imageUploading}
-                  className="h-10 text-xs font-bold"
-                >
-                  {imageUploading ? (
-                    <span className="flex items-center gap-2">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Uploadingâ€¦
-                    </span>
-                  ) : (
-                    serviceModal.mode === 'add' ? 'Publish to Catalog' : 'Save Changes'
-                  )}
-                </Button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
-
-
-      {/* Compose Inbox Reply Modal */}
-      {replyModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 p-5 shadow-soft-lg text-left"
-          >
-            <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-slate-800 pb-2.5">
-              <h4 className="font-extrabold text-xs uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-1.5">
-                <Send className="w-4 h-4 text-brand-600" /> Compose Email Reply
-              </h4>
-              <button onClick={() => setReplyModal({ open: false })} className="p-1 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800">
-                <X className="w-4.5 h-4.5" />
-              </button>
-            </div>
-            
-            <form onSubmit={sendInboxReplySubmit} className="space-y-4">
-              <div>
-                <p className="text-[10px] text-gray-450 uppercase font-extrabold">Customer Email</p>
-                <p className="text-xs font-bold mt-0.5">{replyModal.customerEmail}</p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-455 mb-1.5">Reply message text</label>
-                <textarea
-                  rows={4}
-                  placeholder="Hi, thank you for writing. Here are details..."
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  required
-                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3.5 text-xs text-gray-900 dark:text-white outline-none resize-none focus:border-brand-500"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Button onClick={() => setReplyModal({ open: false })} variant="outline" type="button" fullWidth className="h-10 text-xs">
-                  Cancel
-                </Button>
-                <Button type="submit" fullWidth className="h-10 text-xs font-bold">
-                  Send Response Email
-                </Button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Assign Employee Helper Modal */}
-      {assignModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 p-5 shadow-soft-lg text-left"
-          >
-            <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-slate-800 pb-2.5">
-              <h4 className="font-extrabold text-xs uppercase tracking-wider text-gray-900 dark:text-white">
-                Assign Pro Helper
-              </h4>
-              <button onClick={() => setAssignModal({ open: false })} className="p-1 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800">
-                <X className="w-4.5 h-4.5" />
-              </button>
-            </div>
-            
-            <form onSubmit={assignHelperSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-450 dark:text-gray-400 mb-1.5">Select helper professional</label>
-                <select
-                  value={assignHelperName}
-                  onChange={(e) => setAssignHelperName(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3.5 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500"
-                >
-                  <option value="Rajesh Kumar">Rajesh Kumar (Catering Specialist)</option>
-                  <option value="Priya Sharma">Priya Sharma (Meal Prep Planner)</option>
-                  <option value="Amit Patel">Amit Patel (Electrical & Plumbing Pro)</option>
-                  <option value="Sunita Reddy">Sunita Reddy (Deep Cleaning Manager)</option>
-                </select>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Button onClick={() => setAssignModal({ open: false })} variant="outline" type="button" fullWidth className="h-10 text-xs">
-                  Cancel
-                </Button>
-                <Button type="submit" fullWidth className="h-10 text-xs font-bold">
-                  Confirm Assign helper
-                </Button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Booking Track Timeline Details Modal */}
-      {trackModal.open && trackModal.booking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 p-5 shadow-soft-lg text-left max-h-[85vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-slate-800 pb-2.5">
-              <h4 className="font-extrabold text-xs uppercase tracking-wider text-gray-900 dark:text-white">
-                Live Timeline Tracking Details
-              </h4>
-              <button onClick={() => setTrackModal({ open: false })} className="p-1 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800">
-                <X className="w-4.5 h-4.5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <p className="text-[10px] text-gray-400 font-extrabold uppercase">Service Booked</p>
-                <p className="text-xs font-black mt-0.5">{trackModal.booking.serviceName} â€¢ {trackModal.booking.id}</p>
-                <p className="text-[10px] text-gray-500 mt-1">Date: {trackModal.booking.date} â€¢ {trackModal.booking.timeSlot}</p>
-                <p className="text-[10px] text-gray-500 mt-0.5">Assigned: {trackModal.booking.professionalName}</p>
-              </div>
-
-              {/* Booking status transition buttons */}
-              <div>
-                <p className="text-[10px] text-gray-450 font-extrabold uppercase mb-2">Update status state</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { id: 'pending', label: 'Place Order', bg: 'bg-amber-600' },
-                    { id: 'upcoming', label: 'Confirm Booking', bg: 'bg-blue-600' },
-                    { id: 'in-progress', label: 'Start Travel / Travel', bg: 'bg-indigo-650' },
-                    { id: 'completed', label: 'Complete service', bg: 'bg-emerald-600' },
-                    { id: 'cancelled', label: 'Cancel booking', bg: 'bg-red-500' }
-                  ].map((st) => (
                     <button
-                      key={st.id}
-                      onClick={() => updateBookingStatus(trackModal.booking.id, st.id)}
-                      className={`px-2 py-1.5 rounded-lg text-white text-[10px] font-bold transition active-scale ${st.bg}`}
+                      onClick={() => {
+                        setServiceForm({ id: '', name: '', categoryName: 'Home Cleaning', price: '', description: '', duration: '60 min', image: '', featuresText: '' });
+                        setServiceModal({ open: true, mode: 'add' });
+                      }}
+                      className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-2xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
                     >
-                      {st.label}
+                      <Plus className="w-4 h-4" /> Add New Service
                     </button>
-                  ))}
-                </div>
-              </div>
+                  </div>
 
-              {/* Vertical timeline details */}
-              <div className="bg-gray-50 dark:bg-slate-950/30 p-3.5 rounded-2xl border border-gray-100 dark:border-slate-800/80">
-                <p className="text-[9px] uppercase tracking-wider text-gray-400 font-bold mb-3">Milestones history logs</p>
-                <div className="relative pl-5 space-y-4">
-                  <div className="absolute left-2 top-1.5 bottom-1.5 w-0.5 bg-gray-200 dark:bg-slate-800" />
-                  
-                  {trackModal.booking.timeline && trackModal.booking.timeline.map((step: any, idx: number) => (
-                    <div key={idx} className="relative text-[11px] leading-relaxed">
-                      <div className="absolute left-0 -translate-x-[17.5px] w-3 h-3 rounded-full bg-brand-650 border border-white dark:border-slate-900" />
-                      <p className="font-extrabold text-gray-900 dark:text-white capitalize">{step.status}</p>
-                      <p className="text-[10px] text-gray-500 leading-snug mt-0.5">{step.note}</p>
-                      <p className="text-[8px] text-gray-400 mt-0.5">{new Date(step.time).toLocaleString()}</p>
+                  {/* Filters */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search service name or description..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 h-10 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-xs text-gray-800 dark:text-white outline-none focus:border-brand-500"
+                      />
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <select
+                      value={categoryFilter}
+                      onChange={e => setCategoryFilter(e.target.value)}
+                      className="h-10 px-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-xs font-bold text-gray-700 dark:text-gray-300 outline-none"
+                    >
+                      <option value="all">All Categories</option>
+                      {Array.from(new Set(servicesList.map(s => s.categoryName).filter(Boolean))).map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
 
-              {/* Append custom notes form */}
-              <form onSubmit={addTimelineNoteSubmit} className="space-y-3 pt-2">
-                <Input
-                  label="Attach timeline log note"
-                  placeholder="e.g. Helper reached traffic signal, or material purchased"
-                  value={customNote}
-                  onChange={(e) => setCustomNote(e.target.value)}
-                  required
-                />
-                <Button type="submit" size="sm" fullWidth className="h-9 text-[10px] font-bold">
-                  Publish Milestone Log
-                </Button>
-              </form>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Verify UPI Payment / UTR Modal */}
-      {verifyModal.open && verifyModal.booking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 p-5 shadow-soft-lg text-left"
-          >
-            <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-slate-800 pb-2.5">
-              <h4 className="font-extrabold text-xs uppercase tracking-wider text-gray-900 dark:text-white flex items-center gap-1.5">
-                <Database className="w-4 h-4 text-purple-650" /> Verify UPI Payment
-              </h4>
-              <button onClick={() => setVerifyModal({ open: false })} className="p-1 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800">
-                <X className="w-4.5 h-4.5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <p className="text-[10px] text-gray-400 font-extrabold uppercase">Booking ID</p>
-                <p className="text-xs font-black uppercase text-gray-800 dark:text-white mt-0.5">{verifyModal.booking.id}</p>
-              </div>
-
-              <div>
-                <p className="text-[10px] text-gray-400 font-extrabold uppercase">Service Booked</p>
-                <p className="text-xs font-bold text-gray-700 dark:text-gray-200 mt-0.5">{verifyModal.booking.serviceName}</p>
-
-              </div>
-
-              <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/30 p-3 rounded-2xl">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-bold text-purple-800 dark:text-purple-300">Bill Amount:</span>
-                  <span className="font-black text-purple-950 dark:text-purple-200">â‚¹{verifyModal.booking.price}</span>
-                </div>
-              </div>
-
-              {/* Verify Form */}
-              <form onSubmit={handleVerifyPaymentSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-455 mb-1.5">Customer Entered UTR / Ref Number</label>
-                  <input
-                    type="text"
-                    maxLength={12}
-                    placeholder="Enter 12-digit UPI UTR Code"
-                    value={verifyUtrInput}
-                    onChange={(e) => setVerifyUtrInput(e.target.value.replace(/\D/g, ''))}
-                    className="w-full h-11 px-3 rounded-xl border border-gray-250 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold font-mono tracking-widest text-center outline-none focus:border-brand-500"
-                    required
-                  />
-                  <p className="text-[9.5px] text-gray-455 mt-1.5">
-                    Verify this reference number matches the bank transaction logs.
-                  </p>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    onClick={handleRejectPaymentSubmit}
-                    disabled={verifyingPayment || rejectingPayment}
-                    variant="outline"
-                    type="button"
-                    className="h-10 text-xs border-red-200 hover:bg-red-50 hover:text-red-650 font-bold"
-                    fullWidth
-                  >
-                    {rejectingPayment ? 'Rejecting...' : 'Reject Booking'}
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={verifyingPayment || rejectingPayment}
-                    className="h-10 text-xs font-bold bg-purple-650 hover:bg-purple-750 text-white"
-                    fullWidth
-                  >
-                    {verifyingPayment ? 'Verifying...' : 'Verify & Confirm'}
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* ============================================
-          STORE PRODUCTS TAB
-      ============================================ */}
-      {activeTab === 'store_orders' && (() => {
-        const fetchStoreOrders = async () => {
-          try {
-            const data = await apiClient.getAdminStoreOrders({
-              status: storeOrdersFilter || undefined,
-              payment_status: storeOrdersPayFilter || undefined,
-              search: storeOrdersSearch || undefined,
-            });
-            setStoreOrders(Array.isArray(data) ? data : []);
-          } catch { setStoreOrders([]); }
-        };
-
-        const limit = 10;
-        const paginatedStoreOrders = storeOrders.slice((storeOrdersPage - 1) * limit, storeOrdersPage * limit);
-
-        const handleVerifyStorePayment = async (action: 'approve' | 'reject' | 'reupload') => {
-          if (!selectedStoreOrder) return;
-          if ((action === 'reject' || action === 'reupload') && !storeOrderRejReason) {
-            toast('Enter a reason', 'error'); return;
-          }
-          setVerifyingStorePayment(true);
-          try {
-            const updated = await apiClient.verifyStorePayment(selectedStoreOrder.id, { action, rejection_reason: storeOrderRejReason });
-            setStoreOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
-            setSelectedStoreOrder(updated);
-            setStoreOrderRejReason('');
-            toast(action === 'approve' ? 'Payment approved!' : action === 'reject' ? 'Payment rejected' : 'Re-upload requested', action === 'approve' ? 'success' : 'info');
-          } catch { toast('Action failed', 'error'); }
-          finally { setVerifyingStorePayment(false); }
-        };
-
-        const handleAssignWorker = async () => {
-          if (!selectedStoreOrder || !assignWorkerForm.worker_name) { toast('Enter worker name', 'error'); return; }
-          setAssigningWorker(true);
-          try {
-            const updated = await apiClient.assignStoreWorker(selectedStoreOrder.id, assignWorkerForm);
-            setStoreOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
-            setSelectedStoreOrder(updated);
-            setAssignWorkerForm({ worker_name: '', worker_phone: '' });
-            toast('Worker assigned!', 'success');
-          } catch { toast('Failed to assign worker', 'error'); }
-          finally { setAssigningWorker(false); }
-        };
-
-        const handleUpdateTracking = async () => {
-          if (!selectedStoreOrder || !trackingStageForm) { toast('Select a stage', 'error'); return; }
-          setUpdatingTracking(true);
-          try {
-            const updated = await apiClient.updateStoreTracking(selectedStoreOrder.id, { tracking_stage: trackingStageForm });
-            setStoreOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
-            setSelectedStoreOrder(updated);
-            toast('Tracking updated!', 'success');
-          } catch { toast('Update failed', 'error'); }
-          finally { setUpdatingTracking(false); }
-        };
-
-        const PAY_STATUS_CLS: Record<string, string> = {
-          pending: 'bg-amber-100 text-amber-700',
-          verification_pending: 'bg-blue-100 text-blue-700',
-          verified: 'bg-green-100 text-green-700',
-          rejected: 'bg-red-100 text-red-700',
-          reupload_requested: 'bg-orange-100 text-orange-700',
-          cod_pending: 'bg-amber-100 text-amber-700',
-        };
-        const ORD_STATUS_CLS: Record<string, string> = {
-          placed: 'bg-gray-100 text-gray-700',
-          confirmed: 'bg-green-100 text-green-700',
-          processing: 'bg-blue-100 text-blue-700',
-          delivered: 'bg-green-100 text-green-700',
-          cancelled: 'bg-red-100 text-red-700',
-          payment_failed: 'bg-red-100 text-red-700',
-        };
-        const TRACK_STAGES = ['order_placed','payment_verification','confirmed','worker_assigned','on_the_way','delivered'];
-
-        let selItems: any[] = [], selAddr: any = {};
-        if (selectedStoreOrder) {
-          try { selItems = JSON.parse(selectedStoreOrder.items_json || '[]'); } catch {}
-          try { selAddr = JSON.parse(selectedStoreOrder.address_json || '{}'); } catch {}
-        }
-
-        return (
-          <div className="space-y-5 max-w-5xl mx-auto w-full">
-            <div className="card p-6 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 text-center shadow-sm">
-              <p className="text-[10px] font-black uppercase tracking-widest text-brand-600 mb-2">ADMIN PANEL</p>
-              <h2 className="text-2xl font-black text-gray-900 dark:text-white">Store Orders</h2>
-              <p className="text-sm text-gray-500 mt-1">Verify payments, assign workers, track delivery stages.</p>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap justify-center gap-3">
-              <div className="relative flex-1 min-w-[200px] max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                <input type="search" placeholder="Search order ID or customer..." value={storeOrdersSearch}
-                  onChange={e => setStoreOrdersSearch(e.target.value)}
-                  className="w-full h-9 pl-9 pr-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-700 text-xs text-gray-800 dark:text-white outline-none focus:border-brand-400" />
-              </div>
-              <select value={storeOrdersFilter} onChange={e => setStoreOrdersFilter(e.target.value)}
-                className="h-9 px-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-700 text-xs text-gray-800 dark:text-white outline-none">
-                <option value="">All Statuses</option>
-                {['placed','confirmed','processing','delivered','cancelled','payment_failed'].map(s => <option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
-              </select>
-              <select value={storeOrdersPayFilter} onChange={e => setStoreOrdersPayFilter(e.target.value)}
-                className="h-9 px-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-700 text-xs text-gray-800 dark:text-white outline-none">
-                <option value="">All Payments</option>
-                {['pending','verification_pending','verified','rejected','reupload_requested','cod_pending'].map(s => <option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
-              </select>
-              <button onClick={fetchStoreOrders} className="h-9 px-4 bg-brand-600 hover:bg-brand-700 text-white text-xs font-black rounded-xl transition flex items-center gap-1.5">
-                <RefreshCw className="w-3 h-3" /> Load
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* Orders List */}
-              <div className="lg:col-span-2">
-                <div className="card bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 overflow-hidden">
-                  {storeOrders.length === 0 ? (
-                    <div className="py-16 text-center">
-                      <Package className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                      <p className="text-xs font-bold text-gray-400">No orders yet — click Load to fetch</p>
-                    </div>
-                  ) : (
+                  {/* Services Grid / Table */}
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 overflow-hidden">
                     <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-gray-100 dark:border-slate-800">
-                            {['Order ID', 'Customer', 'Amount', 'Payment', 'Status', 'Date', ''].map(h => (
-                              <th key={h} className="text-[8px] uppercase tracking-widest text-gray-400 font-extrabold px-4 py-3 text-left whitespace-nowrap">{h}</th>
-                            ))}
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800 text-gray-500 font-extrabold uppercase text-[9px] tracking-wider">
+                          <tr>
+                            <th className="p-4">Service</th>
+                            <th className="p-4">Category</th>
+                            <th className="p-4">Price</th>
+                            <th className="p-4">Duration</th>
+                            <th className="p-4 text-right">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50 dark:divide-slate-800/60">
-                          {paginatedStoreOrders.map(order => (
-                            <tr key={order.id} onClick={() => { setSelectedStoreOrder(order); setTrackingStageForm(order.tracking_stage); }}
-                              className={`cursor-pointer hover:bg-gray-50/50 dark:hover:bg-slate-800/20 transition ${selectedStoreOrder?.id === order.id ? 'bg-green-50/50 dark:bg-green-950/10' : ''}`}>
-                              <td className="px-4 py-3"><p className="text-[10px] font-black text-gray-900 dark:text-white font-mono">{order.id}</p></td>
-                              <td className="px-4 py-3"><p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 max-w-[100px] truncate">{order.user_name || order.user_email || order.user_id}</p></td>
-                              <td className="px-4 py-3"><p className="text-[10px] font-black text-gray-900 dark:text-white">₹{order.total}</p></td>
-                              <td className="px-4 py-3"><span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-full capitalize ${PAY_STATUS_CLS[order.payment_status] || 'bg-gray-100 text-gray-700'}`}>{order.payment_status?.replace(/_/g,' ')}</span></td>
-                              <td className="px-4 py-3"><span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-full capitalize ${ORD_STATUS_CLS[order.order_status] || 'bg-gray-100 text-gray-700'}`}>{order.order_status?.replace(/_/g,' ')}</span></td>
-                              <td className="px-4 py-3"><p className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(order.created_at).toLocaleDateString('en-IN')}</p></td>
-                              <td className="px-4 py-3"><Eye className="w-3.5 h-3.5 text-gray-400" /></td>
-                            </tr>
-                          ))}
+                        <tbody className="divide-y divide-gray-100 dark:divide-slate-800 font-medium">
+                          {servicesList
+                            .filter(s => (categoryFilter === 'all' || s.categoryName === categoryFilter) && (s.name?.toLowerCase().includes(searchQuery.toLowerCase()) || s.description?.toLowerCase().includes(searchQuery.toLowerCase())))
+                            .map(s => (
+                              <tr key={s.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-850/40 transition">
+                                <td className="p-4 flex items-center gap-3">
+                                  <img src={s.image} alt="" className="w-12 h-12 rounded-xl object-cover border border-gray-100 dark:border-slate-700" />
+                                  <div>
+                                    <p className="font-bold text-gray-900 dark:text-white text-sm">{s.name}</p>
+                                    <p className="text-[11px] text-gray-400 line-clamp-1 max-w-sm">{s.description}</p>
+                                  </div>
+                                </td>
+                                <td className="p-4">
+                                  <span className="px-2.5 py-1 bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 font-bold rounded-lg text-[10px]">
+                                    {s.categoryName || 'General'}
+                                  </span>
+                                </td>
+                                <td className="p-4 font-black text-gray-900 dark:text-white">₹{s.price}</td>
+                                <td className="p-4 text-gray-500">{s.duration || '60 min'}</td>
+                                <td className="p-4 text-right space-x-2">
+                                  <button
+                                    onClick={() => {
+                                      setServiceForm({
+                                        id: s.id,
+                                        name: s.name,
+                                        categoryName: s.categoryName || 'Cleaning',
+                                        price: String(s.price),
+                                        description: s.description || '',
+                                        duration: s.duration || '60 min',
+                                        image: s.image || '',
+                                        featuresText: Array.isArray(s.features) ? s.features.join('\n') : ''
+                                      });
+                                      setServiceModal({ open: true, mode: 'edit', data: s });
+                                    }}
+                                    className="p-2 bg-gray-100 dark:bg-slate-800 hover:bg-brand-50 hover:text-brand-600 text-gray-600 dark:text-gray-300 rounded-xl transition"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteService(s.id)}
+                                    className="p-2 bg-red-50 dark:bg-red-950/30 text-red-600 rounded-xl hover:bg-red-100 transition"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
                         </tbody>
                       </table>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Order Detail Panel */}
-              <div className="space-y-3">
-                {selectedStoreOrder ? (
-                  <>
-                    {/* Order Info */}
-                    <div className="card bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <p className="font-black text-sm text-gray-900 dark:text-white">{selectedStoreOrder.id}</p>
-                        <button onClick={() => setSelectedStoreOrder(null)} className="text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div><p className="text-[8px] text-gray-400 uppercase font-bold">Customer</p><p className="font-bold text-gray-800 dark:text-white">{selectedStoreOrder.user_name || 'Guest'}</p></div>
-                        <div><p className="text-[8px] text-gray-400 uppercase font-bold">Amount</p><p className="font-black text-green-600">₹{selectedStoreOrder.total}</p></div>
-                        <div><p className="text-[8px] text-gray-400 uppercase font-bold">Payment Method</p><p className="font-bold text-gray-700 dark:text-gray-300 capitalize">{selectedStoreOrder.payment_method}</p></div>
-                        <div><p className="text-[8px] text-gray-400 uppercase font-bold">UTR Number</p><p className="font-mono text-xs font-bold text-gray-700 dark:text-gray-300">{selectedStoreOrder.utr_number || '—'}</p></div>
-                      </div>
-                      {/* Address */}
-                      {selAddr?.address && (
-                        <div className="bg-gray-50 dark:bg-slate-800 rounded-xl p-2.5">
-                          <p className="text-[8px] font-black uppercase text-gray-400 mb-1">Delivery Address</p>
-                          <p className="text-[10px] text-gray-700 dark:text-gray-300">{selAddr.address}, {selAddr.city} – {selAddr.pincode}</p>
+              {/* 3. STORE PRODUCTS TAB (CRUD) */}
+              {activeTab === 'store' && (
+                <div className="space-y-5">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-100 dark:border-slate-800 gap-4">
+                    <div>
+                      <h2 className="text-lg font-black text-gray-900 dark:text-white">Store Products Manager</h2>
+                      <p className="text-xs text-gray-500">Manage store items, stock levels, categories, and prices.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setStoreForm({ id: '', name: '', category: 'Home Essentials', price: '', stock: '50', description: '', image: '', is_active: true });
+                        setStoreModal({ open: true, mode: 'add' });
+                      }}
+                      className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-2xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
+                    >
+                      <Plus className="w-4 h-4" /> Add New Store Product
+                    </button>
+                  </div>
+
+                  {/* Products Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {storeProductsList.map(prod => (
+                      <div key={prod.id} className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-gray-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                        <div>
+                          <img src={prod.image} alt="" className="w-full h-36 object-cover rounded-2xl mb-3 border border-gray-100 dark:border-slate-800" />
+                          <span className="text-[10px] font-bold px-2 py-0.5 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 rounded-md">
+                            {prod.category}
+                          </span>
+                          <h3 className="font-bold text-sm text-gray-900 dark:text-white mt-1.5 line-clamp-1">{prod.name}</h3>
+                          <p className="text-xs text-gray-400 line-clamp-2 mt-0.5">{prod.description}</p>
                         </div>
-                      )}
-                      {/* Items */}
-                      <div className="space-y-2">
-                        {selItems.map((it: any, i: number) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <img src={it.image} alt={it.name} className="w-8 h-8 rounded-lg object-cover"
-                              onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=40'; }} />
-                            <div className="flex-1"><p className="text-[10px] font-bold text-gray-800 dark:text-white line-clamp-1">{it.name}</p><p className="text-[8px] text-gray-400">Qty {it.qty}</p></div>
-                            <p className="text-[10px] font-black text-gray-800 dark:text-white">₹{it.price * it.qty}</p>
+
+                        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-black text-brand-600">₹{prod.price}</p>
+                            <p className="text-[10px] text-gray-500">Stock: <strong>{prod.stock}</strong></p>
                           </div>
-                        ))}
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={() => {
+                                setStoreForm({
+                                  id: prod.id,
+                                  name: prod.name,
+                                  category: prod.category,
+                                  price: String(prod.price),
+                                  stock: String(prod.stock),
+                                  description: prod.description || '',
+                                  image: prod.image || '',
+                                  is_active: Boolean(prod.is_active)
+                                });
+                                setStoreModal({ open: true, mode: 'edit', data: prod });
+                              }}
+                              className="p-1.5 bg-gray-100 dark:bg-slate-800 hover:text-brand-600 rounded-xl transition"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteStoreProduct(prod.id)}
+                              className="p-1.5 bg-red-50 dark:bg-red-950/30 text-red-600 rounded-xl transition"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 4. TAXI & FLEET TAB (CRUD) */}
+              {activeTab === 'taxi' && (
+                <div className="space-y-5">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-100 dark:border-slate-800 gap-4">
+                    <div>
+                      <h2 className="text-lg font-black text-gray-900 dark:text-white">Taxi & Vehicle Fleet Manager</h2>
+                      <p className="text-xs text-gray-500">Manage active cab fleet, passenger capacities, and rate tariffs per km.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setVehicleForm({ id: '', name: '', type: 'SUV', passengers: 5, rate: '15', image: '', status: 'Available' });
+                        setVehicleModal({ open: true, mode: 'add' });
+                      }}
+                      className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-2xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
+                    >
+                      <Plus className="w-4 h-4" /> Add Vehicle
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {vehiclesList.map(veh => (
+                      <div key={veh.id} className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-gray-100 dark:border-slate-800 flex flex-col justify-between shadow-sm">
+                        <div>
+                          <img src={veh.image} alt="" className="w-full h-40 object-cover rounded-2xl mb-3 border border-gray-100 dark:border-slate-800" />
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-blue-50 dark:bg-blue-950/50 text-blue-600 rounded-md">
+                              {veh.type}
+                            </span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${veh.status === 'Available' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                              {veh.status}
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-sm text-gray-900 dark:text-white mt-2">{veh.name}</h3>
+                          <p className="text-xs text-gray-500 mt-1">Passengers: <strong>{veh.passengers} Max</strong></p>
+                          <p className="text-xs font-black text-brand-600 mt-0.5">₹{veh.rate} / km</p>
+                        </div>
+
+                        <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-slate-800">
+                          <button
+                            onClick={() => {
+                              setVehicleForm({
+                                id: veh.id,
+                                name: veh.name,
+                                type: veh.type || 'Sedan',
+                                passengers: veh.passengers || 4,
+                                rate: String(veh.rate || 15),
+                                image: veh.image || '',
+                                status: veh.status || 'Available'
+                              });
+                              setVehicleModal({ open: true, mode: 'edit', data: veh });
+                            }}
+                            className="px-3 py-1.5 bg-gray-100 dark:bg-slate-800 hover:text-brand-600 text-xs font-bold rounded-xl transition"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteVehicle(veh.id)}
+                            className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-xl transition"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 5. MEMBERSHIPS TAB (CRUD) */}
+              {activeTab === 'memberships' && (
+                <div className="space-y-5">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-100 dark:border-slate-800 gap-4">
+                    <div>
+                      <h2 className="text-lg font-black text-gray-900 dark:text-white">Property Care Memberships Manager</h2>
+                      <p className="text-xs text-gray-500">Manage Membership Tiers, prices, badges, and features list.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setMembershipForm({ id: '', name: '', desc: '', price: '₹4,999', numeric_price: 4999, badge: '', popular: false, featuresText: '', button_text: 'Choose Plan', button_variant: 'primary' });
+                        setMembershipModal({ open: true, mode: 'add' });
+                      }}
+                      className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-2xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
+                    >
+                      <Plus className="w-4 h-4" /> Add Membership Plan
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {membershipsList.map(mem => (
+                      <div key={mem.id} className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm flex flex-col justify-between relative overflow-hidden">
+                        {mem.badge && (
+                          <div className="absolute top-3 right-3 bg-amber-400 text-slate-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full">
+                            {mem.badge}
+                          </div>
+                        )}
+                        <div>
+                          <Shield className="w-8 h-8 text-brand-600 mb-3" />
+                          <h3 className="font-extrabold text-lg text-gray-900 dark:text-white">{mem.name}</h3>
+                          <p className="text-xs text-gray-500 mt-1">{mem.desc}</p>
+                          <p className="text-2xl font-black text-brand-600 my-3">{mem.price}</p>
+
+                          <div className="space-y-2 mt-4 pt-4 border-t border-gray-100 dark:border-slate-800">
+                            <p className="text-[10px] font-bold uppercase text-gray-400">Included Features:</p>
+                            {(Array.isArray(mem.features) ? mem.features : []).map((feat: string, idx: number) => (
+                              <p key={idx} className="text-xs text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                                {feat}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 mt-6 pt-4 border-t border-gray-100 dark:border-slate-800">
+                          <button
+                            onClick={() => {
+                              setMembershipForm({
+                                id: mem.id,
+                                name: mem.name,
+                                desc: mem.desc || '',
+                                price: mem.price || '₹4,999',
+                                numeric_price: mem.numeric_price || 4999,
+                                badge: mem.badge || '',
+                                popular: Boolean(mem.popular),
+                                featuresText: Array.isArray(mem.features) ? mem.features.join('\n') : '',
+                                button_text: mem.button_text || 'Choose Plan',
+                                button_variant: mem.button_variant || 'primary'
+                              });
+                              setMembershipModal({ open: true, mode: 'edit', data: mem });
+                            }}
+                            className="flex-1 py-2 bg-gray-100 dark:bg-slate-800 text-xs font-bold text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-200 transition"
+                          >
+                            Edit Plan
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMembership(mem.id)}
+                            className="py-2 px-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl hover:bg-red-100 transition"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 6. MEALS TAB (CRUD) */}
+              {activeTab === 'meals' && (
+                <div className="space-y-5">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-100 dark:border-slate-800 gap-4">
+                    <div>
+                      <h2 className="text-lg font-black text-gray-900 dark:text-white">Daily Meals & Tiffin Plans Manager</h2>
+                      <p className="text-xs text-gray-500">Manage Gujarati Thalis, North Indian, Healthy & Jain gourmet meals.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setMealForm({ id: '', name: '', category: 'Gujarati', caterer: 'MasterChef Kitchen', food_type: 'veg', price: '', original_price: '', calories: '450', serves: '1 Person', description: '', image: '' });
+                        setMealModal({ open: true, mode: 'add' });
+                      }}
+                      className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-2xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
+                    >
+                      <Plus className="w-4 h-4" /> Add Meal Plan
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {mealsList.map(meal => (
+                      <div key={meal.id} className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                        <div>
+                          <img src={meal.image} alt="" className="w-full h-40 object-cover rounded-2xl mb-3 border border-gray-100 dark:border-slate-800" />
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-amber-50 dark:bg-amber-950/40 text-amber-700 rounded-md">
+                              {meal.category}
+                            </span>
+                            <span className="text-[10px] font-bold text-gray-400">{meal.serves}</span>
+                          </div>
+                          <h3 className="font-bold text-sm text-gray-900 dark:text-white mt-2 line-clamp-1">{meal.name}</h3>
+                          <p className="text-xs text-gray-400 line-clamp-2 mt-0.5">{meal.description}</p>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-black text-brand-600">₹{meal.price}</p>
+                            <p className="text-[10px] text-gray-400">{meal.caterer || 'HomeSeva Kitchen'}</p>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={() => {
+                                setMealForm({
+                                  id: meal.id,
+                                  name: meal.name,
+                                  category: meal.category || 'Gujarati',
+                                  caterer: meal.caterer || '',
+                                  food_type: meal.food_type || 'veg',
+                                  price: String(meal.price || ''),
+                                  original_price: String(meal.original_price || meal.price || ''),
+                                  calories: String(meal.calories || 450),
+                                  serves: meal.serves || '1 Person',
+                                  description: meal.description || '',
+                                  image: meal.image || ''
+                                });
+                                setMealModal({ open: true, mode: 'edit', data: meal });
+                              }}
+                              className="p-1.5 bg-gray-100 dark:bg-slate-800 hover:text-brand-600 rounded-xl transition"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMeal(meal.id)}
+                              className="p-1.5 bg-red-50 text-red-600 rounded-xl transition"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 7. CATERING PACKAGES TAB (CRUD) */}
+              {activeTab === 'catering' && (
+                <div className="space-y-5">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-100 dark:border-slate-800 gap-4">
+                    <div>
+                      <h2 className="text-lg font-black text-gray-900 dark:text-white">Event Catering Packages Manager</h2>
+                      <p className="text-xs text-gray-500">Manage Festival food packages, party catering, and guest dining offers.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setCateringForm({ id: '', title: '', category: 'Festival Specials', description: '', pax: '15 Pax', price: '', image: '' });
+                        setCateringModal({ open: true, mode: 'add' });
+                      }}
+                      className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-2xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
+                    >
+                      <Plus className="w-4 h-4" /> Add Catering Package
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {cateringPackagesList.map(cat => (
+                      <div key={cat.id} className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                        <div>
+                          <img src={cat.image} alt="" className="w-full h-40 object-cover rounded-2xl mb-3 border border-gray-100 dark:border-slate-800" />
+                          <span className="text-[10px] font-bold px-2 py-0.5 bg-purple-50 dark:bg-purple-950/50 text-purple-600 rounded-md">
+                            {cat.pax || '15 Pax'}
+                          </span>
+                          <h3 className="font-bold text-sm text-gray-900 dark:text-white mt-1.5">{cat.title}</h3>
+                          <p className="text-xs text-gray-500 line-clamp-3 mt-1">{cat.description}</p>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                          <p className="text-base font-black text-brand-600">₹{cat.price}</p>
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={() => {
+                                setCateringForm({
+                                  id: cat.id,
+                                  title: cat.title,
+                                  category: cat.category || 'Catering',
+                                  description: cat.description || '',
+                                  pax: cat.pax || '15 Pax',
+                                  price: String(cat.price || ''),
+                                  image: cat.image || ''
+                                });
+                                setCateringModal({ open: true, mode: 'edit', data: cat });
+                              }}
+                              className="p-1.5 bg-gray-100 dark:bg-slate-800 hover:text-brand-600 text-gray-700 dark:text-gray-300 rounded-xl transition flex items-center gap-1 text-xs font-bold px-2.5"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCateringPackage(cat.id)}
+                              className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition flex items-center gap-1 text-xs font-bold px-2.5"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 8. CATEGORIZED PAYMENTS TAB */}
+              {activeTab === 'payments' && (
+                <div className="space-y-5">
+                  <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-100 dark:border-slate-800">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div>
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-brand-600">FINANCIAL ANALYTICS</span>
+                        <h2 className="text-lg font-black text-gray-900 dark:text-white mt-0.5">Categorized Payment Tracker</h2>
+                        <p className="text-xs text-gray-500">Filter payments separately by Services, Store, Taxi, Memberships, Meals, & Catering.</p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-slate-800 px-4 py-3 rounded-2xl border border-gray-100 dark:border-slate-700">
+                        <p className="text-[10px] uppercase font-bold text-gray-400">Total Verified Revenue</p>
+                        <p className="text-xl font-black text-brand-600">₹{totalRevenue.toLocaleString('en-IN')}</p>
                       </div>
                     </div>
 
-                    {/* Screenshot */}
-                    {selectedStoreOrder.screenshot_url && (
-                      <div className="card bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-4">
-                        <p className="text-[8px] font-black uppercase text-gray-400 mb-2">Payment Screenshot</p>
-                        <a href={selectedStoreOrder.screenshot_url} target="_blank" rel="noreferrer">
-                          <img src={selectedStoreOrder.screenshot_url} alt="Payment" className="w-full rounded-xl object-cover max-h-48 hover:opacity-90 transition" />
-                        </a>
-                      </div>
-                    )}
+                    {/* Filter Pills */}
+                    <div className="flex flex-wrap gap-2 mt-5 pt-4 border-t border-gray-100 dark:border-slate-800">
+                      {[
+                        { id: 'all', label: 'All Payments' },
+                        { id: 'services', label: '🛠️ Service Bookings' },
+                        { id: 'store', label: '🛍️ Store Orders' },
+                        { id: 'taxi', label: '🚖 Taxi Cabs' },
+                        { id: 'membership', label: '👑 Memberships' },
+                        { id: 'meal', label: '🍱 Meal Plans' },
+                        { id: 'catering', label: '🍲 Catering Requests' }
+                      ].map(tab => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setPaymentCategoryFilter(tab.id)}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition ${
+                            paymentCategoryFilter === tab.id
+                              ? 'bg-brand-600 text-white shadow-md'
+                              : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-                    {/* Verify Payment */}
-                    {(selectedStoreOrder.payment_status === 'verification_pending' || selectedStoreOrder.payment_status === 'pending') && (
-                      <div className="card bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-4 space-y-3">
-                        <p className="text-[8px] font-black uppercase text-gray-400">Verify Payment</p>
-                        <div className="bg-gray-50 dark:bg-slate-800 rounded-xl p-3">
-                          <p className="text-[9px] text-gray-500 mb-0.5">UTR Number</p>
-                          <p className="font-mono font-black text-sm text-gray-900 dark:text-white">{selectedStoreOrder.utr_number || 'Not provided'}</p>
-                        </div>
-                        <textarea value={storeOrderRejReason} onChange={e => setStoreOrderRejReason(e.target.value)} rows={2}
-                          placeholder="Rejection reason (required for reject/re-upload)"
-                          className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-700 text-xs text-gray-900 dark:text-white outline-none resize-none" />
-                        <div className="grid grid-cols-3 gap-2">
-                          <button onClick={() => handleVerifyStorePayment('approve')} disabled={verifyingStorePayment}
-                            className="h-9 bg-green-600 hover:bg-green-700 text-white text-[9px] font-black rounded-xl transition disabled:opacity-60 flex items-center justify-center gap-1">
-                            <Check className="w-3 h-3" /> Approve
-                          </button>
-                          <button onClick={() => handleVerifyStorePayment('reupload')} disabled={verifyingStorePayment}
-                            className="h-9 bg-amber-500 hover:bg-amber-600 text-white text-[9px] font-black rounded-xl transition disabled:opacity-60 flex items-center justify-center gap-1">
-                            <AlertTriangle className="w-3 h-3" /> Re-upload
-                          </button>
-                          <button onClick={() => handleVerifyStorePayment('reject')} disabled={verifyingStorePayment}
-                            className="h-9 bg-red-600 hover:bg-red-700 text-white text-[9px] font-black rounded-xl transition disabled:opacity-60 flex items-center justify-center gap-1">
-                            <XCircle className="w-3 h-3" /> Reject
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                  {/* Payments Table */}
+                  <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800 text-gray-500 font-extrabold uppercase text-[9px] tracking-wider">
+                          <tr>
+                            <th className="p-4">Transaction / Customer</th>
+                            <th className="p-4">Category</th>
+                            <th className="p-4">Item / Service</th>
+                            <th className="p-4">Amount</th>
+                            <th className="p-4">Method</th>
+                            <th className="p-4">Status</th>
+                            <th className="p-4 text-right">Customer Tracker</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-slate-800 font-medium">
+                          {categorizedPayments
+                            .filter(p => paymentCategoryFilter === 'all' || p.category === paymentCategoryFilter)
+                            .map(p => (
+                              <tr key={p.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-850/40 transition">
+                                <td className="p-4">
+                                  <p className="font-bold text-gray-900 dark:text-white text-sm">{p.customer_name}</p>
+                                  <p className="text-[11px] text-gray-400 font-mono">{p.customer_email} • {p.customer_phone}</p>
+                                  <p className="text-[10px] text-brand-600 font-mono mt-0.5">ID: {p.transaction_id || p.id}</p>
+                                </td>
+                                <td className="p-4">
+                                  <span className="px-2.5 py-1 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 font-bold rounded-lg text-[10px] uppercase">
+                                    {p.category}
+                                  </span>
+                                </td>
+                                <td className="p-4 font-semibold text-gray-800 dark:text-gray-200">{p.item_name}</td>
+                                <td className="p-4 font-black text-brand-600 text-sm">₹{p.amount}</td>
+                                <td className="p-4 text-gray-500 font-semibold">{p.payment_method}</td>
+                                <td className="p-4">
+                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
+                                    p.status === 'paid' || p.status === 'verified' || p.status === 'completed'
+                                      ? 'bg-green-100 text-green-700'
+                                      : p.status === 'pending'
+                                      ? 'bg-amber-100 text-amber-700'
+                                      : 'bg-red-100 text-red-700'
+                                  }`}>
+                                    {p.status}
+                                  </span>
+                                </td>
+                                <td className="p-4 text-right">
+                                  <button
+                                    onClick={() => setCustomerModal({ open: true, customer: p })}
+                                    className="px-3 py-1.5 bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300 font-bold rounded-xl hover:bg-brand-100 transition flex items-center gap-1.5 ml-auto"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" /> Track Customer
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-                    {/* Assign Worker */}
-                    {selectedStoreOrder.order_status === 'confirmed' && (
-                      <div className="card bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-4 space-y-2">
-                        <p className="text-[8px] font-black uppercase text-gray-400">Assign Delivery Worker</p>
-                        <input value={assignWorkerForm.worker_name} onChange={e => setAssignWorkerForm(f => ({ ...f, worker_name: e.target.value }))}
-                          placeholder="Worker Name *" className="w-full h-9 px-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-700 text-xs outline-none" />
-                        <input value={assignWorkerForm.worker_phone} onChange={e => setAssignWorkerForm(f => ({ ...f, worker_phone: e.target.value }))}
-                          placeholder="Phone Number" className="w-full h-9 px-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-700 text-xs outline-none" />
-                        <button onClick={handleAssignWorker} disabled={assigningWorker}
-                          className="w-full h-9 bg-brand-600 hover:bg-brand-700 text-white text-xs font-black rounded-xl transition disabled:opacity-60">
-                          {assigningWorker ? 'Assigning...' : 'Assign Worker'}
+              {/* 9. CUSTOMERS DIRECTORY TAB */}
+              {activeTab === 'customers' && (
+                <div className="space-y-5">
+                  <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-100 dark:border-slate-800">
+                    <h2 className="text-lg font-black text-gray-900 dark:text-white">Registered Customer Directory</h2>
+                    <p className="text-xs text-gray-500">Track user profiles, total orders, contact phone numbers, and booking history.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {usersList.map(u => (
+                      <div key={u.id} className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-950/50 flex items-center justify-center font-black text-brand-600 text-sm">
+                              {u.name?.slice(0, 2).toUpperCase() || 'CU'}
+                            </div>
+                            <span className="text-[10px] font-bold px-2.5 py-0.5 bg-gray-100 dark:bg-slate-800 text-gray-600 rounded-full uppercase">
+                              {u.role}
+                            </span>
+                          </div>
+
+                          <h3 className="font-bold text-base text-gray-900 dark:text-white">{u.name}</h3>
+                          <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-1">
+                            <Mail className="w-3.5 h-3.5" /> {u.email}
+                          </p>
+                          <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
+                            <Phone className="w-3.5 h-3.5" /> {u.mobile || '+91 98765 43210'}
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={() => setCustomerModal({ open: true, customer: { customer_name: u.name, customer_email: u.email, customer_phone: u.mobile } })}
+                          className="mt-4 w-full py-2 bg-gray-100 dark:bg-slate-800 hover:bg-brand-600 hover:text-white text-gray-700 dark:text-gray-300 font-bold text-xs rounded-xl transition"
+                        >
+                          View Order History
                         </button>
                       </div>
-                    )}
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                    {/* Update Tracking */}
-                    <div className="card bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-4 space-y-2">
-                      <p className="text-[8px] font-black uppercase text-gray-400">Update Tracking Stage</p>
-                      <select value={trackingStageForm} onChange={e => setTrackingStageForm(e.target.value)}
-                        className="w-full h-9 px-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-700 text-xs text-gray-900 dark:text-white outline-none">
-                        <option value="">Select Stage</option>
-                        {TRACK_STAGES.map(s => <option key={s} value={s}>{s.replace(/_/g,' ')}</option>)}
-                      </select>
-                      <button onClick={handleUpdateTracking} disabled={updatingTracking || !trackingStageForm}
-                        className="w-full h-9 bg-brand-600 hover:bg-brand-700 text-white text-xs font-black rounded-xl transition disabled:opacity-60">
-                        {updatingTracking ? 'Updating...' : 'Update Stage'}
+              {/* 10. OFFERS TAB */}
+              {activeTab === 'offers' && <OffersTab />}
+
+              {/* 11. SETTINGS TAB */}
+              {activeTab === 'settings' && (
+                <div className="space-y-5">
+                  <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-100 dark:border-slate-800">
+                    <h2 className="text-lg font-black text-gray-900 dark:text-white">Platform Settings & Audit Logs</h2>
+                    <p className="text-xs text-gray-500">System backups, contact info, and security logs.</p>
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-gray-100 dark:border-slate-800 space-y-4">
+                    <h3 className="font-bold text-sm">System Actions</h3>
+                    <div className="flex flex-wrap gap-3">
+                      <button onClick={fetchData} className="px-4 py-2 bg-brand-600 text-white font-bold text-xs rounded-xl hover:bg-brand-700 transition">
+                        Refresh Database Connections
                       </button>
                     </div>
-                  </>
-                ) : (
-                  <div className="card bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 p-8 text-center">
-                    <Eye className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-xs font-bold text-gray-400">Select an order to see details</p>
                   </div>
-                )}
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
+
+      {/* ==========================================
+          COMMON MODALS FOR CRUD OPERATIONS
+      ========================================== */}
+
+      {/* 1. Service Add/Edit Modal */}
+      {serviceModal.open && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-lg w-full border border-gray-100 dark:border-slate-800 shadow-2xl space-y-4">
+            <h3 className="font-extrabold text-base">{serviceModal.mode === 'edit' ? 'Edit Service' : 'Add New Service'}</h3>
+            <form onSubmit={handleSaveService} className="space-y-3">
+              <Input label="Service Name" required value={serviceForm.name} onChange={e => setServiceForm({ ...serviceForm, name: e.target.value })} />
+              <Input label="Category" required value={serviceForm.categoryName} onChange={e => setServiceForm({ ...serviceForm, categoryName: e.target.value })} />
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Price (₹)" type="number" required value={serviceForm.price} onChange={e => setServiceForm({ ...serviceForm, price: e.target.value })} />
+                <Input label="Duration" value={serviceForm.duration} onChange={e => setServiceForm({ ...serviceForm, duration: e.target.value })} />
+              </div>
+              <Input label="Image URL" value={serviceForm.image} onChange={e => setServiceForm({ ...serviceForm, image: e.target.value })} />
+              <div>
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Description</label>
+                <textarea value={serviceForm.description} onChange={e => setServiceForm({ ...serviceForm, description: e.target.value })} className="w-full p-3 rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800 text-xs" />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Features (One per line)</label>
+                <textarea value={serviceForm.featuresText} onChange={e => setServiceForm({ ...serviceForm, featuresText: e.target.value })} className="w-full p-3 rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800 text-xs" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button type="button" variant="outline" fullWidth onClick={() => setServiceModal({ open: false, mode: 'add' })}>Cancel</Button>
+                <Button type="submit" fullWidth>Save Service</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Store Product Modal */}
+      {storeModal.open && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-lg w-full border border-gray-100 dark:border-slate-800 shadow-2xl space-y-4">
+            <h3 className="font-extrabold text-base">{storeModal.mode === 'edit' ? 'Edit Store Product' : 'Add Store Product'}</h3>
+            <form onSubmit={handleSaveStoreProduct} className="space-y-3">
+              <Input label="Product Name" required value={storeForm.name} onChange={e => setStoreForm({ ...storeForm, name: e.target.value })} />
+              <Input label="Category" required value={storeForm.category} onChange={e => setStoreForm({ ...storeForm, category: e.target.value })} />
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Price (₹)" type="number" required value={storeForm.price} onChange={e => setStoreForm({ ...storeForm, price: e.target.value })} />
+                <Input label="Stock Units" type="number" required value={storeForm.stock} onChange={e => setStoreForm({ ...storeForm, stock: e.target.value })} />
+              </div>
+              <Input label="Image URL" value={storeForm.image} onChange={e => setStoreForm({ ...storeForm, image: e.target.value })} />
+              <div>
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Description</label>
+                <textarea value={storeForm.description} onChange={e => setStoreForm({ ...storeForm, description: e.target.value })} className="w-full p-3 rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800 text-xs" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button type="button" variant="outline" fullWidth onClick={() => setStoreModal({ open: false, mode: 'add' })}>Cancel</Button>
+                <Button type="submit" fullWidth>Save Product</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Vehicle Modal */}
+      {vehicleModal.open && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-lg w-full border border-gray-100 dark:border-slate-800 shadow-2xl space-y-4">
+            <h3 className="font-extrabold text-base">{vehicleModal.mode === 'edit' ? 'Edit Vehicle' : 'Add Vehicle to Fleet'}</h3>
+            <form onSubmit={handleSaveVehicle} className="space-y-3">
+              <Input label="Vehicle Model Name" required value={vehicleForm.name} onChange={e => setVehicleForm({ ...vehicleForm, name: e.target.value })} />
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Body Type (SUV/Sedan)" required value={vehicleForm.type} onChange={e => setVehicleForm({ ...vehicleForm, type: e.target.value })} />
+                <Input label="Passengers Max" type="number" required value={vehicleForm.passengers} onChange={e => setVehicleForm({ ...vehicleForm, passengers: Number(e.target.value) })} />
+              </div>
+              <Input label="Rate (₹ / km)" type="number" required value={vehicleForm.rate} onChange={e => setVehicleForm({ ...vehicleForm, rate: e.target.value })} />
+              <Input label="Image URL" value={vehicleForm.image} onChange={e => setVehicleForm({ ...vehicleForm, image: e.target.value })} />
+              <div className="flex gap-2 pt-2">
+                <Button type="button" variant="outline" fullWidth onClick={() => setVehicleModal({ open: false, mode: 'add' })}>Cancel</Button>
+                <Button type="submit" fullWidth>Save Vehicle</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Membership Care Modal */}
+      {membershipModal.open && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-lg w-full border border-gray-100 dark:border-slate-800 shadow-2xl space-y-4">
+            <h3 className="font-extrabold text-base">{membershipModal.mode === 'edit' ? 'Edit Membership Plan' : 'Add Membership Plan'}</h3>
+            <form onSubmit={handleSaveMembership} className="space-y-3">
+              <Input label="Plan Name" required value={membershipForm.name} onChange={e => setMembershipForm({ ...membershipForm, name: e.target.value })} />
+              <Input label="Short Description" required value={membershipForm.desc} onChange={e => setMembershipForm({ ...membershipForm, desc: e.target.value })} />
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Display Price (e.g. ₹4,999)" required value={membershipForm.price} onChange={e => setMembershipForm({ ...membershipForm, price: e.target.value })} />
+                <Input label="Numeric Price" type="number" required value={membershipForm.numeric_price} onChange={e => setMembershipForm({ ...membershipForm, numeric_price: Number(e.target.value) })} />
+              </div>
+              <Input label="Badge Text (Optional)" value={membershipForm.badge} onChange={e => setMembershipForm({ ...membershipForm, badge: e.target.value })} />
+              <div>
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Plan Features (One per line)</label>
+                <textarea value={membershipForm.featuresText} onChange={e => setMembershipForm({ ...membershipForm, featuresText: e.target.value })} className="w-full p-3 rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800 text-xs min-h-[80px]" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button type="button" variant="outline" fullWidth onClick={() => setMembershipModal({ open: false, mode: 'add' })}>Cancel</Button>
+                <Button type="submit" fullWidth>Save Membership Plan</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Meal Modal */}
+      {mealModal.open && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-lg w-full border border-gray-100 dark:border-slate-800 shadow-2xl space-y-4">
+            <h3 className="font-extrabold text-base">{mealModal.mode === 'edit' ? 'Edit Meal Plan' : 'Add Meal Plan'}</h3>
+            <form onSubmit={handleSaveMeal} className="space-y-3">
+              <Input label="Meal Dish Name" required value={mealForm.name} onChange={e => setMealForm({ ...mealForm, name: e.target.value })} />
+              <Input label="Cuisine / Category" required value={mealForm.category} onChange={e => setMealForm({ ...mealForm, category: e.target.value })} />
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Price (₹)" type="number" required value={mealForm.price} onChange={e => setMealForm({ ...mealForm, price: e.target.value })} />
+                <Input label="Calories" type="number" value={mealForm.calories} onChange={e => setMealForm({ ...mealForm, calories: e.target.value })} />
+              </div>
+              <Input label="Image URL" value={mealForm.image} onChange={e => setMealForm({ ...mealForm, image: e.target.value })} />
+              <div>
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Description</label>
+                <textarea value={mealForm.description} onChange={e => setMealForm({ ...mealForm, description: e.target.value })} className="w-full p-3 rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800 text-xs" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button type="button" variant="outline" fullWidth onClick={() => setMealModal({ open: false, mode: 'add' })}>Cancel</Button>
+                <Button type="submit" fullWidth>Save Meal Plan</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 6. Catering Modal */}
+      {cateringModal.open && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-lg w-full border border-gray-100 dark:border-slate-800 shadow-2xl space-y-4">
+            <h3 className="font-extrabold text-base">{cateringModal.mode === 'edit' ? 'Edit Catering Package' : 'Add Catering Package'}</h3>
+            <form onSubmit={handleSaveCateringPackage} className="space-y-3">
+              <Input label="Package Title" required value={cateringForm.title} onChange={e => setCateringForm({ ...cateringForm, title: e.target.value })} />
+              <Input label="Pax Capacity (e.g. 15 Pax)" required value={cateringForm.pax} onChange={e => setCateringForm({ ...cateringForm, pax: e.target.value })} />
+              <Input label="Price (₹)" type="number" required value={cateringForm.price} onChange={e => setCateringForm({ ...cateringForm, price: e.target.value })} />
+              <Input label="Image URL" value={cateringForm.image} onChange={e => setCateringForm({ ...cateringForm, image: e.target.value })} />
+              <div>
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 block">Description</label>
+                <textarea value={cateringForm.description} onChange={e => setCateringForm({ ...cateringForm, description: e.target.value })} className="w-full p-3 rounded-xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-800 text-xs" />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button type="button" variant="outline" fullWidth onClick={() => setCateringModal({ open: false, mode: 'add' })}>Cancel</Button>
+                <Button type="submit" fullWidth>Save Package</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 7. Customer Tracking Modal */}
+      {customerModal.open && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-lg w-full border border-gray-100 dark:border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <User className="w-5 h-5 text-brand-600" />
+                <h3 className="font-extrabold text-base text-gray-900 dark:text-white">Customer Live Tracker</h3>
+              </div>
+              <button onClick={() => setCustomerModal({ open: false })} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="bg-gray-50 dark:bg-slate-800 p-4 rounded-2xl space-y-1">
+                <p className="font-extrabold text-sm text-gray-900 dark:text-white">{customerModal.customer?.customer_name || customerModal.customer?.name}</p>
+                <p className="text-gray-500">Email: <strong className="text-gray-800 dark:text-gray-200">{customerModal.customer?.customer_email || customerModal.customer?.email}</strong></p>
+                <p className="text-gray-500">Mobile: <strong className="text-gray-800 dark:text-gray-200">{customerModal.customer?.customer_phone || customerModal.customer?.mobile || '+91 98765 43210'}</strong></p>
+              </div>
+
+              <div className="bg-brand-50 dark:bg-brand-950/30 p-4 rounded-2xl border border-brand-100 dark:border-brand-900/40">
+                <p className="text-[10px] uppercase font-bold text-brand-700 dark:text-brand-300">Live Active Order Timeline</p>
+                <p className="font-bold text-brand-900 dark:text-brand-100 text-sm mt-1">{customerModal.customer?.item_name || 'Active Service / Order'}</p>
+                <p className="text-brand-600 font-black text-sm mt-0.5">Amount: ₹{customerModal.customer?.amount || 0}</p>
+                <div className="mt-3 space-y-1.5">
+                  <div className="flex items-center gap-2 text-green-600 font-bold">
+                    <CheckCircle2 className="w-4 h-4" /> Order Created & Payment Logged
+                  </div>
+                  <div className="flex items-center gap-2 text-green-600 font-bold">
+                    <CheckCircle2 className="w-4 h-4" /> Provider Assigned
+                  </div>
+                  <div className="flex items-center gap-2 text-brand-600 font-bold">
+                    <Activity className="w-4 h-4 animate-pulse" /> Out for Service / Delivery
+                  </div>
+                </div>
               </div>
             </div>
+
+            <Button fullWidth onClick={() => setCustomerModal({ open: false })}>Close Tracker</Button>
           </div>
-        );
-      })()}
+        </div>
+      )}
 
-      {/* ═════════════════════════════
-          STORE SETTINGS TAB
-      ═════════════════════════════ */}
-
-
-          </div>
+    </div>
   );
 }

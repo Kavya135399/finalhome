@@ -66,7 +66,7 @@ const heroServices = [
     id: 'meals',
     name: 'Meals',
     icon: UtensilsCrossed,
-    path: '/catering?category=Daily%20Meals',
+    path: '/meals',
     bgClass: 'bg-[#FFF0F3] dark:bg-rose-500/15 text-[#E11D48] dark:text-rose-400 border border-[#FDDCE3]/70 dark:border-rose-500/30 group-hover:bg-[#FDDCE3]/90 dark:group-hover:bg-rose-500/25',
     shadowClass: 'shadow-sm shadow-rose-500/5 group-hover:shadow-md group-hover:shadow-rose-500/15 dark:group-hover:shadow-none',
   },
