@@ -19,7 +19,7 @@ import bookingRoutes from './routes/bookingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import { applySecurityMiddleware } from './middleware/securityMiddleware.js';
 import { verifySignature, fetchPaymentDetails } from './services/razorpayService.js';
-import { sendCustomerAccountNotification, sendAdminNotification, sendMarketingBroadcast, dispatchEmail, sendOrderNotification } from './services/emailService.js';
+import { sendCustomerAccountNotification, sendAdminNotification, sendMarketingBroadcast, dispatchEmail, sendOrderNotification, sendCateringCustomerEmail, sendCateringAdminEmail, sendCateringStatusEmail } from './services/emailService.js';
 import { verifyTransporter } from './config/mailer.js';
 import { sendPushNotification } from './services/fcmService.js';
 
@@ -204,13 +204,21 @@ const db = new sqlite3.Database(dbFile, (err) => {
         CREATE TABLE IF NOT EXISTS catering_packages (
           id TEXT PRIMARY KEY,
           title TEXT NOT NULL,
+          slug TEXT,
           category TEXT NOT NULL,
           description TEXT NOT NULL,
           pax TEXT NOT NULL,
           price INTEGER NOT NULL,
+          price_type TEXT DEFAULT 'fixed',
+          minimum_guests INTEGER DEFAULT 1,
+          maximum_guests INTEGER DEFAULT 500,
+          included_items TEXT DEFAULT '[]',
           image TEXT NOT NULL,
+          gallery_images TEXT DEFAULT '[]',
           is_active INTEGER DEFAULT 1,
-          created_at TEXT NOT NULL
+          featured INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT
         )
       `);
       db.run(`
@@ -218,18 +226,63 @@ const db = new sqlite3.Database(dbFile, (err) => {
           id TEXT PRIMARY KEY,
           user_id TEXT NOT NULL,
           user_name TEXT NOT NULL,
+          email TEXT DEFAULT '',
           package_id TEXT,
           package_title TEXT NOT NULL,
           guest_count INTEGER NOT NULL,
           event_date TEXT NOT NULL,
+          event_time TEXT DEFAULT '',
           event_type TEXT,
           contact_phone TEXT NOT NULL,
+          location TEXT DEFAULT '',
+          address TEXT DEFAULT '',
+          food_preference TEXT DEFAULT '',
+          budget REAL DEFAULT 0,
           special_notes TEXT,
-          status TEXT DEFAULT 'pending',
+          special_requirements TEXT DEFAULT '',
+          status TEXT DEFAULT 'PENDING',
           total_estimated_price INTEGER NOT NULL,
+          admin_notes TEXT DEFAULT '',
+          created_at TEXT NOT NULL,
+          updated_at TEXT
+        )
+      `);
+      db.run(`
+        CREATE TABLE IF NOT EXISTS catering_gallery (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          category TEXT DEFAULT 'Catering',
+          image TEXT NOT NULL,
+          featured INTEGER DEFAULT 0,
           created_at TEXT NOT NULL
         )
       `);
+
+      // Safe column migrations for existing SQLite databases
+      const cateringPkgCols = [
+        "ALTER TABLE catering_packages ADD COLUMN slug TEXT",
+        "ALTER TABLE catering_packages ADD COLUMN price_type TEXT DEFAULT 'fixed'",
+        "ALTER TABLE catering_packages ADD COLUMN minimum_guests INTEGER DEFAULT 1",
+        "ALTER TABLE catering_packages ADD COLUMN maximum_guests INTEGER DEFAULT 500",
+        "ALTER TABLE catering_packages ADD COLUMN included_items TEXT DEFAULT '[]'",
+        "ALTER TABLE catering_packages ADD COLUMN gallery_images TEXT DEFAULT '[]'",
+        "ALTER TABLE catering_packages ADD COLUMN featured INTEGER DEFAULT 0",
+        "ALTER TABLE catering_packages ADD COLUMN updated_at TEXT"
+      ];
+      cateringPkgCols.forEach(cmd => db.run(cmd, () => {}));
+
+      const cateringReqCols = [
+        "ALTER TABLE catering_requests ADD COLUMN email TEXT DEFAULT ''",
+        "ALTER TABLE catering_requests ADD COLUMN event_time TEXT DEFAULT ''",
+        "ALTER TABLE catering_requests ADD COLUMN location TEXT DEFAULT ''",
+        "ALTER TABLE catering_requests ADD COLUMN address TEXT DEFAULT ''",
+        "ALTER TABLE catering_requests ADD COLUMN food_preference TEXT DEFAULT ''",
+        "ALTER TABLE catering_requests ADD COLUMN budget REAL DEFAULT 0",
+        "ALTER TABLE catering_requests ADD COLUMN special_requirements TEXT DEFAULT ''",
+        "ALTER TABLE catering_requests ADD COLUMN admin_notes TEXT DEFAULT ''",
+        "ALTER TABLE catering_requests ADD COLUMN updated_at TEXT"
+      ];
+      cateringReqCols.forEach(cmd => db.run(cmd, () => {}));
       db.run(`
         CREATE TABLE IF NOT EXISTS meals (
           id TEXT PRIMARY KEY,
@@ -281,68 +334,89 @@ const db = new sqlite3.Database(dbFile, (err) => {
       });
 
       db.get('SELECT COUNT(*) as cnt FROM catering_packages', (err, row) => {
+        const defaultCatering = [
+          {
+            id: 'cat_1',
+            title: 'Festival Food Package',
+            slug: 'festival-food-package',
+            category: 'Festival Specials',
+            description: 'Bespoke traditional festival feast comprising pure ghee sweets (Mohanthal or Sukhadi), premium pooris, potato rassa curry, dal, shrikhand, and dynamic seasonal snacks.',
+            pax: '15 Pax',
+            price: 5000,
+            price_type: 'fixed',
+            minimum_guests: 15,
+            included_items: JSON.stringify(['Mohanthal / Sukhadi', 'Premium Pooris', 'Potato Rassa Curry', 'Dal & Shrikhand', 'Seasonal Snacks']),
+            image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&q=80&w=600'
+          },
+          {
+            id: 'cat_2',
+            title: 'Guest Catering Package',
+            slug: 'guest-catering-package',
+            category: 'Catering',
+            description: 'A massive custom premium buffet setup managed by Swad Caterers. Includes multiple starters, live main course counters, dessert station, mocktails, and cleanup service.',
+            pax: '50 Pax',
+            price: 15000,
+            price_type: 'fixed',
+            minimum_guests: 50,
+            included_items: JSON.stringify(['Multiple Starters', 'Live Main Course Counters', 'Dessert Station', 'Mocktails', 'Cleanup Service']),
+            image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=600'
+          },
+          {
+            id: 'cat_3',
+            title: 'Gujarati Thali',
+            slug: 'gujarati-thali',
+            category: 'Daily Meals',
+            description: 'A traditional home-style spread including 3 rotlis, 2 seasonal shaaks, 1 dal, basmati rice, premium kadhi, pickle, sweet, and buttermilk.',
+            pax: '1 Pax',
+            price: 250,
+            price_type: 'per_pax',
+            minimum_guests: 1,
+            included_items: JSON.stringify(['3 Rotlis', '2 Seasonal Shaaks', 'Dal & Basmati Rice', 'Premium Kadhi', 'Sweet & Buttermilk']),
+            image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=600'
+          },
+          {
+            id: 'cat_4',
+            title: 'Premium Family Meal',
+            slug: 'premium-family-meal',
+            category: 'Family Packages',
+            description: 'A comprehensive family meal consisting of starter paneer tikka, 8 butter naans, 2 large bowls of Punjabi sabji, dal makhani, jeera rice, raita, and gulab jamuns.',
+            pax: '4 Pax',
+            price: 1200,
+            price_type: 'fixed',
+            minimum_guests: 4,
+            included_items: JSON.stringify(['Starter Paneer Tikka', '8 Butter Naans', '2 Punjabi Sabji', 'Dal Makhani & Rice', 'Raita & Gulab Jamun']),
+            image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&q=80&w=600'
+          }
+        ];
         if (!err && row && row.cnt === 0) {
-          const defaultCatering = [
-            {
-              id: 'cat_1',
-              title: 'Festival Food Package',
-              category: 'Festival Specials',
-              description: 'Bespoke traditional festival feast comprising pure ghee sweets (Mohanthal or Sukhadi), premium pooris, potato rassa curry, dal, shrikhand, and dynamic seasonal snacks.',
-              pax: '15 Pax',
-              price: 5000,
-              image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=600'
-            },
-            {
-              id: 'cat_2',
-              title: 'Guest Catering Package',
-              category: 'Catering',
-              description: 'A massive custom premium buffet setup managed by Swad Caterers. Includes multiple starters, live main course counters, dessert station, mocktails, and cleanup service.',
-              pax: '50 Pax',
-              price: 15000,
-              image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=600'
-            },
-            {
-              id: 'cat_3',
-              title: 'Gujarati Thali',
-              category: 'Daily Meals',
-              description: 'A traditional home-style spread including 3 rotlis, 2 seasonal shaaks, 1 dal, basmati rice, premium kadhi, pickle, sweet, and buttermilk.',
-              pax: '1 Pax',
-              price: 250,
-              image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=600'
-            },
-            {
-              id: 'cat_4',
-              title: 'Premium Family Meal',
-              category: 'Family Packages',
-              description: 'A comprehensive family meal consisting of starter paneer tikka, 8 butter naans, 2 large bowls of Punjabi sabji, dal makhani, jeera rice, raita, and gulab jamuns.',
-              pax: '4 Pax',
-              price: 1200,
-              image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&q=80&w=600'
-            },
-            {
-              id: 'cat_5',
-              title: 'Grand Wedding Banquet',
-              category: 'Catering',
-              description: 'Exquisite royal buffet setup featuring live chaat counter, mocktail bar, 5 lavish main dishes, traditional sweets, and personalized serving staff.',
-              pax: '100 Pax',
-              price: 35000,
-              image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=600'
-            },
-            {
-              id: 'cat_6',
-              title: 'Executive Daily Tiffin',
-              category: 'Daily Meals',
-              description: 'Nutritious lunch box delivered hot to your office or home with 4 soft rotis, homestyle dal tadka, fresh seasonal shaak, jeera rice, and salad.',
-              pax: '1 Pax',
-              price: 160,
-              image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=600'
-            }
-          ];
           defaultCatering.forEach((pkg) => {
             db.run(
-              'INSERT OR IGNORE INTO catering_packages (id, title, category, description, pax, price, image, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)',
-              [pkg.id, pkg.title, pkg.category, pkg.description, pkg.pax, pkg.price, pkg.image, new Date().toISOString()]
+              'INSERT OR REPLACE INTO catering_packages (id, title, slug, category, description, pax, price, price_type, minimum_guests, included_items, image, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)',
+              [pkg.id, pkg.title, pkg.slug, pkg.category, pkg.description, pkg.pax, pkg.price, pkg.price_type, pkg.minimum_guests, pkg.included_items, pkg.image, new Date().toISOString()]
             );
+          });
+        } else {
+          // Heal any existing broken images for default sample packages
+          db.run("UPDATE catering_packages SET image = 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&q=80&w=600' WHERE title = 'Festival Food Package' AND (image LIKE '%1555939594%' OR image = '' OR image IS NULL)");
+        }
+      });
+
+      db.get('SELECT COUNT(*) as cnt FROM catering_gallery', (err, row) => {
+        if (!err && row && row.cnt === 0) {
+          const defaultGallery = [
+            { id: 'gal_1', title: 'Royal Buffet Station', category: 'Wedding', image: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&q=80&w=800', featured: 1 },
+            { id: 'gal_2', title: 'Traditional Gujarati Spread', category: 'Festival', image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=800', featured: 1 },
+            { id: 'gal_3', title: 'Corporate Live Counters', category: 'Corporate', image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800', featured: 0 },
+            { id: 'gal_4', title: 'Dessert & Sweet Platter', category: 'Sweets', image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=800', featured: 1 },
+            { id: 'gal_5', title: 'Family Dining Feast', category: 'Family', image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&q=80&w=800', featured: 0 },
+            { id: 'gal_6', title: 'South Indian Banquet', category: 'Traditional', image: 'https://images.unsplash.com/photo-1610192244261-3f33de3f55e4?auto=format&fit=crop&q=80&w=800', featured: 0 }
+          ];
+          defaultGallery.forEach(g => {
+            db.run('INSERT OR IGNORE INTO catering_gallery (id, title, category, image, featured, created_at) VALUES (?, ?, ?, ?, ?, ?)', [g.id, g.title, g.category, g.image, g.featured, new Date().toISOString()]);
+          });
+        }
+      });
+
       // Initialize Store Products table and seeds
       db.run(`
         CREATE TABLE IF NOT EXISTS store_products (
@@ -2437,12 +2511,32 @@ app.delete('/api/meals/:id', authenticateToken, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ==========================================
+// CATERING FEATURE APIs & VALIDATION
+// ==========================================
+
+// Optional auth helper to decode user if token is sent
+const optionalAuth = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+  jwt.verify(token, process.env.JWT_SECRET || 'secret123', (err, user) => {
+    if (!err && user) req.user = user;
+    else req.user = null;
+    next();
+  });
+};
+
+// 1. Get All Active Catering Packages
 app.get('/api/catering/packages', async (req, res) => {
   try {
     const { category } = req.query;
     let sql = 'SELECT * FROM catering_packages WHERE is_active = 1 ORDER BY created_at ASC';
     let params = [];
-    if (category && category !== 'All Packages') {
+    if (category && category !== 'All Packages' && category !== 'All' && category !== 'all') {
       sql = 'SELECT * FROM catering_packages WHERE is_active = 1 AND category = ? ORDER BY created_at ASC';
       params = [category];
     }
@@ -2451,60 +2545,301 @@ app.get('/api/catering/packages', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/catering/packages', authenticateToken, async (req, res) => {
+// 2. Get Catering Packages By Category
+app.get('/api/catering/packages/category/:category', async (req, res) => {
   try {
-    const { title, category, description, pax, price, image } = req.body;
+    const { category } = req.params;
+    let sql = 'SELECT * FROM catering_packages WHERE is_active = 1 AND category = ? ORDER BY created_at ASC';
+    const packages = await dbAll(sql, [category]);
+    res.json(packages);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// 3. Get Single Catering Package By ID or Slug
+app.get('/api/catering/packages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const pkg = await dbGet('SELECT * FROM catering_packages WHERE id = ? OR slug = ?', [id, id]);
+    if (!pkg) return res.status(404).json({ error: 'Catering package not found' });
+    res.json(pkg);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// 4. Get Catering Gallery Images
+app.get('/api/catering/gallery', async (req, res) => {
+  try {
+    const gallery = await dbAll('SELECT * FROM catering_gallery ORDER BY featured DESC, created_at DESC');
+    res.json(gallery);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// 5. Submit a new Catering Request (Validated & Triggering Emails)
+app.post('/api/catering/requests', optionalAuth, async (req, res) => {
+  try {
+    const {
+      package_id, package_title, guest_count, event_date, event_time,
+      event_type, contact_phone, email, location, address,
+      food_preference, budget, special_requirements, special_notes, total_estimated_price
+    } = req.body;
+
+    // Strict Backend Validation
+    if (!contact_phone || !/^\d{10}$/.test(String(contact_phone).trim())) {
+      return res.status(400).json({ error: 'Invalid mobile number. Please enter exactly 10 digits without any alphabets, spaces, or symbols.' });
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim())) {
+      return res.status(400).json({ error: 'Invalid email address syntax.' });
+    }
+    const numGuests = Number(guest_count);
+    if (isNaN(numGuests) || numGuests < 1) {
+      return res.status(400).json({ error: 'Guest count must be a valid positive number.' });
+    }
+    if (package_id) {
+      const pkg = await dbGet('SELECT * FROM catering_packages WHERE id = ?', [package_id]);
+      if (pkg && pkg.minimum_guests && numGuests < pkg.minimum_guests) {
+        return res.status(400).json({ error: `This package requires a minimum of ${pkg.minimum_guests} guests.` });
+      }
+    }
+    if (event_date) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const reqDate = new Date(event_date);
+      if (!isNaN(reqDate.getTime()) && reqDate < today) {
+        return res.status(400).json({ error: 'Event date cannot be in the past. Please select today or a future date.' });
+      }
+    }
+
+    const userId = req.user ? req.user.id : (req.body.user_id || 'guest_' + Date.now());
+    const userName = req.body.customer_name || req.body.user_name || (req.user ? (req.user.name || req.user.email) : 'Valued Customer');
+    const customerEmail = email || req.body.customer_email || (req.user ? req.user.email : '');
+
+    // Generate Request ID formatted like #CR-1024 or sequential random
+    const randDigits = Math.floor(1000 + Math.random() * 9000);
+    const id = `CR-${randDigits}`;
+    const timestamp = new Date().toISOString();
+    const initialStatus = 'PENDING';
+
+    await dbRun(
+      `INSERT INTO catering_requests (
+        id, user_id, user_name, email, package_id, package_title,
+        guest_count, event_date, event_time, event_type, contact_phone,
+        location, address, food_preference, budget, special_notes,
+        special_requirements, status, total_estimated_price, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id, userId, userName, customerEmail, package_id || null, package_title || 'General Catering Request',
+        numGuests, event_date || timestamp.slice(0, 10), event_time || '', event_type || 'Event', String(contact_phone).trim(),
+        location || '', address || '', food_preference || 'Vegetarian', Number(budget || 0), special_notes || '',
+        special_requirements || '', initialStatus, Number(total_estimated_price || 0), timestamp, timestamp
+      ]
+    );
+
+    const createdReq = await dbGet('SELECT * FROM catering_requests WHERE id = ?', [id]);
+
+    // Dispatch Email Notifications Asynchronously
+    sendCateringCustomerEmail(createdReq).catch(e => console.error('[Email] Customer catering notice error:', e));
+    sendCateringAdminEmail(createdReq).catch(e => console.error('[Email] Admin catering alert error:', e));
+
+    res.status(201).json({ success: true, message: 'Catering request created successfully', request: createdReq });
+  } catch (err) {
+    console.error('Error creating catering request:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. Get My Catering Requests
+app.get('/api/catering/requests/my', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user ? req.user.id : 'customer_default';
+    const userEmail = req.user ? req.user.email : '';
+    const requests = await dbAll('SELECT * FROM catering_requests WHERE user_id = ? OR email = ? ORDER BY created_at DESC', [userId, userEmail]);
+    res.json(requests);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// 7. Get Single Catering Request Details
+app.get('/api/catering/requests/:id', optionalAuth, async (req, res) => {
+  try {
+    const request = await dbGet('SELECT * FROM catering_requests WHERE id = ?', [req.params.id]);
+    if (!request) return res.status(404).json({ error: 'Catering request not found' });
+    res.json(request);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// 8. Cancel My Catering Request (Only if PENDING)
+app.patch('/api/catering/requests/:id/cancel', optionalAuth, async (req, res) => {
+  try {
+    const request = await dbGet('SELECT * FROM catering_requests WHERE id = ?', [req.params.id]);
+    if (!request) return res.status(404).json({ error: 'Request not found' });
+    if (request.status.toUpperCase() !== 'PENDING' && request.status.toLowerCase() !== 'submitted') {
+      return res.status(400).json({ error: `Cannot cancel order in status: ${request.status}. Please contact support.` });
+    }
+    await dbRun('UPDATE catering_requests SET status = ?, updated_at = ? WHERE id = ?', ['CANCELLED', new Date().toISOString(), req.params.id]);
+    const updated = await dbGet('SELECT * FROM catering_requests WHERE id = ?', [req.params.id]);
+    res.json({ success: true, request: updated });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ==========================================
+// ADMIN CATERING MANAGEMENT APIs
+// ==========================================
+
+// Admin Get All Catering Packages
+app.get('/api/admin/catering/packages', async (req, res) => {
+  try {
+    const packages = await dbAll('SELECT * FROM catering_packages ORDER BY created_at DESC');
+    res.json(packages);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Admin Create Catering Package
+app.post('/api/admin/catering/packages', async (req, res) => {
+  try {
+    const { title, slug, category, description, pax, price, price_type, minimum_guests, maximum_guests, included_items, image, gallery_images, is_active, featured } = req.body;
     const id = 'cat_' + Date.now();
     await dbRun(
-      'INSERT INTO catering_packages (id, title, category, description, pax, price, image, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)',
-      [id, title, category, description, pax, Number(price), image || 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=600', new Date().toISOString()]
+      `INSERT INTO catering_packages (id, title, slug, category, description, pax, price, price_type, minimum_guests, maximum_guests, included_items, image, gallery_images, is_active, featured, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id, title, slug || title.toLowerCase().replace(/\s+/g, '-'), category, description, pax || `${minimum_guests || 1} Pax`,
+        Number(price), price_type || 'fixed', Number(minimum_guests || 1), Number(maximum_guests || 500),
+        typeof included_items === 'string' ? included_items : JSON.stringify(included_items || []),
+        image || 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=600',
+        typeof gallery_images === 'string' ? gallery_images : JSON.stringify(gallery_images || []),
+        is_active !== undefined ? Number(is_active) : 1, featured !== undefined ? Number(featured) : 0,
+        new Date().toISOString(), new Date().toISOString()
+      ]
     );
     const newPkg = await dbGet('SELECT * FROM catering_packages WHERE id = ?', [id]);
     res.status(201).json(newPkg);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.put('/api/catering/packages/:id', authenticateToken, async (req, res) => {
+// Admin Update Catering Package
+app.put('/api/admin/catering/packages/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, category, description, pax, price, image } = req.body;
+    const { title, slug, category, description, pax, price, price_type, minimum_guests, maximum_guests, included_items, image, gallery_images, is_active, featured } = req.body;
     await dbRun(
-      'UPDATE catering_packages SET title = ?, category = ?, description = ?, pax = ?, price = ?, image = ? WHERE id = ?',
-      [title, category, description, pax, Number(price), image, id]
+      `UPDATE catering_packages SET title = ?, slug = ?, category = ?, description = ?, pax = ?, price = ?, price_type = ?, minimum_guests = ?, maximum_guests = ?, included_items = ?, image = ?, gallery_images = ?, is_active = ?, featured = ?, updated_at = ? WHERE id = ?`,
+      [
+        title, slug || (title ? title.toLowerCase().replace(/\s+/g, '-') : ''), category, description, pax, Number(price),
+        price_type || 'fixed', Number(minimum_guests || 1), Number(maximum_guests || 500),
+        typeof included_items === 'string' ? included_items : JSON.stringify(included_items || []),
+        image, typeof gallery_images === 'string' ? gallery_images : JSON.stringify(gallery_images || []),
+        is_active !== undefined ? Number(is_active) : 1, featured !== undefined ? Number(featured) : 0,
+        new Date().toISOString(), id
+      ]
     );
     const updated = await dbGet('SELECT * FROM catering_packages WHERE id = ?', [id]);
     res.json(updated);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.delete('/api/catering/packages/:id', async (req, res) => {
+// Admin Delete Catering Package
+app.delete('/api/admin/catering/packages/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    await dbRun('DELETE FROM catering_packages WHERE id = ?', [id]);
-    res.json({ message: 'Catering package deleted successfully', id });
+    await dbRun('DELETE FROM catering_packages WHERE id = ?', [req.params.id]);
+    res.json({ success: true, message: 'Package deleted successfully' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get('/api/catering/requests/my', authenticateToken, async (req, res) => {
+// Admin Get All Catering Requests
+app.get('/api/admin/catering/requests', async (req, res) => {
   try {
-    const userId = req.user ? req.user.id : 'customer_default';
-    const requests = await dbAll('SELECT * FROM catering_requests WHERE user_id = ? ORDER BY created_at DESC', [userId]);
+    const requests = await dbAll('SELECT * FROM catering_requests ORDER BY created_at DESC');
     res.json(requests);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/catering/requests', authenticateToken, async (req, res) => {
+// Admin Get Single Catering Request
+app.get('/api/admin/catering/requests/:id', async (req, res) => {
   try {
-    const { package_id, package_title, guest_count, event_date, event_type, contact_phone, special_notes, total_estimated_price } = req.body;
-    const userId = req.user ? req.user.id : 'customer_default';
-    const userName = req.user ? (req.user.name || req.user.email) : 'Customer';
-    const id = 'cr_' + Date.now();
-    await dbRun(
-      'INSERT INTO catering_requests (id, user_id, user_name, package_id, package_title, guest_count, event_date, event_type, contact_phone, special_notes, status, total_estimated_price, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, userId, userName, package_id || null, package_title, Number(guest_count), event_date, event_type || 'Event', contact_phone || '', special_notes || '', 'confirmed', Number(total_estimated_price), new Date().toISOString()]
-    );
-    const createdReq = await dbGet('SELECT * FROM catering_requests WHERE id = ?', [id]);
-    res.status(201).json(createdReq);
+    const reqData = await dbGet('SELECT * FROM catering_requests WHERE id = ?', [req.params.id]);
+    res.json(reqData);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Admin Update Catering Status (Sends Email!)
+app.patch('/api/admin/catering/requests/:id/status', async (req, res) => {
+  try {
+    const { status, admin_notes } = req.body;
+    await dbRun('UPDATE catering_requests SET status = ?, updated_at = ? WHERE id = ?', [status || 'PENDING', new Date().toISOString(), req.params.id]);
+    if (admin_notes !== undefined) {
+      await dbRun('UPDATE catering_requests SET admin_notes = ? WHERE id = ?', [admin_notes, req.params.id]);
+    }
+    const updated = await dbGet('SELECT * FROM catering_requests WHERE id = ?', [req.params.id]);
+
+    // Send status notification email to customer
+    sendCateringStatusEmail(updated, updated.status).catch(e => console.error('[Email] Status update email error:', e));
+
+    res.json(updated);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Admin Update Catering Notes
+app.patch('/api/admin/catering/requests/:id/notes', async (req, res) => {
+  try {
+    const { admin_notes, special_notes } = req.body;
+    if (admin_notes !== undefined) {
+      await dbRun('UPDATE catering_requests SET admin_notes = ?, updated_at = ? WHERE id = ?', [admin_notes, new Date().toISOString(), req.params.id]);
+    }
+    if (special_notes !== undefined) {
+      await dbRun('UPDATE catering_requests SET special_notes = ?, updated_at = ? WHERE id = ?', [special_notes, new Date().toISOString(), req.params.id]);
+    }
+    const updated = await dbGet('SELECT * FROM catering_requests WHERE id = ?', [req.params.id]);
+    res.json(updated);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Support legacy PUT for status update
+app.put('/api/admin/catering/requests/:id', async (req, res) => {
+  try {
+    const { status, special_notes, admin_notes } = req.body;
+    await dbRun('UPDATE catering_requests SET status=?, special_notes=?, admin_notes=?, updated_at=? WHERE id=?', [
+      status || 'UNDER REVIEW', special_notes || '', admin_notes || '', new Date().toISOString(), req.params.id
+    ]);
+    const updated = await dbGet('SELECT * FROM catering_requests WHERE id=?', [req.params.id]);
+    sendCateringStatusEmail(updated, updated.status).catch(e => console.error('[Email] Status update email error:', e));
+    res.json(updated);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Admin Delete Catering Request
+app.delete('/api/admin/catering/requests/:id', async (req, res) => {
+  try {
+    await dbRun('DELETE FROM catering_requests WHERE id=?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Admin Gallery CRUD
+app.post('/api/admin/catering/gallery', async (req, res) => {
+  try {
+    const { title, category, image, featured } = req.body;
+    const id = 'gal_' + Date.now();
+    await dbRun('INSERT INTO catering_gallery (id, title, category, image, featured, created_at) VALUES (?, ?, ?, ?, ?, ?)', [
+      id, title, category || 'Catering', image || '', Number(featured || 0), new Date().toISOString()
+    ]);
+    const item = await dbGet('SELECT * FROM catering_gallery WHERE id = ?', [id]);
+    res.status(201).json(item);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/admin/catering/gallery/:id', async (req, res) => {
+  try {
+    const { title, category, image, featured } = req.body;
+    await dbRun('UPDATE catering_gallery SET title = ?, category = ?, image = ?, featured = ? WHERE id = ?', [
+      title, category || 'Catering', image, Number(featured || 0), req.params.id
+    ]);
+    const item = await dbGet('SELECT * FROM catering_gallery WHERE id = ?', [req.params.id]);
+    res.json(item);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/admin/catering/gallery/:id', async (req, res) => {
+  try {
+    await dbRun('DELETE FROM catering_gallery WHERE id = ?', [req.params.id]);
+    res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

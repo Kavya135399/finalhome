@@ -244,3 +244,109 @@ export const sendReminderEmail = async (templateKey, reminderData) => {
     html,
   });
 };
+
+/**
+ * Catering Feature Notifications
+ */
+export const sendCateringCustomerEmail = async (requestData) => {
+  const recipient = requestData.email;
+  if (!recipient) return false;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+      <div style="background-color: #2563EB; color: white; padding: 24px; text-align: center;">
+        <h1 style="margin: 0; font-size: 24px;">🍽️ Catering Request Received</h1>
+      </div>
+      <div style="padding: 24px; color: #1e293b;">
+        <p style="font-size: 16px;">Hello <strong>${requestData.user_name || requestData.customer_name}</strong>,</p>
+        <p>Thank you for submitting your catering request with HomeSeva! We have received your inquiry and our food curation team is reviewing it.</p>
+        <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 4px 0;"><strong>Request ID:</strong> #${requestData.id}</p>
+          <p style="margin: 4px 0;"><strong>Package:</strong> ${requestData.package_title || 'Custom Catering Request'}</p>
+          <p style="margin: 4px 0;"><strong>Event Date:</strong> ${requestData.event_date} ${requestData.event_time || ''}</p>
+          <p style="margin: 4px 0;"><strong>Guest Count:</strong> ${requestData.guest_count || requestData.guests} Guests</p>
+          <p style="margin: 4px 0;"><strong>Estimated Price:</strong> ₹${requestData.total_estimated_price || requestData.estimated_price || 0}</p>
+          <p style="margin: 4px 0;"><strong>Status:</strong> <span style="color: #d97706; font-weight: bold;">PENDING (Under Review)</span></p>
+        </div>
+        <p>Our team will reach out to you at <strong>${requestData.contact_phone || requestData.phone}</strong> shortly to discuss the menu, customization, and confirmed quotations.</p>
+        <p style="margin-top: 24px; color: #64748b; font-size: 14px;">Best regards,<br/>HomeSeva Catering Team</p>
+      </div>
+    </div>
+  `;
+
+  return await dispatchEmail({
+    to: recipient,
+    subject: `🍽️ Catering Request Received - #${requestData.id} | HomeSeva`,
+    html,
+  });
+};
+
+export const sendCateringAdminEmail = async (requestData) => {
+  const adminEmail = getAdminEmail();
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+      <div style="background-color: #0f172a; color: white; padding: 20px; text-align: center;">
+        <h2 style="margin: 0; font-size: 20px;">🚨 New Catering Request Received</h2>
+      </div>
+      <div style="padding: 24px; color: #1e293b;">
+        <p>A new catering booking has just been submitted on HomeSeva:</p>
+        <div style="background-color: #f1f5f9; padding: 16px; border-radius: 8px; margin: 16px 0;">
+          <p style="margin: 4px 0;"><strong>ID:</strong> #${requestData.id}</p>
+          <p style="margin: 4px 0;"><strong>Customer Name:</strong> ${requestData.user_name || requestData.customer_name}</p>
+          <p style="margin: 4px 0;"><strong>Email:</strong> ${requestData.email}</p>
+          <p style="margin: 4px 0;"><strong>Phone:</strong> ${requestData.contact_phone || requestData.phone}</p>
+          <p style="margin: 4px 0;"><strong>Package:</strong> ${requestData.package_title}</p>
+          <p style="margin: 4px 0;"><strong>Event Type:</strong> ${requestData.event_type || 'General'}</p>
+          <p style="margin: 4px 0;"><strong>Event Date:</strong> ${requestData.event_date} ${requestData.event_time || ''}</p>
+          <p style="margin: 4px 0;"><strong>Guests:</strong> ${requestData.guest_count || requestData.guests}</p>
+          <p style="margin: 4px 0;"><strong>Location/Address:</strong> ${requestData.location || ''} ${requestData.address || ''}</p>
+          <p style="margin: 4px 0;"><strong>Food Preference:</strong> ${requestData.food_preference || 'N/A'}</p>
+          <p style="margin: 4px 0;"><strong>Estimated Amount:</strong> ₹${requestData.total_estimated_price || requestData.estimated_price || 0}</p>
+          <p style="margin: 4px 0;"><strong>Special Notes:</strong> ${requestData.special_notes || requestData.special_requirements || 'None'}</p>
+        </div>
+        <p>Please review and follow up with the customer via the Admin Dashboard.</p>
+      </div>
+    </div>
+  `;
+
+  return await dispatchEmail({
+    to: adminEmail,
+    subject: `🚨 [New Catering Inquiry] #${requestData.id} (${requestData.guest_count} Pax) - ${requestData.user_name}`,
+    html,
+  });
+};
+
+export const sendCateringStatusEmail = async (requestData, newStatus) => {
+  const recipient = requestData.email;
+  if (!recipient) return false;
+
+  const statusColor = newStatus === 'CONFIRMED' ? '#10B981' : newStatus === 'COMPLETED' ? '#8B5CF6' : newStatus === 'REJECTED' ? '#EF4444' : '#3B82F6';
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+      <div style="background-color: ${statusColor}; color: white; padding: 24px; text-align: center;">
+        <h1 style="margin: 0; font-size: 22px;">Catering Status Updated: ${newStatus}</h1>
+      </div>
+      <div style="padding: 24px; color: #1e293b;">
+        <p>Hello <strong>${requestData.user_name || requestData.customer_name}</strong>,</p>
+        <p>Your catering request <strong>#${requestData.id}</strong> for <strong>${requestData.package_title}</strong> has been updated to:</p>
+        <div style="text-align: center; margin: 24px 0;">
+          <span style="background-color: #f1f5f9; color: ${statusColor}; font-weight: bold; font-size: 18px; padding: 12px 24px; border-radius: 999px; border: 2px solid ${statusColor}; display: inline-block;">
+            ${newStatus}
+          </span>
+        </div>
+        ${requestData.admin_notes ? `<p style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px;"><strong>Message from Team:</strong> ${requestData.admin_notes}</p>` : ''}
+        <p>If you have any questions or require modifications, please reply to this email or contact us at our customer service line.</p>
+        <p style="margin-top: 24px; color: #64748b; font-size: 14px;">Thank you for choosing HomeSeva!</p>
+      </div>
+    </div>
+  `;
+
+  return await dispatchEmail({
+    to: recipient,
+    subject: `✨ Catering Order #${requestData.id} Status: ${newStatus} | HomeSeva`,
+    html,
+  });
+};
+

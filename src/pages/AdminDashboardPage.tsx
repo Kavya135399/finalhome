@@ -7,7 +7,7 @@ import {
   Plus, Edit, Trash2, Check, XCircle, Inbox, Settings, FileText,
   ShieldAlert, Activity, RefreshCw, Send, Database, Menu, X, Clock,
   CarTaxiFront, Camera, LogOut, ShoppingBag, Package, Eye, AlertTriangle, Tag,
-  Utensils, UtensilsCrossed, Shield, CreditCard, Filter, User, MapPin, Phone, Mail, CheckCircle2, ArrowRight
+  Utensils, UtensilsCrossed, Shield, CreditCard, Filter, User, MapPin, Phone, Mail, CheckCircle2, ArrowRight, ChefHat
 } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { OverviewTab } from '../components/admin/OverviewTab';
 import { OffersTab } from '../components/admin/OffersTab';
+import { FoodArrangementsTab } from '../components/admin/FoodArrangementsTab';
 import {
   services as mockServices,
   userBookings as mockBookings,
@@ -78,6 +79,7 @@ type AdminTab =
   | 'memberships'
   | 'meals'
   | 'catering'
+  | 'catering_orders'
   | 'payments'
   | 'customers'
   | 'offers'
@@ -530,6 +532,7 @@ export function AdminDashboardPage() {
               { id: 'memberships', label: 'Memberships Care', icon: Shield, badge: membershipsList.length },
               { id: 'meals', label: 'Meals & Tiffin', icon: Utensils, badge: mealsList.length },
               { id: 'catering', label: 'Catering Packages', icon: UtensilsCrossed, badge: cateringPackagesList.length },
+              { id: 'catering_orders', label: 'Food Arrangements', icon: ChefHat },
               { id: 'payments', label: 'Categorized Payments', icon: CreditCard, highlight: true },
               { id: 'customers', label: 'Customers Directory', icon: Users, badge: usersList.filter(u => u.role === 'customer').length },
               { id: 'offers', label: 'Offers & Promos', icon: Tag },
@@ -1242,8 +1245,9 @@ export function AdminDashboardPage() {
                 </div>
               )}
 
-              {/* 10. OFFERS TAB */}
+              {/* 10. OFFERS TAB & FOOD ARRANGEMENTS */}
               {activeTab === 'offers' && <OffersTab />}
+              {activeTab === 'catering_orders' && <FoodArrangementsTab />}
 
               {/* 11. SETTINGS TAB */}
               {activeTab === 'settings' && (

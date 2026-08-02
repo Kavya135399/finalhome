@@ -566,38 +566,81 @@ export const apiClient = {
     const res = await api.delete(`/meals/${id}`);
     return res.data;
   },
-  async getCateringPackages() {
-    const res = await api.get('/catering/packages');
+  async getCateringPackages(category?: string) {
+    const url = category && category !== 'All Packages' && category !== 'All' ? `/catering/packages?category=${encodeURIComponent(category)}` : '/catering/packages';
+    const res = await api.get(url);
     return res.data;
   },
-  async addCateringPackage(data: any) {
-    const res = await api.post('/catering/packages', data);
+  async getCateringPackageById(id: string) {
+    const res = await api.get(`/catering/packages/${id}`);
     return res.data;
   },
-  async updateCateringPackage(id: string, data: any) {
-    const res = await api.put(`/catering/packages/${id}`, data);
+  async getCateringGallery() {
+    const res = await api.get('/catering/gallery');
     return res.data;
   },
-  async deleteCateringPackage(id: string) {
-    const res = await api.delete(`/catering/packages/${id}`);
+  async submitCateringRequest(data: any) {
+    const res = await api.post('/catering/requests', data);
+    return res.data;
+  },
+  async getMyCateringRequests() {
+    const res = await api.get('/catering/requests/my');
+    return res.data;
+  },
+  async cancelCateringRequest(id: string) {
+    const res = await api.patch(`/catering/requests/${id}/cancel`);
     return res.data;
   },
 
-  // 24. Vehicles / Taxi Fleet CRUD
-  async getVehicles() {
-    const res = await api.get('/vehicles');
+  // Legacy & Admin Catering Package methods
+  async addCateringPackage(data: any) {
+    const res = await api.post('/admin/catering/packages', data);
     return res.data;
   },
-  async addVehicle(data: any) {
-    const res = await api.post('/vehicles', data);
+  async updateCateringPackage(id: string, data: any) {
+    const res = await api.put(`/admin/catering/packages/${id}`, data);
     return res.data;
   },
-  async updateVehicle(id: string, data: any) {
-    const res = await api.put(`/vehicles/${id}`, data);
+  async deleteCateringPackage(id: string) {
+    const res = await api.delete(`/admin/catering/packages/${id}`);
     return res.data;
   },
-  async deleteVehicle(id: string) {
-    const res = await api.delete(`/vehicles/${id}`);
+  async getAdminCateringPackages() {
+    const res = await api.get('/admin/catering/packages');
+    return res.data;
+  },
+
+  // Admin Catering Request & Gallery methods
+  async getAdminCateringRequests() {
+    const res = await api.get('/admin/catering/requests');
+    return res.data;
+  },
+  async getAdminCateringRequestById(id: string) {
+    const res = await api.get(`/admin/catering/requests/${id}`);
+    return res.data;
+  },
+  async updateAdminCateringStatus(id: string, status: string, admin_notes?: string) {
+    const res = await api.patch(`/admin/catering/requests/${id}/status`, { status, admin_notes });
+    return res.data;
+  },
+  async updateAdminCateringNotes(id: string, admin_notes?: string, special_notes?: string) {
+    const res = await api.patch(`/admin/catering/requests/${id}/notes`, { admin_notes, special_notes });
+    return res.data;
+  },
+  async deleteAdminCateringRequest(id: string) {
+    const res = await api.delete(`/admin/catering/requests/${id}`);
+    return res.data;
+  },
+  async addAdminCateringGallery(data: any) {
+    const res = await api.post('/admin/catering/gallery', data);
+    return res.data;
+  },
+  async updateAdminCateringGallery(id: string, data: any) {
+    const res = await api.put(`/admin/catering/gallery/${id}`, data);
+    return res.data;
+  },
+  async deleteAdminCateringGallery(id: string) {
+    const res = await api.delete(`/admin/catering/gallery/${id}`);
     return res.data;
   },
 
@@ -609,5 +652,6 @@ export const apiClient = {
 };
 
 export { api };
+
 
 

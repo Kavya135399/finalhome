@@ -125,6 +125,7 @@ export function RootLayout() {
   else if (pathname === '/terms') pageTitle = 'Terms of Service';
 
   // Navigation flags
+  const isAdminView = pathname.startsWith('/admin');
   const hideBottomNavList = ['/login', '/register', '/forgot-password', '/book', '/admin', '/pro'];
   const isDetailsView = pathname.startsWith('/services/') && pathname !== '/services';
   const showBottomNav = !hideBottomNavList.some((p) => pathname.startsWith(p)) && !isDetailsView;
@@ -150,6 +151,7 @@ export function RootLayout() {
     <div className="h-screen h-[100dvh] w-full bg-gray-50 dark:bg-slate-950 flex flex-col text-gray-900 dark:text-white antialiased overflow-hidden">
       
       {/* Top App Bar */}
+      {!isAdminView && (
       <header className="fixed top-0 inset-x-0 h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-b border-gray-150 dark:border-slate-800/60 z-40 select-none">
         <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
@@ -299,7 +301,7 @@ export function RootLayout() {
                             <button
                               onClick={() => {
                                 setProfileMenuOpen(false);
-                                navigate('/dashboard?tab=bookings');
+                                navigate(user?.role === 'admin' ? '/admin' : '/dashboard?tab=bookings');
                               }}
                               className="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition text-left font-semibold"
                             >
@@ -342,9 +344,9 @@ export function RootLayout() {
           </div>
         </div>
       </header>
+      )}
 
-      {/* Main Content Area (Scrollable viewport) */}
-      <main className={`flex-1 flex flex-col overflow-y-auto overflow-x-hidden scroll-smooth pt-14 ${showBottomNav ? 'pb-16' : 'pb-0'}`}>
+      <main className={`flex-1 flex flex-col overflow-y-auto overflow-x-hidden scroll-smooth ${isAdminView ? 'pt-0' : 'pt-14'} ${showBottomNav ? 'pb-16' : 'pb-0'}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={pathname + location.search}

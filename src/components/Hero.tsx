@@ -232,7 +232,7 @@ export function Hero() {
 
             {/* Sign In to Dashboard Button */}
             <button
-              onClick={() => navigate(user ? '/dashboard' : '/login')}
+              onClick={() => navigate(user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/login')}
               className="w-full mt-5 sm:mt-6 py-3 px-6 bg-white hover:bg-gray-100 text-slate-900 font-bold rounded-[20px] text-sm sm:text-base transition-all duration-200 shadow hover:shadow-lg active:scale-[0.99]"
             >
               {user ? 'Go to Dashboard' : 'Sign In to Dashboard'}
