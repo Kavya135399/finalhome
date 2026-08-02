@@ -639,7 +639,7 @@ export function AdminDashboardPage() {
               {/* 3. STORE PRODUCTS TAB (CRUD) */}
               {activeTab === 'store' && (
                 <div className="space-y-5">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-100 dark:border-slate-800 gap-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-100 dark:border-slate-800 gap-3 sm:gap-4">
                     <div>
                       <h2 className="text-lg font-black text-gray-900 dark:text-white">Store Products Manager</h2>
                       <p className="text-xs text-gray-500">Manage store items, stock levels, categories, and prices.</p>
@@ -649,31 +649,39 @@ export function AdminDashboardPage() {
                         setStoreForm({ id: '', name: '', category: 'Home Essentials', price: '', stock: '50', description: '', image: '', is_active: true });
                         setStoreModal({ open: true, mode: 'add' });
                       }}
-                      className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-2xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
+                      className="w-full sm:w-auto justify-center px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-2xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
                     >
                       <Plus className="w-4 h-4" /> Add New Store Product
                     </button>
                   </div>
 
                   {/* Products Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
                     {storeProductsList.map(prod => (
-                      <div key={prod.id} className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-gray-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
-                        <div>
-                          <img src={prod.image} alt="" className="w-full h-36 object-cover rounded-2xl mb-3 border border-gray-100 dark:border-slate-800" />
-                          <span className="text-[10px] font-bold px-2 py-0.5 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 rounded-md">
-                            {prod.category}
-                          </span>
-                          <h3 className="font-bold text-sm text-gray-900 dark:text-white mt-1.5 line-clamp-1">{prod.name}</h3>
-                          <p className="text-xs text-gray-400 line-clamp-2 mt-0.5">{prod.description}</p>
+                      <div key={prod.id} className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl p-3 sm:p-4 border border-gray-100 dark:border-slate-800 shadow-sm flex flex-row sm:flex-col justify-between items-center sm:items-stretch gap-3 sm:gap-0">
+                        <div className="flex flex-row sm:flex-col items-center sm:items-stretch gap-3 sm:gap-0 flex-1 min-w-0">
+                          <img src={prod.image} alt="" className="w-16 h-16 sm:w-full sm:h-36 object-cover rounded-xl sm:rounded-2xl shrink-0 sm:mb-3 border border-gray-100 dark:border-slate-800" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 rounded-md truncate max-w-[120px] sm:max-w-none">
+                                {prod.category}
+                              </span>
+                              <span className="sm:hidden text-[9px] font-medium text-gray-500 bg-gray-50 dark:bg-slate-800/50 px-1.5 py-0.5 rounded-md">
+                                Stock: <strong>{prod.stock}</strong>
+                              </span>
+                            </div>
+                            <h3 className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white mt-1 sm:mt-1.5 truncate sm:line-clamp-1">{prod.name}</h3>
+                            <p className="hidden sm:block text-xs text-gray-400 line-clamp-2 mt-0.5">{prod.description}</p>
+                            <p className="sm:hidden text-xs font-black text-brand-600 mt-0.5">₹{prod.price}</p>
+                          </div>
                         </div>
 
-                        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
-                          <div>
+                        <div className="sm:mt-4 sm:pt-3 sm:border-t border-gray-100 dark:border-slate-800 flex items-center justify-end sm:justify-between shrink-0">
+                          <div className="hidden sm:block">
                             <p className="text-xs font-black text-brand-600">₹{prod.price}</p>
                             <p className="text-[10px] text-gray-500">Stock: <strong>{prod.stock}</strong></p>
                           </div>
-                          <div className="flex gap-1.5">
+                          <div className="flex flex-col sm:flex-row gap-1.5 shrink-0">
                             <button
                               onClick={() => {
                                 setStoreForm({
@@ -688,13 +696,13 @@ export function AdminDashboardPage() {
                                 });
                                 setStoreModal({ open: true, mode: 'edit', data: prod });
                               }}
-                              className="p-1.5 bg-gray-100 dark:bg-slate-800 hover:text-brand-600 rounded-xl transition"
+                              className="p-2 sm:p-1.5 bg-gray-100 dark:bg-slate-800 hover:text-brand-600 rounded-xl transition flex items-center justify-center"
                             >
                               <Edit className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleDeleteStoreProduct(prod.id)}
-                              className="p-1.5 bg-red-50 dark:bg-red-950/30 text-red-600 rounded-xl transition"
+                              className="p-2 sm:p-1.5 bg-red-50 dark:bg-red-950/30 text-red-600 rounded-xl transition flex items-center justify-center"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -709,7 +717,7 @@ export function AdminDashboardPage() {
               {/* 4. TAXI & FLEET TAB (CRUD) */}
               {activeTab === 'taxi' && (
                 <div className="space-y-5">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-100 dark:border-slate-800 gap-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-100 dark:border-slate-800 gap-3 sm:gap-4">
                     <div>
                       <h2 className="text-lg font-black text-gray-900 dark:text-white">Taxi & Vehicle Fleet Manager</h2>
                       <p className="text-xs text-gray-500">Manage active cab fleet, passenger capacities, and rate tariffs per km.</p>
@@ -719,31 +727,33 @@ export function AdminDashboardPage() {
                         setVehicleForm({ id: '', name: '', type: 'SUV', passengers: 5, rate: '15', image: '', status: 'Available' });
                         setVehicleModal({ open: true, mode: 'add' });
                       }}
-                      className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-2xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
+                      className="w-full sm:w-auto justify-center px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-2xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
                     >
                       <Plus className="w-4 h-4" /> Add Vehicle
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
                     {vehiclesList.map(veh => (
-                      <div key={veh.id} className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-gray-100 dark:border-slate-800 flex flex-col justify-between shadow-sm">
-                        <div>
-                          <img src={veh.image} alt="" className="w-full h-40 object-cover rounded-2xl mb-3 border border-gray-100 dark:border-slate-800" />
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-blue-50 dark:bg-blue-950/50 text-blue-600 rounded-md">
-                              {veh.type}
-                            </span>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${veh.status === 'Available' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                              {veh.status}
-                            </span>
+                      <div key={veh.id} className="bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-2xl sm:rounded-3xl border border-gray-100 dark:border-slate-800 flex flex-row sm:flex-col justify-between items-center sm:items-stretch gap-3 sm:gap-0 shadow-sm">
+                        <div className="flex flex-row sm:flex-col items-center sm:items-stretch gap-3 sm:gap-0 flex-1 min-w-0">
+                          <img src={veh.image} alt="" className="w-16 h-16 sm:w-full sm:h-40 object-cover rounded-xl sm:rounded-2xl shrink-0 sm:mb-3 border border-gray-100 dark:border-slate-800" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center sm:justify-between gap-1.5 flex-wrap">
+                              <span className="text-[9px] sm:text-[10px] font-extrabold uppercase px-1.5 sm:px-2 py-0.5 bg-blue-50 dark:bg-blue-950/50 text-blue-600 rounded-md">
+                                {veh.type}
+                              </span>
+                              <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-md sm:rounded-full ${veh.status === 'Available' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                {veh.status}
+                              </span>
+                            </div>
+                            <h3 className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white mt-1 sm:mt-2 truncate sm:whitespace-normal">{veh.name}</h3>
+                            <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">Passengers: <strong>{veh.passengers} Max</strong></p>
+                            <p className="text-xs font-black text-brand-600 mt-0.5">₹{veh.rate} / km</p>
                           </div>
-                          <h3 className="font-bold text-sm text-gray-900 dark:text-white mt-2">{veh.name}</h3>
-                          <p className="text-xs text-gray-500 mt-1">Passengers: <strong>{veh.passengers} Max</strong></p>
-                          <p className="text-xs font-black text-brand-600 mt-0.5">₹{veh.rate} / km</p>
                         </div>
 
-                        <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-slate-800">
+                        <div className="flex flex-col sm:flex-row justify-end gap-1.5 sm:gap-2 sm:mt-4 sm:pt-3 sm:border-t border-gray-100 dark:border-slate-800 shrink-0">
                           <button
                             onClick={() => {
                               setVehicleForm({
@@ -757,15 +767,17 @@ export function AdminDashboardPage() {
                               });
                               setVehicleModal({ open: true, mode: 'edit', data: veh });
                             }}
-                            className="px-3 py-1.5 bg-gray-100 dark:bg-slate-800 hover:text-brand-600 text-xs font-bold rounded-xl transition"
+                            className="p-2 sm:px-3 sm:py-1.5 bg-gray-100 dark:bg-slate-800 hover:text-brand-600 text-xs font-bold rounded-xl transition flex items-center justify-center"
                           >
-                            Edit
+                            <Edit className="w-3.5 h-3.5 sm:hidden" />
+                            <span className="hidden sm:inline">Edit</span>
                           </button>
                           <button
                             onClick={() => handleDeleteVehicle(veh.id)}
-                            className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-xl transition"
+                            className="p-2 sm:px-3 sm:py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-xl transition flex items-center justify-center"
                           >
-                            Remove
+                            <Trash2 className="w-3.5 h-3.5 sm:hidden" />
+                            <span className="hidden sm:inline">Remove</span>
                           </button>
                         </div>
                       </div>
@@ -855,7 +867,7 @@ export function AdminDashboardPage() {
               {/* 6. MEALS TAB (CRUD) */}
               {activeTab === 'meals' && (
                 <div className="space-y-5">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-100 dark:border-slate-800 gap-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-100 dark:border-slate-800 gap-3 sm:gap-4">
                     <div>
                       <h2 className="text-lg font-black text-gray-900 dark:text-white">Daily Meals & Tiffin Plans Manager</h2>
                       <p className="text-xs text-gray-500">Manage Gujarati Thalis, North Indian, Healthy & Jain gourmet meals.</p>
@@ -865,33 +877,39 @@ export function AdminDashboardPage() {
                         setMealForm({ id: '', name: '', category: 'Gujarati', caterer: 'MasterChef Kitchen', food_type: 'veg', price: '', original_price: '', calories: '450', serves: '1 Person', description: '', image: '' });
                         setMealModal({ open: true, mode: 'add' });
                       }}
-                      className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-2xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
+                      className="w-full sm:w-auto justify-center px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-2xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
                     >
                       <Plus className="w-4 h-4" /> Add Meal Plan
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
                     {mealsList.map(meal => (
-                      <div key={meal.id} className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
-                        <div>
-                          <img src={meal.image} alt="" className="w-full h-40 object-cover rounded-2xl mb-3 border border-gray-100 dark:border-slate-800" />
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-amber-50 dark:bg-amber-950/40 text-amber-700 rounded-md">
-                              {meal.category}
-                            </span>
-                            <span className="text-[10px] font-bold text-gray-400">{meal.serves}</span>
+                      <div key={meal.id} className="bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-2xl sm:rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm flex flex-row sm:flex-col justify-between items-center sm:items-stretch gap-3 sm:gap-0">
+                        <div className="flex flex-row sm:flex-col items-center sm:items-stretch gap-3 sm:gap-0 flex-1 min-w-0">
+                          <img src={meal.image} alt="" className="w-16 h-16 sm:w-full sm:h-40 object-cover rounded-xl sm:rounded-2xl shrink-0 sm:mb-3 border border-gray-100 dark:border-slate-800" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center sm:justify-between gap-1.5 flex-wrap">
+                              <span className="text-[9px] sm:text-[10px] font-extrabold uppercase px-1.5 sm:px-2 py-0.5 bg-amber-50 dark:bg-amber-950/40 text-amber-700 rounded-md">
+                                {meal.category}
+                              </span>
+                              <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 bg-gray-50 dark:bg-slate-800/50 sm:bg-transparent px-1.5 sm:px-0 py-0.5 sm:py-0 rounded-md">{meal.serves}</span>
+                            </div>
+                            <h3 className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white mt-1 sm:mt-2 truncate sm:line-clamp-1">{meal.name}</h3>
+                            <p className="hidden sm:block text-xs text-gray-400 line-clamp-2 mt-0.5">{meal.description}</p>
+                            <div className="sm:hidden flex items-center gap-2 mt-0.5">
+                              <span className="text-xs font-black text-brand-600">₹{meal.price}</span>
+                              <span className="text-[10px] text-gray-400 truncate">{meal.caterer || 'HomeSeva Kitchen'}</span>
+                            </div>
                           </div>
-                          <h3 className="font-bold text-sm text-gray-900 dark:text-white mt-2 line-clamp-1">{meal.name}</h3>
-                          <p className="text-xs text-gray-400 line-clamp-2 mt-0.5">{meal.description}</p>
                         </div>
 
-                        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
-                          <div>
+                        <div className="sm:mt-4 sm:pt-3 sm:border-t border-gray-100 dark:border-slate-800 flex items-center justify-end sm:justify-between shrink-0">
+                          <div className="hidden sm:block">
                             <p className="text-sm font-black text-brand-600">₹{meal.price}</p>
                             <p className="text-[10px] text-gray-400">{meal.caterer || 'HomeSeva Kitchen'}</p>
                           </div>
-                          <div className="flex gap-1.5">
+                          <div className="flex flex-col sm:flex-row gap-1.5 shrink-0">
                             <button
                               onClick={() => {
                                 setMealForm({
@@ -909,13 +927,13 @@ export function AdminDashboardPage() {
                                 });
                                 setMealModal({ open: true, mode: 'edit', data: meal });
                               }}
-                              className="p-1.5 bg-gray-100 dark:bg-slate-800 hover:text-brand-600 rounded-xl transition"
+                              className="p-2 sm:p-1.5 bg-gray-100 dark:bg-slate-800 hover:text-brand-600 rounded-xl transition flex items-center justify-center"
                             >
                               <Edit className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleDeleteMeal(meal.id)}
-                              className="p-1.5 bg-red-50 text-red-600 rounded-xl transition"
+                              className="p-2 sm:p-1.5 bg-red-50 text-red-600 rounded-xl transition flex items-center justify-center"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -930,7 +948,7 @@ export function AdminDashboardPage() {
               {/* 7. CATERING PACKAGES TAB (CRUD) */}
               {activeTab === 'catering' && (
                 <div className="space-y-5">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-100 dark:border-slate-800 gap-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-100 dark:border-slate-800 gap-3 sm:gap-4">
                     <div>
                       <h2 className="text-lg font-black text-gray-900 dark:text-white">Event Catering Packages Manager</h2>
                       <p className="text-xs text-gray-500">Manage Festival food packages, party catering, and guest dining offers.</p>
@@ -940,27 +958,30 @@ export function AdminDashboardPage() {
                         setCateringForm({ id: '', title: '', category: 'Festival Specials', description: '', pax: '15 Pax', price: '', image: '' });
                         setCateringModal({ open: true, mode: 'add' });
                       }}
-                      className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-2xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
+                      className="w-full sm:w-auto justify-center px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-2xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
                     >
                       <Plus className="w-4 h-4" /> Add Catering Package
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
                     {cateringPackagesList.map(cat => (
-                      <div key={cat.id} className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm flex flex-col justify-between">
-                        <div>
-                          <img src={cat.image} alt="" className="w-full h-40 object-cover rounded-2xl mb-3 border border-gray-100 dark:border-slate-800" />
-                          <span className="text-[10px] font-bold px-2 py-0.5 bg-purple-50 dark:bg-purple-950/50 text-purple-600 rounded-md">
-                            {cat.pax || '15 Pax'}
-                          </span>
-                          <h3 className="font-bold text-sm text-gray-900 dark:text-white mt-1.5">{cat.title}</h3>
-                          <p className="text-xs text-gray-500 line-clamp-3 mt-1">{cat.description}</p>
+                      <div key={cat.id} className="bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-2xl sm:rounded-3xl border border-gray-100 dark:border-slate-800 shadow-sm flex flex-row sm:flex-col justify-between items-center sm:items-stretch gap-3 sm:gap-0">
+                        <div className="flex flex-row sm:flex-col items-center sm:items-stretch gap-3 sm:gap-0 flex-1 min-w-0">
+                          <img src={cat.image} alt="" className="w-16 h-16 sm:w-full sm:h-40 object-cover rounded-xl sm:rounded-2xl shrink-0 sm:mb-3 border border-gray-100 dark:border-slate-800" />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 bg-purple-50 dark:bg-purple-950/50 text-purple-600 rounded-md inline-block">
+                              {cat.pax || '15 Pax'}
+                            </span>
+                            <h3 className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white mt-1 sm:mt-1.5 truncate sm:whitespace-normal">{cat.title}</h3>
+                            <p className="hidden sm:block text-xs text-gray-500 line-clamp-3 mt-1">{cat.description}</p>
+                            <p className="sm:hidden text-xs font-black text-brand-600 mt-0.5">₹{cat.price}</p>
+                          </div>
                         </div>
 
-                        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
-                          <p className="text-base font-black text-brand-600">₹{cat.price}</p>
-                          <div className="flex gap-1.5">
+                        <div className="sm:mt-4 sm:pt-3 sm:border-t border-gray-100 dark:border-slate-800 flex items-center justify-end sm:justify-between shrink-0">
+                          <p className="hidden sm:block text-base font-black text-brand-600">₹{cat.price}</p>
+                          <div className="flex flex-col sm:flex-row gap-1.5 shrink-0">
                             <button
                               onClick={() => {
                                 setCateringForm({
@@ -974,17 +995,17 @@ export function AdminDashboardPage() {
                                 });
                                 setCateringModal({ open: true, mode: 'edit', data: cat });
                               }}
-                              className="p-1.5 bg-gray-100 dark:bg-slate-800 hover:text-brand-600 text-gray-700 dark:text-gray-300 rounded-xl transition flex items-center gap-1 text-xs font-bold px-2.5"
+                              className="p-2 sm:p-1.5 sm:px-2.5 bg-gray-100 dark:bg-slate-800 hover:text-brand-600 text-gray-700 dark:text-gray-300 rounded-xl transition flex items-center justify-center gap-1 text-xs font-bold"
                             >
                               <Edit className="w-3.5 h-3.5" />
-                              <span>Edit</span>
+                              <span className="hidden sm:inline">Edit</span>
                             </button>
                             <button
                               onClick={() => handleDeleteCateringPackage(cat.id)}
-                              className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition flex items-center gap-1 text-xs font-bold px-2.5"
+                              className="p-2 sm:p-1.5 sm:px-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl transition flex items-center justify-center gap-1 text-xs font-bold"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
-                              <span>Delete</span>
+                              <span className="hidden sm:inline">Delete</span>
                             </button>
                           </div>
                         </div>
