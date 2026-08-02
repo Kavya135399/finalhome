@@ -159,6 +159,7 @@ const db = new sqlite3.Database(dbFile, (err) => {
           description TEXT NOT NULL,
           category_id TEXT,
           categoryName TEXT NOT NULL,
+          category_name TEXT DEFAULT 'General',
           service_type TEXT DEFAULT 'standard',
           price REAL NOT NULL,
           original_price REAL,
@@ -176,6 +177,8 @@ const db = new sqlite3.Database(dbFile, (err) => {
           updated_at TEXT
         )
       `);
+      db.run("ALTER TABLE services ADD COLUMN category_name TEXT DEFAULT 'General'", () => {});
+      db.run("ALTER TABLE services ADD COLUMN categoryName TEXT DEFAULT 'General'", () => {});
       db.run("ALTER TABLE services ADD COLUMN slug TEXT", () => {});
       db.run("ALTER TABLE services ADD COLUMN short_description TEXT", () => {});
       db.run("ALTER TABLE services ADD COLUMN category_id TEXT", () => {});
