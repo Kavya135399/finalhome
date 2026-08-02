@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { OverviewTab } from '../components/admin/OverviewTab';
 import { OffersTab } from '../components/admin/OffersTab';
+import { ServicesManagerTab } from '../components/admin/ServicesManagerTab';
 import {
   services as mockServices,
   userBookings as mockBookings,
@@ -630,114 +631,7 @@ export function AdminDashboardPage() {
               )}
 
               {/* 2. SERVICES TAB (CRUD) */}
-              {activeTab === 'services' && (
-                <div className="space-y-5">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white dark:bg-slate-900 p-5 rounded-3xl border border-gray-100 dark:border-slate-800 gap-4">
-                    <div>
-                      <h2 className="text-lg font-black text-gray-900 dark:text-white">Services Catalog Manager</h2>
-                      <p className="text-xs text-gray-500">Manage all home cleaning, electrical, plumbing, and repair services.</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setServiceForm({ id: '', name: '', categoryName: 'Home Cleaning', price: '', description: '', duration: '60 min', image: '', featuresText: '' });
-                        setServiceModal({ open: true, mode: 'add' });
-                      }}
-                      className="px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-2xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20"
-                    >
-                      <Plus className="w-4 h-4" /> Add New Service
-                    </button>
-                  </div>
-
-                  {/* Filters */}
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search service name or description..."
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 h-10 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-xs text-gray-800 dark:text-white outline-none focus:border-brand-500"
-                      />
-                    </div>
-                    <select
-                      value={categoryFilter}
-                      onChange={e => setCategoryFilter(e.target.value)}
-                      className="h-10 px-3 rounded-xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 text-xs font-bold text-gray-700 dark:text-gray-300 outline-none"
-                    >
-                      <option value="all">All Categories</option>
-                      {Array.from(new Set(servicesList.map(s => s.categoryName).filter(Boolean))).map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Services Grid / Table */}
-                  <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800 text-gray-500 font-extrabold uppercase text-[9px] tracking-wider">
-                          <tr>
-                            <th className="p-4">Service</th>
-                            <th className="p-4">Category</th>
-                            <th className="p-4">Price</th>
-                            <th className="p-4">Duration</th>
-                            <th className="p-4 text-right">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-slate-800 font-medium">
-                          {servicesList
-                            .filter(s => (categoryFilter === 'all' || s.categoryName === categoryFilter) && (s.name?.toLowerCase().includes(searchQuery.toLowerCase()) || s.description?.toLowerCase().includes(searchQuery.toLowerCase())))
-                            .map(s => (
-                              <tr key={s.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-850/40 transition">
-                                <td className="p-4 flex items-center gap-3">
-                                  <img src={s.image} alt="" className="w-12 h-12 rounded-xl object-cover border border-gray-100 dark:border-slate-700" />
-                                  <div>
-                                    <p className="font-bold text-gray-900 dark:text-white text-sm">{s.name}</p>
-                                    <p className="text-[11px] text-gray-400 line-clamp-1 max-w-sm">{s.description}</p>
-                                  </div>
-                                </td>
-                                <td className="p-4">
-                                  <span className="px-2.5 py-1 bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 font-bold rounded-lg text-[10px]">
-                                    {s.categoryName || 'General'}
-                                  </span>
-                                </td>
-                                <td className="p-4 font-black text-gray-900 dark:text-white">₹{s.price}</td>
-                                <td className="p-4 text-gray-500">{s.duration || '60 min'}</td>
-                                <td className="p-4 text-right space-x-2">
-                                  <button
-                                    onClick={() => {
-                                      setServiceForm({
-                                        id: s.id,
-                                        name: s.name,
-                                        categoryName: s.categoryName || 'Cleaning',
-                                        price: String(s.price),
-                                        description: s.description || '',
-                                        duration: s.duration || '60 min',
-                                        image: s.image || '',
-                                        featuresText: Array.isArray(s.features) ? s.features.join('\n') : ''
-                                      });
-                                      setServiceModal({ open: true, mode: 'edit', data: s });
-                                    }}
-                                    className="p-2 bg-gray-100 dark:bg-slate-800 hover:bg-brand-50 hover:text-brand-600 text-gray-600 dark:text-gray-300 rounded-xl transition"
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteService(s.id)}
-                                    className="p-2 bg-red-50 dark:bg-red-950/30 text-red-600 rounded-xl hover:bg-red-100 transition"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {activeTab === 'services' && <ServicesManagerTab />}
 
               {/* 3. STORE PRODUCTS TAB (CRUD) */}
               {activeTab === 'store' && (

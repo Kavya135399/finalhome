@@ -92,27 +92,33 @@ export const apiClient = {
   },
 
   // 3. Services CRUD
-  async getServices() {
-    const res = await api.get('/services');
+  async getServices(params?: { category?: string; search?: string }) {
+    const res = await api.get('/services', { params });
     return res.data;
   },
 
-  async addService(serviceData: {
-    name: string;
-    categoryName: string;
-    description: string;
-    longDescription?: string;
-    price: number;
-    duration?: string;
-    image?: string;
-    features?: string[];
-  }) {
+  async getAdminServices(params?: { category?: string; status?: string; search?: string }) {
+    const res = await api.get('/admin/services', { params });
+    return res.data;
+  },
+
+  async getServiceById(id: string) {
+    const res = await api.get(`/admin/services/${id}`);
+    return res.data;
+  },
+
+  async addService(serviceData: any) {
     const res = await api.post('/services', serviceData);
     return res.data;
   },
 
   async updateService(id: string, serviceData: any) {
     const res = await api.put(`/services/${id}`, serviceData);
+    return res.data;
+  },
+
+  async toggleServiceToggle(id: string, data: { is_active?: boolean; featured?: boolean; popular?: boolean; sort_order?: number }) {
+    const res = await api.patch(`/admin/services/${id}/toggle`, data);
     return res.data;
   },
 
@@ -580,24 +586,6 @@ export const apiClient = {
   },
   async deleteCateringPackage(id: string) {
     const res = await api.delete(`/catering/packages/${id}`);
-    return res.data;
-  },
-
-  // 24. Vehicles / Taxi Fleet CRUD
-  async getVehicles() {
-    const res = await api.get('/vehicles');
-    return res.data;
-  },
-  async addVehicle(data: any) {
-    const res = await api.post('/vehicles', data);
-    return res.data;
-  },
-  async updateVehicle(id: string, data: any) {
-    const res = await api.put(`/vehicles/${id}`, data);
-    return res.data;
-  },
-  async deleteVehicle(id: string) {
-    const res = await api.delete(`/vehicles/${id}`);
     return res.data;
   },
 
