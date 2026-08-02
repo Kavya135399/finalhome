@@ -201,6 +201,35 @@ const db = new sqlite3.Database(dbFile, (err) => {
         )
       `);
       db.run(`
+        CREATE TABLE IF NOT EXISTS vehicles (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          type TEXT DEFAULT 'Sedan',
+          passengers INTEGER DEFAULT 4,
+          capacity_passengers INTEGER DEFAULT 4,
+          luggage INTEGER DEFAULT 2,
+          capacity_luggage INTEGER DEFAULT 2,
+          rate REAL DEFAULT 15,
+          price_per_km REAL DEFAULT 15,
+          base_price REAL DEFAULT 0,
+          image TEXT,
+          status TEXT DEFAULT 'Available',
+          features TEXT DEFAULT '[]',
+          is_active INTEGER DEFAULT 1,
+          created_at TEXT NOT NULL
+        )
+      `);
+      db.run("ALTER TABLE vehicles ADD COLUMN price_per_km REAL DEFAULT 15", () => {});
+      db.run("ALTER TABLE vehicles ADD COLUMN rate REAL DEFAULT 15", () => {});
+      db.run("ALTER TABLE vehicles ADD COLUMN capacity_passengers INTEGER DEFAULT 4", () => {});
+      db.run("ALTER TABLE vehicles ADD COLUMN capacity_luggage INTEGER DEFAULT 2", () => {});
+      db.run("ALTER TABLE vehicles ADD COLUMN passengers INTEGER DEFAULT 4", () => {});
+      db.run("ALTER TABLE vehicles ADD COLUMN luggage INTEGER DEFAULT 2", () => {});
+      db.run("ALTER TABLE vehicles ADD COLUMN base_price REAL DEFAULT 0", () => {});
+      db.run("ALTER TABLE vehicles ADD COLUMN features TEXT DEFAULT '[]'", () => {});
+      db.run("ALTER TABLE vehicles ADD COLUMN is_active INTEGER DEFAULT 1", () => {});
+      db.run("ALTER TABLE vehicles ADD COLUMN status TEXT DEFAULT 'Available'", () => {});
+      db.run(`
         CREATE TABLE IF NOT EXISTS logs (
           id TEXT PRIMARY KEY,
           user_id TEXT NOT NULL,
@@ -3187,32 +3216,71 @@ app.delete('/api/admin/catering/gallery/:id', async (req, res) => {
 app.get('/api/vehicles', async (req, res) => {
   try {
     const vehicles = await dbAll('SELECT * FROM vehicles ORDER BY created_at DESC');
-    res.json(vehicles);
+    const formatted = vehicles.map(v => ({
+      ...v,
+      rate: Number(v.rate || v.price_per_km || 15),
+      price_per_km: Number(v.price_per_km || v.rate || 15),
+      passengers: Number(v.passengers || v.capacity_passengers || 4),
+      capacity_passengers: Number(v.capacity_passengers || v.passengers || 4),
+      luggage: Number(v.luggage || v.capacity_luggage || 2),
+      capacity_luggage: Number(v.capacity_luggage || v.luggage || 2),
+      status: v.status || (v.is_active !== 0 ? 'Available' : 'Unavailable'),
+      is_active: Boolean(v.is_active !== 0)
+    }));
+    res.json(formatted);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/vehicles', authenticateToken, async (req, res) => {
   try {
-    const { name, type, capacity_passengers, capacity_luggage, base_price, price_per_km, image, features, is_active } = req.body;
+    const { name, type, capacity_passengers, passengers, capacity_luggage, luggage, base_price, price_per_km, rate, image, features, is_active, status } = req.body;
     const id = 'veh_' + Date.now();
+    const finalRate = Number(rate !== undefined ? rate : (price_per_km !== undefined ? price_per_km : 15)) || 15;
+    const finalPax = Number(passengers !== undefined ? passengers : (capacity_passengers !== undefined ? capacity_passengers : 4)) || 4;
+    const finalLug = Number(luggage !== undefined ? luggage : (capacity_luggage !== undefined ? capacity_luggage : 2)) || 2;
+    const finalStatus = status || (is_active !== 0 ? 'Available' : 'Unavailable');
+    const finalActive = is_active !== undefined ? (is_active ? 1 : 0) : (finalStatus === 'Available' ? 1 : 0);
+    const finalImg = image || 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=400';
+
     await dbRun(
-      'INSERT INTO vehicles (id, name, type, capacity_passengers, capacity_luggage, base_price, price_per_km, image, features, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [id, name, type, capacity_passengers, capacity_luggage, base_price, price_per_km, image, JSON.stringify(features || []), is_active ? 1 : 0, new Date().toISOString()]
+      'INSERT INTO vehicles (id, name, type, passengers, capacity_passengers, luggage, capacity_luggage, base_price, rate, price_per_km, image, status, features, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [id, name || 'Taxi Vehicle', type || 'Sedan', finalPax, finalPax, finalLug, finalLug, Number(base_price || 0), finalRate, finalRate, finalImg, finalStatus, JSON.stringify(features || []), finalActive, new Date().toISOString()]
     );
     const vehicle = await dbGet('SELECT * FROM vehicles WHERE id = ?', [id]);
-    res.json(vehicle);
+    res.json({
+      ...vehicle,
+      rate: Number(vehicle.rate || vehicle.price_per_km || 15),
+      price_per_km: Number(vehicle.price_per_km || vehicle.rate || 15),
+      passengers: Number(vehicle.passengers || vehicle.capacity_passengers || 4),
+      capacity_passengers: Number(vehicle.capacity_passengers || vehicle.passengers || 4)
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.put('/api/vehicles/:id', authenticateToken, async (req, res) => {
   try {
-    const { name, type, capacity_passengers, capacity_luggage, base_price, price_per_km, image, features, is_active } = req.body;
+    const { name, type, capacity_passengers, passengers, capacity_luggage, luggage, base_price, price_per_km, rate, image, features, is_active, status } = req.body;
+    const old = await dbGet('SELECT * FROM vehicles WHERE id = ?', [req.params.id]);
+    if (!old) return res.status(404).json({ error: 'Vehicle not found' });
+
+    const finalRate = Number(rate !== undefined ? rate : (price_per_km !== undefined ? price_per_km : (old.rate || old.price_per_km || 15))) || 15;
+    const finalPax = Number(passengers !== undefined ? passengers : (capacity_passengers !== undefined ? capacity_passengers : (old.passengers || old.capacity_passengers || 4))) || 4;
+    const finalLug = Number(luggage !== undefined ? luggage : (capacity_luggage !== undefined ? capacity_luggage : (old.luggage || old.capacity_luggage || 2))) || 2;
+    const finalStatus = status !== undefined ? status : (old.status || 'Available');
+    const finalActive = is_active !== undefined ? (is_active ? 1 : 0) : (finalStatus === 'Available' ? 1 : 0);
+
     await dbRun(
-      'UPDATE vehicles SET name=?, type=?, capacity_passengers=?, capacity_luggage=?, base_price=?, price_per_km=?, image=?, features=?, is_active=? WHERE id=?',
-      [name, type, capacity_passengers, capacity_luggage, base_price, price_per_km, image, JSON.stringify(features || []), is_active ? 1 : 0, req.params.id]
+      'UPDATE vehicles SET name=?, type=?, passengers=?, capacity_passengers=?, luggage=?, capacity_luggage=?, base_price=?, rate=?, price_per_km=?, image=?, status=?, features=?, is_active=? WHERE id=?',
+      [name || old.name, type || old.type, finalPax, finalPax, finalLug, finalLug, Number(base_price !== undefined ? base_price : (old.base_price || 0)), finalRate, finalRate, image || old.image, finalStatus, JSON.stringify(features !== undefined ? features : (old.features || [])), finalActive, req.params.id]
     );
     const vehicle = await dbGet('SELECT * FROM vehicles WHERE id = ?', [req.params.id]);
-    res.json(vehicle);
+    res.json({
+      ...vehicle,
+      rate: Number(vehicle.rate || vehicle.price_per_km || 15),
+      price_per_km: Number(vehicle.price_per_km || vehicle.rate || 15),
+      passengers: Number(vehicle.passengers || vehicle.capacity_passengers || 4),
+      capacity_passengers: Number(vehicle.capacity_passengers || vehicle.passengers || 4)
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
