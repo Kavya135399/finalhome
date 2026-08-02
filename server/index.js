@@ -1687,12 +1687,13 @@ app.post('/api/services/:id/duplicate', async (req, res) => {
     const name = `${service.name} (Copy)`;
     const slug = `${service.slug || 'svc'}-copy-${Date.now().toString().slice(-4)}`;
 
+    const finalCategory = service.categoryName || service.category_name || 'General';
     await dbRun(
       `INSERT INTO services (
-        id, name, slug, short_description, description, category_id, categoryName,
+        id, name, slug, short_description, description, category_id, categoryName, category_name,
         service_type, price, original_price, duration, image, icon, badge,
         featured, popular, is_active, sort_order, available_cities, tags, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         serviceId,
         name,
@@ -1700,7 +1701,8 @@ app.post('/api/services/:id/duplicate', async (req, res) => {
         service.short_description,
         service.description,
         service.category_id,
-        service.categoryName,
+        finalCategory,
+        finalCategory,
         service.service_type || 'standard',
         service.price,
         service.original_price,
