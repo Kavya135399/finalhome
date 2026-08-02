@@ -194,6 +194,13 @@ const db = new sqlite3.Database(dbFile, (err) => {
       db.run("ALTER TABLE services ADD COLUMN tags TEXT", () => {});
       db.run("ALTER TABLE services ADD COLUMN updated_at TEXT", () => {});
       db.run(`
+        CREATE TABLE IF NOT EXISTS service_features (
+          id TEXT PRIMARY KEY,
+          service_id TEXT NOT NULL,
+          feature TEXT NOT NULL
+        )
+      `);
+      db.run(`
         CREATE TABLE IF NOT EXISTS logs (
           id TEXT PRIMARY KEY,
           user_id TEXT NOT NULL,
