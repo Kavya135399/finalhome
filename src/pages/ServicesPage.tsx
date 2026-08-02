@@ -21,9 +21,9 @@ import {
   ShieldCheck,
   Plus,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { services as catalogServices } from '../data/serviceCatalog';
 import { apiClient } from '../services/apiClient';
 import { processUPIPayment } from '../services/razorpay';
 import type { Service } from '../types';
@@ -61,30 +61,63 @@ const timeSlots = [
   '05:00 PM - 06:30 PM',
 ];
 
-const getServiceIcon = (s: Service, isSelected: boolean) => {
-  const text = `${s.slug || ''} ${s.name || ''} ${s.categoryName || ''}`.toLowerCase();
+const getServiceIconConfig = (s: Service, isSelected: boolean) => {
+  const text = `${s.slug || ''} ${s.name || ''} ${s.categoryName || ''} ${s.icon || ''}`.toLowerCase();
   
-  if (text.includes('plumb') || text.includes('water') || text.includes('tap') || text.includes('pipe'))
-    return <Droplets className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-blue-600'}`} />;
-  if (text.includes('electr') || text.includes('wir') || text.includes('switch') || text.includes('light') || text.includes('fan'))
-    return <Zap className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-amber-500'}`} />;
-  if (text.includes('ac-') || text.includes('hvac') || text.includes('cooling') || text.includes('air'))
-    return <Wind className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-cyan-500'}`} />;
-  if (text.includes('paint') || text.includes('artisan') || text.includes('wall'))
-    return <Paintbrush className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-purple-600'}`} />;
-  if (text.includes('inspect') || text.includes('check') || text.includes('audit'))
-    return <ClipboardCheck className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-emerald-600'}`} />;
+  if (text.includes('plumb') || text.includes('water') || text.includes('tap') || text.includes('pipe') || text.includes('droplets'))
+    return {
+      icon: <Droplets className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-blue-600'}`} />,
+      bg: isSelected ? 'bg-brand-100/70 border-brand-200' : 'bg-blue-50/80 border-blue-100/80'
+    };
+  if (text.includes('electr') || text.includes('wir') || text.includes('switch') || text.includes('light') || text.includes('fan') || text.includes('zap'))
+    return {
+      icon: <Zap className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-amber-500'}`} />,
+      bg: isSelected ? 'bg-brand-100/70 border-brand-200' : 'bg-amber-50/80 border-amber-100/80'
+    };
+  if (text.includes('ac') || text.includes('hvac') || text.includes('cooling') || text.includes('air') || text.includes('wind'))
+    return {
+      icon: <Wind className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-cyan-500'}`} />,
+      bg: isSelected ? 'bg-brand-100/70 border-brand-200' : 'bg-cyan-50/80 border-cyan-100/80'
+    };
+  if (text.includes('paint') || text.includes('artisan') || text.includes('wall') || text.includes('paintbrush'))
+    return {
+      icon: <Paintbrush className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-purple-600'}`} />,
+      bg: isSelected ? 'bg-brand-100/70 border-brand-200' : 'bg-purple-50/80 border-purple-100/80'
+    };
+  if (text.includes('inspect') || text.includes('check') || text.includes('audit') || text.includes('clipboard'))
+    return {
+      icon: <ClipboardCheck className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-emerald-600'}`} />,
+      bg: isSelected ? 'bg-brand-100/70 border-brand-200' : 'bg-emerald-50/80 border-emerald-100/80'
+    };
   if (text.includes('key') || text.includes('surveill') || text.includes('security') || text.includes('box'))
-    return <Box className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-indigo-600'}`} />;
-  if (text.includes('emergency') || text.includes('rapid') || text.includes('support'))
-    return <PhoneCall className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-rose-600'}`} />;
-  if (text.includes('clean') || text.includes('sofa') || text.includes('carpet') || text.includes('festival') || s.categoryId === 'c7')
-    return <Sparkles className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-teal-500'}`} />;
-  if (text.includes('cater') || text.includes('buffet') || s.categoryId === 'c1')
-    return <UtensilsCrossed className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-orange-500'}`} />;
-  if (text.includes('meal') || text.includes('cook') || text.includes('tiffin') || s.categoryId === 'c2')
-    return <CookingPot className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-emerald-500'}`} />;
-  return <Wrench className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-brand-600'}`} />;
+    return {
+      icon: <Box className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-indigo-600'}`} />,
+      bg: isSelected ? 'bg-brand-100/70 border-brand-200' : 'bg-indigo-50/80 border-indigo-100/80'
+    };
+  if (text.includes('emergency') || text.includes('rapid') || text.includes('support') || text.includes('phone'))
+    return {
+      icon: <PhoneCall className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-rose-600'}`} />,
+      bg: isSelected ? 'bg-brand-100/70 border-brand-200' : 'bg-rose-50/80 border-rose-100/80'
+    };
+  if (text.includes('clean') || text.includes('sofa') || text.includes('carpet') || text.includes('festival') || text.includes('sparkle'))
+    return {
+      icon: <Sparkles className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-teal-500'}`} />,
+      bg: isSelected ? 'bg-brand-100/70 border-brand-200' : 'bg-teal-50/80 border-teal-100/80'
+    };
+  if (text.includes('cater') || text.includes('buffet'))
+    return {
+      icon: <UtensilsCrossed className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-orange-500'}`} />,
+      bg: isSelected ? 'bg-brand-100/70 border-brand-200' : 'bg-orange-50/80 border-orange-100/80'
+    };
+  if (text.includes('meal') || text.includes('cook') || text.includes('tiffin'))
+    return {
+      icon: <CookingPot className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-emerald-500'}`} />,
+      bg: isSelected ? 'bg-brand-100/70 border-brand-200' : 'bg-emerald-50/80 border-emerald-100/80'
+    };
+  return {
+    icon: <Wrench className={`w-5 h-5 ${isSelected ? 'text-brand-600' : 'text-brand-600'}`} />,
+    bg: isSelected ? 'bg-brand-100/70 border-brand-200' : 'bg-slate-50 border-slate-200'
+  };
 };
 
 export function ServicesPage() {
@@ -93,8 +126,10 @@ export function ServicesPage() {
   const { toast } = useToast();
 
   const [step, setStep] = useState<number>(1);
-  const [servicesList, setServicesList] = useState<Service[]>(catalogServices);
-  const [selectedIds, setSelectedIds] = useState<string[]>(['s35']); // Default select Plumbing to display active styling
+  const [servicesList, setServicesList] = useState<Service[]>([]);
+  const [loadingServices, setLoadingServices] = useState<boolean>(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Address & Scheduling State
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(defaultAddresses);
@@ -111,41 +146,42 @@ export function ServicesPage() {
   const [selectedTime, setSelectedTime] = useState<string>('11:00 AM - 12:30 PM');
   const [processingPayment, setProcessingPayment] = useState<boolean>(false);
 
-  // Dynamically fetch services from backend so any additions via Admin/DB show up immediately
+  // Dynamically fetch active services from backend database
   useEffect(() => {
+    setLoadingServices(true);
     apiClient.getServices()
       .then((data: Service[]) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           setServicesList(data);
-        } else {
-          setServicesList(catalogServices);
+          if (data.length > 0 && selectedIds.length === 0) {
+            setSelectedIds([data[0].id]);
+          }
         }
       })
-      .catch(() => setServicesList(catalogServices));
+      .catch((err: any) => {
+        console.error('Failed to fetch services:', err);
+      })
+      .finally(() => setLoadingServices(false));
   }, []);
 
-  // Exclude legacy simple items (s1-s33) to strictly display the 9 executive packages from the reference image,
-  // while retaining full capability to display any brand new services created via the backend database/Admin.
-  const displayedServices = useMemo(() => {
-    const legacyIds = new Set([
-      's1', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10',
-      's11', 's12', 's13', 's14', 's15', 's16', 's17', 's18', 's19', 's20',
-      's21', 's22', 's23', 's24', 's25', 's26', 's27', 's28', 's29', 's30',
-      's31', 's32', 's33'
-    ]);
-    const targetOrder = ['s34', 's35', 's36', 's37', 's38', 's39', 's40', 's41', 's42'];
-    const result = servicesList.filter((s) => !legacyIds.has(s.id));
-    
-    result.sort((a, b) => {
-      const idxA = targetOrder.indexOf(a.id);
-      const idxB = targetOrder.indexOf(b.id);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      if (idxA !== -1) return -1;
-      if (idxB !== -1) return 1;
-      return 0;
+  // Compute available categories dynamically
+  const categoriesList = useMemo(() => {
+    const set = new Set<string>();
+    servicesList.forEach((s) => {
+      if (s.categoryName) set.add(s.categoryName);
     });
-    return result;
+    return ['All', ...Array.from(set)];
   }, [servicesList]);
+
+  // Filter services by active status and selected category
+  const displayedServices = useMemo(() => {
+    let list = servicesList.filter((s) => s.is_active !== false && s.active !== false);
+    if (selectedCategory !== 'All') {
+      list = list.filter((s) => s.categoryName === selectedCategory);
+    }
+    list.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    return list;
+  }, [servicesList, selectedCategory]);
 
   const selectedServices = useMemo(() => {
     return servicesList.filter((s) => selectedIds.includes(s.id));
@@ -366,64 +402,112 @@ export function ServicesPage() {
         {/* STEP 1: SELECT SERVICES */}
         {step === 1 && (
           <div className="bg-white border border-gray-200/90 rounded-3xl p-6 sm:p-8 sm:py-9 shadow-sm relative">
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 font-display tracking-tight">
-              Select Services
-            </h1>
-            <p className="text-sm sm:text-base text-gray-500 font-medium mt-1 mb-8">
-              What exactly does your property need right now?
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-black text-gray-900 font-display tracking-tight">
+                  Select Services
+                </h1>
+                <p className="text-sm sm:text-base text-gray-500 font-medium mt-1">
+                  What exactly does your property need right now?
+                </p>
+              </div>
 
-            {/* Service Cards Grid (Strict 9 reference packages + any dynamic newly added backend services) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 pb-12">
-              {displayedServices.map((s) => {
-                const isSelected = selectedIds.includes(s.id);
-                const icon = getServiceIcon(s, isSelected);
+              {/* Dynamic Category Pill Filters (shows if >1 category) */}
+              {categoriesList.length > 2 && (
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full no-scrollbar">
+                  {categoriesList.map((cat) => {
+                    const isCatSelected = selectedCategory === cat;
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all ${
+                          isCatSelected
+                            ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-                return (
-                  <div
-                    key={s.id}
-                    onClick={() => handleToggleService(s.id)}
-                    className={`cursor-pointer p-4 sm:p-6 rounded-2xl border-2 transition-all duration-200 flex flex-row sm:flex-col items-center sm:items-start sm:justify-between gap-4 sm:gap-6 relative text-left select-none group sm:min-h-[160px] ${
-                      isSelected
-                        ? 'border-brand-500 bg-brand-50/20 shadow-md shadow-brand-500/5'
-                        : 'border-gray-200/90 bg-white hover:border-gray-300 hover:shadow-sm'
-                    }`}
-                  >
-                    {/* Circular Icon Container */}
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
-                      isSelected ? 'bg-brand-100/70 border border-brand-200/60' : 'bg-slate-50 border border-slate-200/70'
-                    }`}>
-                      {icon}
-                    </div>
+            {loadingServices ? (
+              <div className="py-16 text-center flex flex-col items-center justify-center">
+                <Sparkles className="w-8 h-8 text-brand-600 animate-spin mb-3" />
+                <p className="text-sm font-bold text-gray-600">Loading active services from database...</p>
+              </div>
+            ) : displayedServices.length === 0 ? (
+              <div className="py-16 text-center flex flex-col items-center justify-center">
+                <Wrench className="w-12 h-12 text-gray-300 mb-3" />
+                <h3 className="text-base font-extrabold text-gray-800">No Active Services Available</h3>
+                <p className="text-xs text-gray-400 max-w-sm mt-1">
+                  There are currently no active services. Add services from the Admin panel to display them here.
+                </p>
+              </div>
+            ) : (
+              /* Dynamic Service Cards Grid (Matching reference screenshot 100%) */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 pb-12">
+                {displayedServices.map((s) => {
+                  const isSelected = selectedIds.includes(s.id);
+                  const { icon, bg } = getServiceIconConfig(s, isSelected);
 
-                    {/* Middle Text Block (Inline next to icon on mobile, underneath on desktop) */}
-                    <div className="flex-1 min-w-0 sm:w-full">
-                      <h3 className="font-extrabold text-gray-900 text-sm sm:text-base leading-snug mb-0.5 sm:mb-1 pr-2 sm:pr-0 truncate sm:whitespace-normal">
-                        {s.name}
-                      </h3>
-                      <p className="text-[11px] sm:text-xs font-semibold text-gray-500">
-                        Starts at <span className="text-gray-700 font-bold">₹{Number(s.price || 0).toLocaleString('en-IN')}</span>
-                      </p>
-                    </div>
+                  return (
+                    <motion.div
+                      key={s.id}
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleToggleService(s.id)}
+                      className={`cursor-pointer p-4 sm:p-6 rounded-2xl border-2 transition-all duration-200 flex flex-row sm:flex-col items-center sm:items-start sm:justify-between gap-4 sm:gap-6 relative text-left select-none group sm:min-h-[160px] ${
+                        isSelected
+                          ? 'border-brand-500 bg-brand-50/20 shadow-md shadow-brand-500/5'
+                          : 'border-gray-200/90 bg-white hover:border-gray-300 hover:shadow-sm'
+                      }`}
+                    >
+                      {/* Circular Icon Container */}
+                      <div
+                        className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 border transition-transform group-hover:scale-105 ${bg}`}
+                      >
+                        {icon}
+                      </div>
 
-                    {/* Right Badge on mobile, Top-Right Badge on desktop */}
-                    <div className="shrink-0 sm:absolute sm:top-6 sm:right-6 flex items-center">
-                      {isSelected ? (
-                        <div className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-full bg-brand-100 border border-brand-200 flex items-center justify-center text-brand-600 shadow-xs">
-                          <CheckCircle2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 fill-brand-600 text-white" />
-                        </div>
-                      ) : (
-                        s.popular && (
+                      {/* Middle Text Block */}
+                      <div className="flex-1 min-w-0 sm:w-full">
+                        <h3 className="font-extrabold text-gray-900 text-sm sm:text-base leading-snug mb-0.5 sm:mb-1 pr-2 sm:pr-0 truncate sm:whitespace-normal">
+                          {s.name || s.title}
+                        </h3>
+                        <p className="text-[11px] sm:text-xs font-semibold text-gray-500">
+                          Starts at{' '}
+                          <span className="text-gray-700 font-bold">
+                            ₹{Number(s.price || 0).toLocaleString('en-IN')}
+                          </span>
+                        </p>
+                      </div>
+
+                      {/* Right Badge on mobile, Top-Right Badge on desktop */}
+                      <div className="shrink-0 sm:absolute sm:top-6 sm:right-6 flex items-center">
+                        {isSelected ? (
+                          <div className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-full bg-brand-100 border border-brand-200 flex items-center justify-center text-brand-600 shadow-xs">
+                            <CheckCircle2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 fill-brand-600 text-white" />
+                          </div>
+                        ) : s.popular ? (
                           <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg bg-[#FFF4E5] text-[#D97706] font-extrabold text-[9px] sm:text-[10px] uppercase tracking-wider">
                             POPULAR
                           </span>
-                        )
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                        ) : s.badge ? (
+                          <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg bg-brand-50 text-brand-600 font-extrabold text-[9px] sm:text-[10px] uppercase tracking-wider">
+                            {s.badge}
+                          </span>
+                        ) : null}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Bottom Action Bar with Back button */}
             <div className="pt-6 border-t border-gray-100 flex items-center justify-between">

@@ -13,20 +13,33 @@ export interface Category {
 export interface Service {
   id: string;
   name: string;
+  title?: string;
   slug: string;
-  categoryId: string;
+  categoryId?: string;
   categoryName: string;
+  shortDescription?: string;
   description: string;
-  longDescription: string;
+  fullDescription?: string;
+  longDescription?: string;
   features: string[];
   price: number;
-  originalPrice: number;
+  originalPrice?: number;
+  discountPrice?: number;
   duration: string;
-  rating: number;
-  reviewCount: number;
+  rating?: number;
+  reviewCount?: number;
   image: string;
-  popular: boolean;
-  tags: string[];
+  icon?: string;
+  badge?: string;
+  featured?: boolean;
+  popular?: boolean;
+  is_active?: boolean;
+  active?: boolean;
+  sortOrder?: number;
+  availableCities?: string[];
+  tags?: string[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Professional {

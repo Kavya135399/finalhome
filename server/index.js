@@ -139,6 +139,57 @@ const db = new sqlite3.Database(dbFile, (err) => {
       `);
       db.run("ALTER TABLE users ADD COLUMN mobile TEXT DEFAULT ''", () => {});
       db.run("ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0", () => {});
+
+      db.run(`
+        CREATE TABLE IF NOT EXISTS service_categories (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          slug TEXT NOT NULL,
+          icon TEXT DEFAULT 'Wrench',
+          color TEXT DEFAULT 'from-brand-400 to-brand-600',
+          description TEXT
+        )
+      `);
+      db.run(`
+        CREATE TABLE IF NOT EXISTS services (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          slug TEXT,
+          short_description TEXT,
+          description TEXT NOT NULL,
+          category_id TEXT,
+          categoryName TEXT NOT NULL,
+          service_type TEXT DEFAULT 'standard',
+          price REAL NOT NULL,
+          original_price REAL,
+          duration TEXT DEFAULT '60 min',
+          image TEXT NOT NULL,
+          icon TEXT DEFAULT 'Wrench',
+          badge TEXT DEFAULT '',
+          featured INTEGER DEFAULT 0,
+          popular INTEGER DEFAULT 0,
+          is_active INTEGER DEFAULT 1,
+          sort_order INTEGER DEFAULT 0,
+          available_cities TEXT,
+          tags TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT
+        )
+      `);
+      db.run("ALTER TABLE services ADD COLUMN slug TEXT", () => {});
+      db.run("ALTER TABLE services ADD COLUMN short_description TEXT", () => {});
+      db.run("ALTER TABLE services ADD COLUMN category_id TEXT", () => {});
+      db.run("ALTER TABLE services ADD COLUMN service_type TEXT DEFAULT 'standard'", () => {});
+      db.run("ALTER TABLE services ADD COLUMN original_price REAL", () => {});
+      db.run("ALTER TABLE services ADD COLUMN icon TEXT DEFAULT 'Wrench'", () => {});
+      db.run("ALTER TABLE services ADD COLUMN badge TEXT DEFAULT ''", () => {});
+      db.run("ALTER TABLE services ADD COLUMN featured INTEGER DEFAULT 0", () => {});
+      db.run("ALTER TABLE services ADD COLUMN popular INTEGER DEFAULT 0", () => {});
+      db.run("ALTER TABLE services ADD COLUMN is_active INTEGER DEFAULT 1", () => {});
+      db.run("ALTER TABLE services ADD COLUMN sort_order INTEGER DEFAULT 0", () => {});
+      db.run("ALTER TABLE services ADD COLUMN available_cities TEXT", () => {});
+      db.run("ALTER TABLE services ADD COLUMN tags TEXT", () => {});
+      db.run("ALTER TABLE services ADD COLUMN updated_at TEXT", () => {});
       db.run(`
         CREATE TABLE IF NOT EXISTS logs (
           id TEXT PRIMARY KEY,
@@ -1240,132 +1291,381 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
   res.json({ url: imageUrl, filename: req.file.filename });
 });
 
+// Helper function to format service records consistently
+const formatServiceRecord = async (s) => {
+  if (!s) return null;
+  const featuresRows = await dbAll('SELECT feature FROM service_features WHERE service_id = ?', [s.id]);
+  let parsedTags = [];
+  try {
+    parsedTags = typeof s.tags === 'string' ? JSON.parse(s.tags || '[]') : (s.tags || []);
+  } catch (e) {
+    parsedTags = [];
+  }
+  let parsedCities = [];
+  try {
+    parsedCities = typeof s.available_cities === 'string' ? JSON.parse(s.available_cities || '[]') : (s.available_cities || []);
+  } catch (e) {
+    parsedCities = [];
+  }
+
+  return {
+    ...s,
+    id: s.id,
+    name: s.name,
+    title: s.name,
+    slug: s.slug || s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    shortDescription: s.short_description || s.description,
+    description: s.description,
+    fullDescription: s.description,
+    longDescription: s.description,
+    categoryName: s.categoryName || 'Home Repair',
+    categoryId: s.category_id || 'c_default',
+    serviceType: s.service_type || 'standard',
+    price: Number(s.price),
+    originalPrice: Number(s.original_price || Math.round(Number(s.price) * 1.3)),
+    discountPrice: Number(s.original_price || Math.round(Number(s.price) * 1.3)),
+    duration: s.duration || '60 min',
+    image: s.image,
+    icon: s.icon || 'Wrench',
+    badge: s.badge || '',
+    featured: Boolean(s.featured),
+    popular: Boolean(s.popular),
+    is_active: Boolean(s.is_active !== 0),
+    active: Boolean(s.is_active !== 0),
+    sortOrder: Number(s.sort_order || 0),
+    availableCities: parsedCities,
+    tags: parsedTags,
+    features: featuresRows.map(r => r.feature),
+    createdAt: s.created_at,
+    updatedAt: s.updated_at
+  };
+};
+
+// 1. GET Public Active Services
 app.get('/api/services', async (req, res) => {
   try {
-    const services = await dbAll('SELECT * FROM services ORDER BY created_at DESC');
-    // Hydrate features array, parse tags, and map snake_case → camelCase for frontend
-    for (const s of services) {
-      s.features = (await dbAll('SELECT feature FROM service_features WHERE service_id = ?', [s.id])).map(r => r.feature);
-      try { s.tags = JSON.parse(s.tags || '[]'); } catch { s.tags = []; }
-      s.popular = s.popular === 1;
-      // Map snake_case columns to camelCase expected by frontend
-      s.originalPrice = s.original_price ?? s.price;
-      s.reviewCount = s.review_count ?? 0;
-      s.longDescription = s.long_description ?? '';
+    const { category, search } = req.query;
+    let sql = 'SELECT * FROM services WHERE (is_active = 1 OR is_active IS NULL)';
+    const params = [];
+
+    if (category && category !== 'all' && category !== 'All') {
+      sql += ' AND (LOWER(categoryName) = ? OR LOWER(category_id) = ?)';
+      params.push(category.toLowerCase(), category.toLowerCase());
     }
-    res.json(services);
+
+    if (search) {
+      sql += ' AND (LOWER(name) LIKE ? OR LOWER(description) LIKE ? OR LOWER(short_description) LIKE ?)';
+      const sTerm = `%${search.toLowerCase()}%`;
+      params.push(sTerm, sTerm, sTerm);
+    }
+
+    sql += ' ORDER BY sort_order ASC, created_at DESC';
+    const services = await dbAll(sql, params);
+    const formatted = await Promise.all(services.map(formatServiceRecord));
+    res.json(formatted);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+// GET Dynamic Categories
+app.get('/api/categories', async (req, res) => {
+  try {
+    const categoriesFromDb = await dbAll('SELECT * FROM service_categories ORDER BY name ASC');
+    const serviceCategoryNames = await dbAll('SELECT DISTINCT categoryName FROM services WHERE categoryName IS NOT NULL AND categoryName != ""');
+    
+    const dbCatSet = new Set(categoriesFromDb.map(c => c.name));
+    const allCategories = [...categoriesFromDb];
 
-app.post('/api/services', async (req, res) => {
-  const { name, categoryName, description, price, duration, image, features } = req.body;
-  if (!name || !categoryName || !price || !description) {
-    return res.status(400).json({ error: 'Required parameters missing' });
+    for (const row of serviceCategoryNames) {
+      if (!dbCatSet.has(row.categoryName)) {
+        allCategories.push({
+          id: `cat_${row.categoryName.toLowerCase().replace(/\s+/g, '-')}`,
+          name: row.categoryName,
+          slug: row.categoryName.toLowerCase().replace(/\s+/g, '-'),
+          icon: 'Wrench',
+          color: 'from-brand-400 to-brand-600',
+          description: `All ${row.categoryName} services`
+        });
+        dbCatSet.add(row.categoryName);
+      }
+    }
+
+    res.json(allCategories);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. GET Admin All Services (active + inactive)
+app.get('/api/admin/services', async (req, res) => {
+  try {
+    const { category, status, search } = req.query;
+    let sql = 'SELECT * FROM services WHERE 1=1';
+    const params = [];
+
+    if (category && category !== 'all' && category !== 'All') {
+      sql += ' AND LOWER(categoryName) = ?';
+      params.push(category.toLowerCase());
+    }
+
+    if (status === 'active') {
+      sql += ' AND (is_active = 1 OR is_active IS NULL)';
+    } else if (status === 'inactive') {
+      sql += ' AND is_active = 0';
+    }
+
+    if (search) {
+      sql += ' AND (LOWER(name) LIKE ? OR LOWER(description) LIKE ? OR LOWER(categoryName) LIKE ?)';
+      const sTerm = `%${search.toLowerCase()}%`;
+      params.push(sTerm, sTerm, sTerm);
+    }
+
+    sql += ' ORDER BY sort_order ASC, created_at DESC';
+    const services = await dbAll(sql, params);
+    const formatted = await Promise.all(services.map(formatServiceRecord));
+    res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. GET Single Service by ID
+app.get('/api/admin/services/:id', async (req, res) => {
+  try {
+    const service = await dbGet('SELECT * FROM services WHERE id = ?', [req.params.id]);
+    if (!service) return res.status(404).json({ error: 'Service not found' });
+    const formatted = await formatServiceRecord(service);
+    res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/services/:id', async (req, res) => {
+  try {
+    const service = await dbGet('SELECT * FROM services WHERE id = ?', [req.params.id]);
+    if (!service) return res.status(404).json({ error: 'Service not found' });
+    const formatted = await formatServiceRecord(service);
+    res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 4. POST Create Service (Admin + Standard)
+const handleCreateService = async (req, res) => {
+  const {
+    name, title, categoryName, shortDescription, description, fullDescription,
+    price, discountPrice, originalPrice, duration, image, icon, badge,
+    featured, popular, active, is_active, sortOrder, tags, features, availableCities
+  } = req.body;
+
+  const finalName = name || title;
+  const finalCategory = categoryName || 'Home Repair';
+  const finalPrice = Number(price);
+  const finalDesc = description || fullDescription || shortDescription || '';
+
+  if (!finalName || !finalCategory || isNaN(finalPrice)) {
+    return res.status(400).json({ error: 'Service name, category, and valid price are required' });
   }
 
   try {
-    let cat = await dbGet('SELECT * FROM service_categories WHERE LOWER(name) = ?', [categoryName.toLowerCase()]);
+    let cat = await dbGet('SELECT * FROM service_categories WHERE LOWER(name) = ?', [finalCategory.toLowerCase()]);
     let categoryId = cat ? cat.id : `c_${Date.now()}`;
 
     if (!cat) {
       await dbRun(
         'INSERT INTO service_categories (id, name, slug, icon, color, description) VALUES (?, ?, ?, ?, ?, ?)',
-        [categoryId, categoryName, categoryName.toLowerCase().replace(/\s+/g, '-'), 'Wrench', 'from-brand-400 to-brand-600', `All ${categoryName} services`]
+        [categoryId, finalCategory, finalCategory.toLowerCase().replace(/\s+/g, '-'), icon || 'Wrench', 'from-brand-400 to-brand-600', `All ${finalCategory} services`]
       );
     }
 
     const serviceId = `s_${Date.now()}`;
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    
+    const slug = finalName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const finalOrigPrice = Number(originalPrice || discountPrice || Math.round(finalPrice * 1.3));
+    const activeVal = active !== undefined ? (active ? 1 : 0) : (is_active !== undefined ? (is_active ? 1 : 0) : 1);
+    const tagsStr = Array.isArray(tags) ? JSON.stringify(tags) : (typeof tags === 'string' ? JSON.stringify(tags.split(',').map(t=>t.trim())) : '[]');
+    const citiesStr = Array.isArray(availableCities) ? JSON.stringify(availableCities) : '[]';
+
     await dbRun(
-      'INSERT INTO services (id, name, slug, category_id, categoryName, description, price, original_price, duration, image, popular, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      `INSERT INTO services (
+        id, name, slug, short_description, description, category_id, categoryName, category_name,
+        service_type, price, original_price, duration, image, icon, badge,
+        featured, popular, is_active, sort_order, available_cities, tags, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         serviceId,
-        name,
+        finalName,
         slug,
+        shortDescription || finalDesc.slice(0, 120),
+        finalDesc,
         categoryId,
-        categoryName,
-        description,
-        Number(price),
-        Math.round(Number(price) * 1.3),
+        finalCategory,
+        finalCategory,
+        'standard',
+        finalPrice,
+        finalOrigPrice,
         duration || '60 min',
-        image || 'https://images.pexels.com/photos/4239034/pexels-photo-4239034.jpeg?auto=compress&cs=tinysrgb&w=800&h=600&fit=crop',
-        0,
+        image || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=400',
+        icon || 'Wrench',
+        badge || '',
+        featured ? 1 : 0,
+        popular ? 1 : 0,
+        activeVal,
+        Number(sortOrder || 0),
+        citiesStr,
+        tagsStr,
+        new Date().toISOString(),
         new Date().toISOString()
       ]
     );
 
     // Save Features
-    const featuresList = features || ['Verified helper', 'Quality guarantee'];
+    const featuresList = Array.isArray(features) ? features : ['Verified Professional', 'Quality Satisfaction Guarantee'];
     for (const feat of featuresList) {
-      await dbRun('INSERT INTO service_features (id, service_id, feature) VALUES (?, ?, ?)', [
-        `sf_${Date.now()}_${Math.random().toString().slice(-4)}`,
-        serviceId,
-        feat
-      ]);
+      if (feat && feat.trim()) {
+        await dbRun('INSERT INTO service_features (id, service_id, feature) VALUES (?, ?, ?)', [
+          `sf_${Date.now()}_${Math.random().toString().slice(-4)}`,
+          serviceId,
+          feat.trim()
+        ]);
+      }
     }
 
-    await addAuditLog('admin', 'Admin Panel', 'Add Service', `Added catalog service ${name}`);
+    await addAuditLog('admin', 'Admin Panel', 'Add Service', `Added catalog service ${finalName}`);
     
     const created = await dbGet('SELECT * FROM services WHERE id = ?', [serviceId]);
-    if (created) {
-      created.originalPrice = created.original_price ?? created.price;
-      created.reviewCount = created.review_count ?? 0;
-      created.features = (await dbAll('SELECT feature FROM service_features WHERE service_id = ?', [serviceId])).map(r => r.feature);
-    }
-    res.json(created);
+    const formatted = await formatServiceRecord(created);
+    res.status(201).json(formatted);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+};
 
-app.put('/api/services/:id', async (req, res) => {
+app.post('/api/services', handleCreateService);
+app.post('/api/admin/services', handleCreateService);
+
+// 5. PUT Update Service (Admin + Standard)
+const handleUpdateService = async (req, res) => {
   const { id } = req.params;
-  const { name, categoryName, description, price, duration, image } = req.body;
+  const {
+    name, title, categoryName, shortDescription, description, fullDescription,
+    price, discountPrice, originalPrice, duration, image, icon, badge,
+    featured, popular, active, is_active, sortOrder, tags, features
+  } = req.body;
 
   try {
     const service = await dbGet('SELECT * FROM services WHERE id = ?', [id]);
     if (!service) return res.status(404).json({ error: 'Service not found' });
 
-    let sql = 'UPDATE services SET name = ?, categoryName = ?, description = ?, price = ?, original_price = ?, duration = ?, image = ?, updated_at = ? WHERE id = ?';
-    await dbRun(sql, [
-      name || service.name,
-      categoryName || service.categoryName,
-      description || service.description,
-      price ? Number(price) : service.price,
-      price ? Math.round(Number(price) * 1.3) : service.original_price,
-      duration || service.duration,
-      image || service.image,
-      new Date().toISOString(),
-      id
-    ]);
+    const finalName = name || title || service.name;
+    const finalCategory = categoryName || service.categoryName;
+    const finalPrice = price ? Number(price) : service.price;
+    const finalDesc = description || fullDescription || shortDescription || service.description;
+    const activeVal = active !== undefined ? (active ? 1 : 0) : (is_active !== undefined ? (is_active ? 1 : 0) : service.is_active);
 
-    await addAuditLog('admin', 'Admin Panel', 'Edit Service', `Updated catalog service ${name || service.name}`);
-    const updated = await dbGet('SELECT * FROM services WHERE id = ?', [id]);
-    if (updated) {
-      updated.originalPrice = updated.original_price ?? updated.price;
-      updated.reviewCount = updated.review_count ?? 0;
-      updated.features = (await dbAll('SELECT feature FROM service_features WHERE service_id = ?', [id])).map(r => r.feature);
+    const tagsStr = tags !== undefined
+      ? (Array.isArray(tags) ? JSON.stringify(tags) : JSON.stringify(String(tags).split(',').map(t=>t.trim())))
+      : service.tags;
+
+    await dbRun(
+      `UPDATE services SET
+        name = ?, categoryName = ?, category_name = ?, short_description = ?, description = ?,
+        price = ?, original_price = ?, duration = ?, image = ?, icon = ?,
+        badge = ?, featured = ?, popular = ?, is_active = ?, sort_order = ?,
+        tags = ?, updated_at = ?
+      WHERE id = ?`,
+      [
+        finalName,
+        finalCategory,
+        finalCategory,
+        shortDescription || finalDesc.slice(0, 120),
+        finalDesc,
+        finalPrice,
+        originalPrice || discountPrice ? Number(originalPrice || discountPrice) : service.original_price,
+        duration || service.duration,
+        image || service.image,
+        icon || service.icon || 'Wrench',
+        badge !== undefined ? badge : service.badge,
+        featured !== undefined ? (featured ? 1 : 0) : service.featured,
+        popular !== undefined ? (popular ? 1 : 0) : service.popular,
+        activeVal,
+        sortOrder !== undefined ? Number(sortOrder) : service.sort_order,
+        tagsStr,
+        new Date().toISOString(),
+        id
+      ]
+    );
+
+    // Features Update if provided
+    if (Array.isArray(features)) {
+      await dbRun('DELETE FROM service_features WHERE service_id = ?', [id]);
+      for (const feat of features) {
+        if (feat && feat.trim()) {
+          await dbRun('INSERT INTO service_features (id, service_id, feature) VALUES (?, ?, ?)', [
+            `sf_${Date.now()}_${Math.random().toString().slice(-4)}`,
+            id,
+            feat.trim()
+          ]);
+        }
+      }
     }
-    res.json(updated);
+
+    await addAuditLog('admin', 'Admin Panel', 'Edit Service', `Updated catalog service ${finalName}`);
+    const updated = await dbGet('SELECT * FROM services WHERE id = ?', [id]);
+    const formatted = await formatServiceRecord(updated);
+    res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+app.put('/api/services/:id', handleUpdateService);
+app.put('/api/admin/services/:id', handleUpdateService);
+
+// 6. PATCH Toggle Status / Featured / Popular / SortOrder
+app.patch('/api/admin/services/:id/toggle', async (req, res) => {
+  const { id } = req.params;
+  const { is_active, active, featured, popular, sort_order, sortOrder } = req.body;
+
+  try {
+    const service = await dbGet('SELECT * FROM services WHERE id = ?', [id]);
+    if (!service) return res.status(404).json({ error: 'Service not found' });
+
+    const newActive = is_active !== undefined ? (is_active ? 1 : 0) : (active !== undefined ? (active ? 1 : 0) : service.is_active);
+    const newFeatured = featured !== undefined ? (featured ? 1 : 0) : service.featured;
+    const newPopular = popular !== undefined ? (popular ? 1 : 0) : service.popular;
+    const newSortOrder = sortOrder !== undefined ? Number(sortOrder) : (sort_order !== undefined ? Number(sort_order) : service.sort_order);
+
+    await dbRun(
+      'UPDATE services SET is_active = ?, featured = ?, popular = ?, sort_order = ?, updated_at = ? WHERE id = ?',
+      [newActive, newFeatured, newPopular, newSortOrder, new Date().toISOString(), id]
+    );
+
+    const updated = await dbGet('SELECT * FROM services WHERE id = ?', [id]);
+    const formatted = await formatServiceRecord(updated);
+    res.json(formatted);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.delete('/api/services/:id', async (req, res) => {
+// 7. DELETE Service (Admin + Standard)
+const handleDeleteService = async (req, res) => {
   const { id } = req.params;
   try {
     await dbRun('DELETE FROM services WHERE id = ?', [id]);
+    await dbRun('DELETE FROM service_features WHERE service_id = ?', [id]);
     await addAuditLog('admin', 'Admin Panel', 'Delete Service', `Removed service catalog ID ${id}`);
-    res.json({ success: true });
+    res.json({ success: true, message: 'Service deleted successfully', id });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+};
+
+app.delete('/api/services/:id', handleDeleteService);
+app.delete('/api/admin/services/:id', handleDeleteService);
 
 app.post('/api/services/:id/duplicate', async (req, res) => {
   const { id } = req.params;
@@ -1375,29 +1675,54 @@ app.post('/api/services/:id/duplicate', async (req, res) => {
 
     const serviceId = `s_${Date.now()}`;
     const name = `${service.name} (Copy)`;
-    const slug = `${service.slug}-copy-${Date.now().toString().slice(-4)}`;
+    const slug = `${service.slug || 'svc'}-copy-${Date.now().toString().slice(-4)}`;
 
     await dbRun(
-      'INSERT INTO services (id, name, slug, category_id, categoryName, description, price, original_price, duration, image, popular, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      `INSERT INTO services (
+        id, name, slug, short_description, description, category_id, categoryName,
+        service_type, price, original_price, duration, image, icon, badge,
+        featured, popular, is_active, sort_order, available_cities, tags, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         serviceId,
         name,
         slug,
+        service.short_description,
+        service.description,
         service.category_id,
         service.categoryName,
-        service.description,
+        service.service_type || 'standard',
         service.price,
         service.original_price,
         service.duration,
         service.image,
-        0,
+        service.icon || 'Wrench',
+        service.badge || '',
+        service.featured || 0,
+        service.popular || 0,
+        service.is_active !== 0 ? 1 : 0,
+        (service.sort_order || 0) + 1,
+        service.available_cities,
+        service.tags,
+        new Date().toISOString(),
         new Date().toISOString()
       ]
     );
 
-    await addAuditLog(req.user.id, 'Admin Panel', 'Duplicate Service', `Duplicated catalog service ${service.name}`);
+    // Copy Features
+    const featuresRows = await dbAll('SELECT feature FROM service_features WHERE service_id = ?', [id]);
+    for (const f of featuresRows) {
+      await dbRun('INSERT INTO service_features (id, service_id, feature) VALUES (?, ?, ?)', [
+        `sf_${Date.now()}_${Math.random().toString().slice(-4)}`,
+        serviceId,
+        f.feature
+      ]);
+    }
+
+    await addAuditLog('admin', 'Admin Panel', 'Duplicate Service', `Duplicated catalog service ${service.name}`);
     const created = await dbGet('SELECT * FROM services WHERE id = ?', [serviceId]);
-    res.json(created);
+    const formatted = await formatServiceRecord(created);
+    res.json(formatted);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
