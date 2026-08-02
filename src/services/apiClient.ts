@@ -503,6 +503,10 @@ export const apiClient = {
     const res = await api.get('/analytics');
     return res.data;
   },
+  async trackVisitor(data: { visitorId: string; path: string; referrer?: string; userName?: string }) {
+    const res = await api.post('/analytics/track', data).catch(() => ({ data: null }));
+    return res.data;
+  },
 
   // 20. Promos & Offers Management
   async getPromos() {

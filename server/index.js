@@ -56,6 +56,15 @@ const upload = multer({
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
+let liveOnlineConnections = 0;
+io.on('connection', (socket) => {
+  liveOnlineConnections++;
+  io.emit('live_visitors', liveOnlineConnections);
+  socket.on('disconnect', () => {
+    liveOnlineConnections = Math.max(0, liveOnlineConnections - 1);
+    io.emit('live_visitors', liveOnlineConnections);
+  });
+});
 app.use((req, res, next) => { req.io = io; next(); });
 
 app.use(cors({
@@ -3326,27 +3335,86 @@ app.get('/api/analytics', authenticateToken, async (req, res) => {
   try {
     const visitors = await dbAll('SELECT * FROM visitors ORDER BY last_visit DESC');
     const uniqueVisitors = visitors.length;
-    const totalVisitors = visitors.reduce((acc, v) => acc + v.visit_count, 0);
+    const totalVisitors = visitors.reduce((acc, v) => acc + (Number(v.visit_count) || 1), 0);
     const returningVisitors = visitors.filter(v => v.visit_count > 1).length;
     
-    // Revenue stats
-    const orders = await dbAll("SELECT * FROM store_orders WHERE status = 'paid'");
-    const revenue = orders.reduce((acc, o) => acc + (Number(o.amount) || 0), 0);
+    const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const recentActive = visitors.filter(v => v.last_visit && v.last_visit >= fifteenMinsAgo).length;
+    const onlineCount = Math.max(liveOnlineConnections || 0, recentActive);
+
+    const orders = await dbAll("SELECT * FROM store_orders");
+    const revenue = orders.reduce((acc, o) => {
+      if (o.status === 'paid' || o.payment_status === 'PAID' || o.payment_method === 'COD') {
+        return acc + (Number(o.amount) || 0);
+      }
+      return acc;
+    }, 0);
     
-    // Top Services
     const bookings = await dbAll("SELECT * FROM bookings");
-    
+    const bookingsRev = bookings.reduce((acc, b) => acc + (Number(b.price) || Number(b.amount) || 0), 0);
+
     res.json({
       visitors,
       totalVisitors,
       uniqueVisitors,
       returningVisitors,
-      onlineVisitors,
-      totalRevenue: revenue,
-      totalBookings: bookings.length
+      onlineVisitors: onlineCount,
+      totalRevenue: revenue + bookingsRev,
+      totalBookings: (bookings?.length || 0) + (orders?.length || 0)
     });
   } catch(err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/analytics/track', async (req, res) => {
+  try {
+    const { visitorId, path, referrer, userName } = req.body;
+    const id = visitorId || crypto.randomUUID();
+    
+    const rawIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip || 'Direct Web Visitor';
+    let ip = rawIp.split(',')[0].trim();
+    if (ip === '::1' || ip === '::ffff:127.0.0.1' || ip === '127.0.0.1') {
+      ip = '127.0.0.1 (Local System)';
+    }
+
+    const uaString = req.headers['user-agent'] || '';
+    const parser = new UAParser(uaString);
+    const result = parser.getResult();
+    
+    const browser = result.browser.name || 'Web Browser';
+    const os = result.os.name || 'Operating System';
+    const device = result.device.type === 'mobile' ? 'Mobile' : result.device.type === 'tablet' ? 'Tablet' : 'Desktop';
+
+    let country = 'India';
+    let city = 'Local Network / Direct';
+    if (!ip.includes('Local System') && !ip.startsWith('192.168.') && !ip.startsWith('10.')) {
+      city = 'Web Client';
+    }
+
+    const cleanReferrer = referrer || 'Direct / Bookmark';
+    const now = new Date().toISOString();
+    const cleanUserName = userName || 'Website Visitor';
+
+    try { await dbRun("ALTER TABLE visitors ADD COLUMN user_name TEXT DEFAULT ''"); } catch(e){}
+    try { await dbRun("ALTER TABLE visitors ADD COLUMN last_path TEXT DEFAULT '/'"); } catch(e){}
+
+    const existing = await dbGet('SELECT * FROM visitors WHERE id = ? OR ip = ?', [id, ip]);
+    if (existing) {
+      await dbRun(
+        'UPDATE visitors SET visit_count = visit_count + 1, last_visit = ?, referrer = ?, user_name = ?, last_path = ? WHERE id = ?',
+        [now, cleanReferrer, cleanUserName !== 'Website Visitor' ? cleanUserName : existing.user_name || 'Website Visitor', path || '/', existing.id]
+      );
+    } else {
+      await dbRun(
+        'INSERT INTO visitors (id, ip, country, state, city, browser, device, os, referrer, last_visit, visit_count, user_name, last_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, ip, country, '', city, browser, device, os, cleanReferrer, now, 1, cleanUserName, path || '/']
+      );
+    }
+
+    res.json({ success: true });
+  } catch(err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

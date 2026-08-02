@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, ScrollRestoration, Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -31,6 +31,29 @@ export function RootLayout() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Real-World Client Web Traffic Tracking
+    // Whenever any real visitor navigates any route on the website, silently track session in backend DB
+    const trackVisitor = async () => {
+      try {
+        let visitorId = localStorage.getItem('hs_visitor_id');
+        if (!visitorId) {
+          visitorId = `vis_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+          localStorage.setItem('hs_visitor_id', visitorId);
+        }
+        await apiClient.trackVisitor({
+          visitorId,
+          path: location.pathname,
+          referrer: document.referrer || 'Direct / Bookmark',
+          userName: user?.name || user?.email || 'Website Visitor',
+        });
+      } catch (err) {
+        // Silently ignore if offline
+      }
+    };
+    trackVisitor();
+  }, [location.pathname, user]);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
