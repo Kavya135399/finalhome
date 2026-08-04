@@ -15,20 +15,58 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 
-const BookingPage = lazy(() => import('./pages/BookingPage').then((m) => ({ default: m.BookingPage })));
-const DashboardPage = lazy(() => import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })));
-const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })));
-const ProfessionalDashboardPage = lazy(() => import('./pages/ProfessionalDashboardPage').then((m) => ({ default: m.ProfessionalDashboardPage })));
-const TaxiBookingPage = lazy(() => import('./pages/TaxiBookingPage').then((m) => ({ default: m.TaxiBookingPage })));
-const StorePage = lazy(() => import('./pages/StorePage').then((m) => ({ default: m.StorePage })));
-const CateringPage = lazy(() => import('./pages/CateringPage').then((m) => ({ default: m.CateringPage })));
-const MealsPage = lazy(() => import('./pages/MealsPage').then((m) => ({ default: m.MealsPage })));
-const StoreMyOrdersPage = lazy(() => import('./pages/StoreMyOrdersPage').then((m) => ({ default: m.StoreMyOrdersPage })));
-const StoreOrderTrackingPage = lazy(() => import('./pages/StoreOrderTrackingPage').then((m) => ({ default: m.StoreOrderTrackingPage })));
-const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage').then((m) => ({ default: m.PaymentSuccessPage })));
-const PaymentFailedPage = lazy(() => import('./pages/PaymentFailedPage').then((m) => ({ default: m.PaymentFailedPage })));
-const MembershipsPage = lazy(() => import('./pages/MembershipsPage').then((m) => ({ default: m.MembershipsPage })));
-const MembershipsInfoPage = lazy(() => import('./pages/MembershipsInfoPage').then((m) => ({ default: m.MembershipsInfoPage })));
+function safeLazy<T extends { [key: string]: any }>(
+  importFn: () => Promise<T>,
+  exportName: keyof T
+) {
+  return lazy(() =>
+    importFn()
+      .then((m) => {
+        sessionStorage.removeItem('chunk_reload_retry');
+        return { default: m[exportName] };
+      })
+      .catch((err) => {
+        console.warn(`Dynamic import failed for ${String(exportName)}, auto-reloading:`, err);
+        // Automatically reload page seamlessly on HMR chunk mismatch
+        window.location.reload();
+        return new Promise(() => {});
+      })
+  );
+}
+
+const BookingPage = safeLazy(() => import('./pages/BookingPage'), 'BookingPage');
+const DashboardPage = safeLazy(() => import('./pages/DashboardPage'), 'DashboardPage');
+const AdminDashboardPage = safeLazy(() => import('./pages/AdminDashboardPage'), 'AdminDashboardPage');
+const ProfessionalDashboardPage = safeLazy(() => import('./pages/ProfessionalDashboardPage'), 'ProfessionalDashboardPage');
+const TaxiBookingPage = safeLazy(() => import('./pages/TaxiBookingPage'), 'TaxiBookingPage');
+const StorePage = safeLazy(() => import('./pages/StorePage'), 'StorePage');
+const CateringPage = safeLazy(() => import('./pages/CateringPage'), 'CateringPage');
+const MealsPage = safeLazy(() => import('./pages/MealsPage'), 'MealsPage');
+const StoreMyOrdersPage = safeLazy(() => import('./pages/StoreMyOrdersPage'), 'StoreMyOrdersPage');
+const StoreOrderTrackingPage = safeLazy(() => import('./pages/StoreOrderTrackingPage'), 'StoreOrderTrackingPage');
+const PaymentSuccessPage = safeLazy(() => import('./pages/PaymentSuccessPage'), 'PaymentSuccessPage');
+const PaymentFailedPage = safeLazy(() => import('./pages/PaymentFailedPage'), 'PaymentFailedPage');
+const MembershipsPage = safeLazy(() => import('./pages/MembershipsPage'), 'MembershipsPage');
+const MembershipsInfoPage = safeLazy(() => import('./pages/MembershipsInfoPage'), 'MembershipsInfoPage');
+
+function RouteErrorBoundary() {
+  useEffect(() => {
+    // Automatically reload silently when module update is detected
+    const timer = setTimeout(() => {
+      window.location.reload();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-gray-50 dark:bg-slate-950">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-10 h-10 border-4 border-brand-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm font-bold text-gray-600 dark:text-gray-300">Updating application with latest changes...</p>
+      </div>
+    </div>
+  );
+}
 
 function SuspenseWrap({ children }: { children: ReactNode }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
@@ -48,6 +86,7 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <RootLayout />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <HomePage /> },
       { path: 'services', element: <ServicesPage /> },

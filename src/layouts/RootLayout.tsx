@@ -25,12 +25,25 @@ import { useToast } from '../context/ToastContext';
 import { useNotifications } from '../context/NotificationContext';
 import { apiClient } from '../services/apiClient';
 
+function getAvatarSrc(avatarUrl?: string) {
+  if (!avatarUrl) return '';
+  if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://') || avatarUrl.startsWith('data:')) {
+    return avatarUrl;
+  }
+  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const base = backendUrl.replace(/\/+$/, '');
+  const rel = avatarUrl.startsWith('/') ? avatarUrl : `/${avatarUrl}`;
+  return `${base}${rel}`;
+}
+
 export function RootLayout() {
   const { user, signOut, updateUser } = useAuth();
   const { toast } = useToast();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const headerAvatarSrc = getAvatarSrc(user?.avatar);
 
   useEffect(() => {
     // Real-World Client Web Traffic Tracking
@@ -134,7 +147,6 @@ export function RootLayout() {
     else if (tab === 'favorites') pageTitle = 'My Favorites';
     else if (tab === 'addresses') pageTitle = 'My Addresses';
     else if (tab === 'notifications') pageTitle = 'Notifications';
-    else if (tab === 'wallet') pageTitle = 'My Wallet';
     else if (tab === 'profile') pageTitle = 'Profile Settings';
     else pageTitle = 'My Dashboard';
   } else if (pathname === '/pro/dashboard') pageTitle = 'Pro Panel';
@@ -298,8 +310,8 @@ export function RootLayout() {
                     className="w-8 h-8 rounded-full border border-gray-200 dark:border-slate-700 flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800 transition active-scale relative overflow-hidden focus:outline-none"
                     aria-label="Profile menu"
                   >
-                    {user?.avatar ? (
-                      <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                    {headerAvatarSrc ? (
+                      <img src={headerAvatarSrc} alt="Avatar" className="w-full h-full rounded-full object-cover" />
                     ) : (
                       <UserIcon className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                     )}
@@ -429,8 +441,8 @@ export function RootLayout() {
                 {user && (
                   <div className="p-4 bg-brand-50/55 dark:bg-slate-800/50 rounded-2xl mb-2 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full border border-gray-200 dark:border-slate-700 overflow-hidden shrink-0 bg-white dark:bg-slate-800 flex items-center justify-center">
-                      {user.avatar ? (
-                        <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                      {headerAvatarSrc ? (
+                        <img src={headerAvatarSrc} alt="Avatar" className="w-full h-full rounded-full object-cover" />
                       ) : (
                         <UserIcon className="w-5 h-5 text-gray-450" />
                       )}

@@ -27,6 +27,7 @@ export const loadRazorpayScript = (): Promise<boolean> => {
 };
 
 export interface PaymentOptions {
+  userId?: string;
   productName: string;
   productId: string;
   amount: number;
@@ -117,6 +118,7 @@ export const processUPIPayment = async (options: PaymentOptions) => {
             gst: orderData.breakdown?.gst || Math.round(options.amount * 0.18),
             discount: options.discount || 0,
             finalAmount: orderData.breakdown?.finalAmount || options.amount,
+            userId: options.userId,
             customerName: options.customerName,
             phoneNumber: options.phoneNumber,
             email: options.email,

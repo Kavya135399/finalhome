@@ -35,6 +35,14 @@ const userSchema = new mongoose.Schema({
     enum: ['pending', 'active', 'suspended'],
     default: 'pending',
   },
+  avatar: {
+    type: String,
+    default: '',
+  },
+  profileImage: {
+    type: String,
+    default: '',
+  },
   createdAt: {
     type: Date,
     default: Date.now,

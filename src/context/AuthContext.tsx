@@ -63,8 +63,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
 
     if (!isSupabaseConfigured) {
-      setLocalUser(readCurrentLocalUser());
-      setLoading(false);
+      const stored = readCurrentLocalUser();
+      setLocalUser(stored);
+      const token = localStorage.getItem('homeseva.token');
+      if (token) {
+        apiClient
+          .getCurrentUser()
+          .then((resData) => {
+            if (resData.success && resData.user && mounted) {
+              setLocalUser(resData.user);
+              saveCurrentLocalUser(resData.user);
+            }
+          })
+          .catch((err) => {
+            console.warn('Failed to fetch user me profile:', err);
+          })
+          .finally(() => {
+            if (mounted) setLoading(false);
+          });
+      } else {
+        setLoading(false);
+      }
       return;
     }
 

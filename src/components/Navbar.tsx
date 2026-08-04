@@ -28,6 +28,17 @@ const navLinks = [
   { to: '/contact', label: 'Contact' },
 ];
 
+function getAvatarSrc(avatarUrl?: string) {
+  if (!avatarUrl) return '';
+  if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://') || avatarUrl.startsWith('data:')) {
+    return avatarUrl;
+  }
+  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const base = backendUrl.replace(/\/+$/, '');
+  const rel = avatarUrl.startsWith('/') ? avatarUrl : `/${avatarUrl}`;
+  return `${base}${rel}`;
+}
+
 export function Navbar() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -36,6 +47,8 @@ export function Navbar() {
   const [city, setCity] = useState('Patan, Gujarat');
   const [cityOpen, setCityOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+
+  const navAvatarSrc = getAvatarSrc(user?.avatar);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -127,8 +140,12 @@ export function Navbar() {
                   onClick={() => setProfileOpen((v) => !v)}
                   className="flex items-center gap-2 pl-1 pr-3 py-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition"
                 >
-                  <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-700 dark:text-brand-300 font-semibold text-sm">
-                    {user.name.charAt(0).toUpperCase()}
+                  <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center text-brand-700 dark:text-brand-300 font-semibold text-sm overflow-hidden shrink-0">
+                    {navAvatarSrc ? (
+                      <img src={navAvatarSrc} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      user.name.charAt(0).toUpperCase()
+                    )}
                   </div>
                   <span className="text-sm font-medium max-w-24 truncate">{user.name}</span>
                   <ChevronDown className={`w-4 h-4 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />

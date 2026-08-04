@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -6,7 +6,6 @@ import {
   Heart,
   MapPin,
   Bell,
-  Wallet,
   Clock,
   XCircle,
   Download,
@@ -18,8 +17,6 @@ import {
   ChevronRight,
   ChevronDown,
   Check,
-  TrendingUp,
-  TrendingDown,
   Wrench,
   Shield,
   User,
@@ -31,6 +28,8 @@ import {
   SlidersHorizontal,
   Sparkles,
   ArrowRight,
+  Camera,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -40,18 +39,104 @@ import { Modal } from '../components/ui/Modal';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { userBookings, savedAddresses, notifications, walletTransactions, services } from '../data/sampleData';
+import { userBookings, savedAddresses, notifications, services } from '../data/sampleData';
 import { apiClient } from '../services/apiClient';
 import type { Booking, SavedAddress } from '../types';
 
-type Tab = 'dashboard' | 'bookings' | 'favorites' | 'addresses' | 'notifications' | 'wallet' | 'profile' | 'edit_profile' | 'food' | 'taxi';
+type Tab = 'dashboard' | 'bookings' | 'favorites' | 'addresses' | 'notifications' | 'profile' | 'edit_profile' | 'food' | 'taxi';
 
 export function DashboardPage() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, updateUser } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = (searchParams.get('tab') as Tab) || 'dashboard';
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [confirmDeleteAvatarModal, setConfirmDeleteAvatarModal] = useState(false);
+  const [avatarTimestamp, setAvatarTimestamp] = useState<number>(Date.now());
+
+  // Formats avatar URL dynamically with cache buster
+  const avatarSrc = useMemo(() => {
+    if (!user?.avatar) return '';
+    const raw = user.avatar;
+    let full = raw;
+    if (!raw.startsWith('http://') && !raw.startsWith('https://') && !raw.startsWith('data:')) {
+      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const base = backendUrl.replace(/\/+$/, '');
+      const rel = raw.startsWith('/') ? raw : `/${raw}`;
+      full = `${base}${rel}`;
+    }
+    return `${full}?t=${avatarTimestamp}`;
+  }, [user?.avatar, avatarTimestamp]);
+
+  // Production-Ready Upload Handler
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input value so re-selecting same file triggers onChange
+    e.target.value = '';
+
+    // Validate MIME Type & Extension (Section 5)
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowedExts = ['.jpg', '.jpeg', '.png', '.webp'];
+    const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+
+    if (!allowedTypes.includes(file.type.toLowerCase()) && !allowedExts.includes(ext)) {
+      toast('Invalid file type! Only JPG, JPEG, PNG, and WEBP image files are allowed.', 'error');
+      return;
+    }
+
+    // Max 5MB Limit
+    if (file.size > 5 * 1024 * 1024) {
+      toast('Image file size exceeds maximum limit of 5MB.', 'error');
+      return;
+    }
+
+    setAvatarLoading(true);
+
+    try {
+      // Call permanent backend API POST /api/users/profile-picture
+      const res = await apiClient.uploadProfilePicture(file);
+      if (res.success && res.user) {
+        setAvatarTimestamp(Date.now());
+        updateUser(res.user);
+        toast(res.message || 'Profile picture uploaded and saved permanently!', 'success');
+      } else {
+        throw new Error(res.error || 'Failed to upload profile picture');
+      }
+    } catch (err: any) {
+      console.error('Avatar Upload Error:', err);
+      const msg = err.response?.data?.error || err.message || 'Upload failed. Please check internet connection.';
+      toast(msg, 'error');
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
+  // Production-Ready Remove Avatar Handler (Section 4)
+  const handleRemoveAvatar = async () => {
+    setAvatarLoading(true);
+    try {
+      const res = await apiClient.removeProfilePicture();
+      if (res.success && res.user) {
+        setAvatarTimestamp(Date.now());
+        updateUser(res.user);
+        toast(res.message || 'Profile picture removed successfully.', 'success');
+      } else {
+        throw new Error(res.error || 'Failed to remove profile picture');
+      }
+    } catch (err: any) {
+      console.error('Avatar Remove Error:', err);
+      const msg = err.response?.data?.error || err.message || 'Failed to remove profile picture.';
+      toast(msg, 'error');
+    } finally {
+      setAvatarLoading(false);
+      setConfirmDeleteAvatarModal(false);
+    }
+  };
 
   const [bookingFilter, setBookingFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,9 +153,23 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (user) {
-      apiClient.getBookings({ userId: user.id })
-        .then((data) => setBookings(data))
-        .catch(() => setBookings(userBookings));
+      apiClient.getBookings({ userId: user.id, email: user.email })
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setBookings(data);
+          } else {
+            setBookings([]);
+          }
+        })
+        .catch(() => {
+          if (user.email === 'vikram@example.com' || user.id === 'usr1') {
+            setBookings(userBookings);
+          } else {
+            setBookings([]);
+          }
+        });
+    } else {
+      setBookings([]);
     }
   }, [user]);
 
@@ -111,7 +210,6 @@ export function DashboardPage() {
   };
 
   const favoriteServices = services.filter((s) => isFavorite(s.id));
-  const walletBalance = walletTransactions.reduce((sum, t) => sum + (t.type === 'credit' ? t.amount : -t.amount), 0);
   const unreadCount = notifList.filter((n) => !n.read).length;
 
   const cancelBooking = async () => {
@@ -157,6 +255,13 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col flex-1 bg-gray-50/60 dark:bg-slate-950 pb-20 min-h-screen">
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/*"
+        className="hidden"
+        onChange={handleAvatarUpload}
+      />
       
       {/* 1. Executive Greeting Hero */}
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 pt-8 pb-6 text-left">
@@ -180,7 +285,6 @@ export function DashboardPage() {
             { id: 'profile', label: 'Personal Info', icon: User },
             { id: 'addresses', label: 'Properties', icon: Building, count: addresses.length },
             { id: 'bookings', label: 'Bookings', icon: Calendar, count: bookings.length },
-            { id: 'wallet', label: 'Transactions & Wallet', icon: Wallet },
             { id: 'favorites', label: 'Memberships & Saved', icon: Shield },
             { id: 'notifications', label: 'Notifications', icon: Bell, count: unreadCount > 0 ? unreadCount : undefined },
             { id: 'food', label: 'Food Arrangements', icon: ChefHat },
@@ -248,16 +352,11 @@ export function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div onClick={() => setTab('bookings')} className="p-6 rounded-3xl border border-gray-200/80 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/40 hover:border-brand-500/40 transition cursor-pointer group">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Active Bookings</p>
                     <p className="text-3xl font-black text-gray-900 dark:text-white mt-2 group-hover:text-brand-600 transition-colors">{bookings.length}</p>
                     <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 mt-3">View Service History →</span>
-                  </div>
-                  <div onClick={() => setTab('wallet')} className="p-6 rounded-3xl border border-gray-200/80 dark:border-slate-800 bg-blue-50/40 dark:bg-slate-800/40 hover:border-brand-500/40 transition cursor-pointer group">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Concierge Wallet</p>
-                    <p className="text-3xl font-black text-brand-600 dark:text-brand-400 mt-2">₹{walletBalance.toLocaleString('en-IN')}</p>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-3">+ Top Up Credits →</span>
                   </div>
                   <div onClick={() => setTab('addresses')} className="p-6 rounded-3xl border border-gray-200/80 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/40 hover:border-brand-500/40 transition cursor-pointer group">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Saved Properties</p>
@@ -545,75 +644,6 @@ export function DashboardPage() {
               </div>
             )}
 
-            {/* 5. WALLET & TRANSACTIONS TAB */}
-            {tab === 'wallet' && (
-              <div className="space-y-8 max-w-4xl">
-                <div className="border-b border-gray-100 dark:border-slate-800 pb-4">
-                  <h2 className="text-xl font-black text-gray-900 dark:text-white">Concierge Wallet & Billing</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Prepaid balances for automated home maintenance and rapid checkout.</p>
-                </div>
-                {/* Balance Hero Card */}
-                <div className="rounded-[2rem] bg-gradient-to-br from-brand-600 via-blue-700 to-indigo-900 p-8 text-white shadow-soft-xl relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-2 text-brand-100 text-xs font-extrabold uppercase tracking-widest">
-                      <Wallet className="w-4 h-4" /> HomeSeva Concierge Balance
-                    </div>
-                    <p className="text-4xl sm:text-5xl font-black tracking-tight mt-2">₹{walletBalance.toLocaleString('en-IN')}</p>
-                    <p className="text-xs text-brand-200 mt-2 font-medium">Credits never expire • Valid across all Patan & Ahmedabad services</p>
-                  </div>
-                  <div className="flex gap-3 relative z-10 w-full sm:w-auto">
-                    <button
-                      className="px-6 py-3.5 bg-white hover:bg-gray-100 text-slate-950 text-xs font-extrabold rounded-2xl shadow transition active-scale flex-1 sm:flex-initial text-center"
-                      onClick={() => toast('Redirecting to secure Payment Gateway...', 'info')}
-                    >
-                      + Top Up Balance
-                    </button>
-                    <button
-                      className="px-6 py-3.5 bg-white/15 hover:bg-white/25 text-white border border-white/20 text-xs font-extrabold rounded-2xl transition flex-1 sm:flex-initial text-center"
-                      onClick={() => toast('Withdraw request initiated', 'info')}
-                    >
-                      Withdraw
-                    </button>
-                  </div>
-                </div>
-
-                {/* Transactions List */}
-                <div className="space-y-3">
-                  <h3 className="font-extrabold text-xs uppercase tracking-wider text-gray-500 mb-4">Transaction History</h3>
-                  <div className="divide-y divide-gray-100 dark:divide-slate-800 border border-gray-200/80 dark:border-slate-800 rounded-3xl p-4 sm:p-6 bg-gray-50/30 dark:bg-slate-800/20">
-                    {walletTransactions.map((t) => (
-                      <div key={t.id} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-                        <div className="flex items-center gap-4">
-                          <div
-                            className={`w-11 h-11 rounded-[1.2rem] flex items-center justify-center shrink-0 ${
-                              t.type === 'credit'
-                                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                : 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
-                            }`}
-                          >
-                            {t.type === 'credit' ? <TrendingUp className="w-5 h-5 stroke-[2.2]" /> : <TrendingDown className="w-5 h-5 stroke-[2.2]" />}
-                          </div>
-                          <div>
-                            <p className="font-black text-sm text-gray-900 dark:text-white leading-snug">{t.description}</p>
-                            <p className="text-xs text-gray-400 mt-0.5 font-medium">
-                              {new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            </p>
-                          </div>
-                        </div>
-                        <span
-                          className={`font-black text-base ${
-                            t.type === 'credit' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white'
-                          }`}
-                        >
-                          {t.type === 'credit' ? '+' : '-'}₹{t.amount.toLocaleString('en-IN')}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* 6. PROFESSIONAL PERSONAL INFO (PROFILE TAB) */}
             {tab === 'profile' && (
               <div className="space-y-8 max-w-5xl">
@@ -633,8 +663,26 @@ export function DashboardPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Left Column: Personal Card */}
                   <div className="lg:col-span-2 p-6 sm:p-8 rounded-[2rem] border border-gray-200/80 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/30 flex flex-col sm:flex-row items-start sm:items-center gap-6 relative overflow-hidden">
-                    <div className="w-24 h-24 rounded-[2.2rem] bg-gradient-to-br from-brand-600 to-blue-800 text-white text-3xl font-black flex items-center justify-center shrink-0 shadow-soft-lg border-2 border-white dark:border-slate-700">
-                      {userName.charAt(0).toUpperCase()}
+                    <div
+                      onClick={() => !avatarLoading && fileInputRef.current?.click()}
+                      className="w-24 h-24 rounded-full bg-gradient-to-br from-brand-600 to-blue-800 text-white text-3xl font-black flex items-center justify-center shrink-0 shadow-soft-lg border-2 border-white dark:border-slate-700 relative group cursor-pointer overflow-hidden"
+                      title="Click to upload new profile picture"
+                    >
+                      {avatarSrc ? (
+                        <img src={avatarSrc} alt={userName} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        userName.charAt(0).toUpperCase()
+                      )}
+                      {avatarLoading ? (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white">
+                          <Loader2 className="w-6 h-6 animate-spin" />
+                        </div>
+                      ) : (
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-extrabold gap-0.5">
+                          <Camera className="w-5 h-5" />
+                          <span>Change</span>
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -644,26 +692,36 @@ export function DashboardPage() {
                         </span>
                       </div>
                       <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">{userEmail}</p>
-                      <div className="pt-2 flex items-center gap-4 text-xs font-bold text-gray-600 dark:text-gray-300">
-                        <span className="capitalize bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-gray-200/80 dark:border-slate-700 shadow-2xs">
-                          Role: {user?.role ?? 'Customer'}
-                        </span>
-                        <span className="bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-gray-200/80 dark:border-slate-700 shadow-2xs">
-                          Patan Home Concierge Tier
-                        </span>
+                      <div className="pt-2 flex items-center gap-2.5 flex-wrap text-xs font-bold">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={avatarLoading}
+                          loading={avatarLoading}
+                          onClick={() => fileInputRef.current?.click()}
+                          className="!rounded-xl !text-xs !py-1.5 !px-3 !font-extrabold flex items-center gap-1.5"
+                        >
+                          <Camera className="w-3.5 h-3.5" /> Upload Photo
+                        </Button>
+                        {user?.avatar && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={avatarLoading}
+                            onClick={() => setConfirmDeleteAvatarModal(true)}
+                            className="!rounded-xl !text-xs !py-1.5 !px-3 !font-extrabold text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-500" /> Remove Photo
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   {/* Right Column: Stat Widgets */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
-                    <div onClick={() => setTab('wallet')} className="p-4 rounded-3xl border border-gray-200/80 dark:border-slate-800 bg-blue-50/50 dark:bg-slate-800/40 flex items-center justify-between cursor-pointer hover:border-brand-400 transition">
-                      <div>
-                        <p className="text-[11px] font-extrabold text-gray-500 uppercase">Wallet Balance</p>
-                        <p className="text-xl font-black text-brand-600 dark:text-brand-400 mt-0.5">₹{walletBalance.toLocaleString('en-IN')}</p>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
-                    </div>
+                  <div className="grid grid-cols-1 gap-3">
                     <div onClick={() => setTab('addresses')} className="p-4 rounded-3xl border border-gray-200/80 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/40 flex items-center justify-between cursor-pointer hover:border-brand-400 transition">
                       <div>
                         <p className="text-[11px] font-extrabold text-gray-500 uppercase">Registered Properties</p>
@@ -720,12 +778,48 @@ export function DashboardPage() {
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Keep your phone number and emergency residential address up to date.</p>
                 </div>
                 <div className="flex items-center gap-6 py-2">
-                  <div className="w-20 h-20 rounded-[2rem] bg-brand-600 text-white flex items-center justify-center text-3xl font-black shadow-soft">
-                    {userName.charAt(0).toUpperCase()}
+                  <div
+                    onClick={() => !avatarLoading && fileInputRef.current?.click()}
+                    className="w-20 h-20 rounded-full bg-brand-600 text-white flex items-center justify-center text-3xl font-black shadow-soft overflow-hidden cursor-pointer relative group"
+                  >
+                    {avatarSrc ? (
+                      <img src={avatarSrc} alt={userName} className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      userName.charAt(0).toUpperCase()
+                    )}
+                    {avatarLoading ? (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                        <Camera className="w-5 h-5" />
+                      </div>
+                    )}
                   </div>
-                  <Button variant="outline" size="sm" className="!rounded-2xl !font-extrabold" onClick={() => toast('Image upload is mockup', 'info')}>
-                    Upload New Avatar
-                  </Button>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={avatarLoading}
+                      loading={avatarLoading}
+                      className="!rounded-2xl !font-extrabold flex items-center gap-2"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Camera className="w-4 h-4" /> Upload New Avatar
+                    </Button>
+                    {user?.avatar && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={avatarLoading}
+                        onClick={() => setConfirmDeleteAvatarModal(true)}
+                        className="!rounded-2xl !font-extrabold text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 flex items-center gap-1.5"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" /> Remove Picture
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-4 pt-2">
@@ -795,22 +889,37 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Booking Cancellation Alert Modal */}
+      {/* Remove Profile Picture Confirmation Modal (Section 4) */}
       <Modal
-        open={!!cancelTarget}
-        onClose={() => setCancelTarget(null)}
-        title="Cancel booking?"
-        footer={
-          <div className="flex justify-end gap-2.5 w-full">
-            <Button variant="ghost" onClick={() => setCancelTarget(null)}>No, Keep</Button>
-            <Button variant="danger" onClick={cancelBooking}>Yes, Cancel</Button>
-          </div>
-        }
+        open={confirmDeleteAvatarModal}
+        onClose={() => !avatarLoading && setConfirmDeleteAvatarModal(false)}
+        title="Remove Profile Picture"
       >
-        <p className="text-xs text-gray-600 dark:text-gray-400 text-left leading-normal">
-          Are you sure you want to cancel booking for <span className="font-bold">{cancelTarget?.serviceName}</span> scheduled on{' '}
-          {cancelTarget && new Date(cancelTarget.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}? Free cancellations permitted up to 2 hours in advance.
-        </p>
+        <div className="space-y-4 text-left py-2">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Are you sure you want to remove your profile picture? This will delete your uploaded picture permanently and restore the default avatar.
+          </p>
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-slate-800">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={avatarLoading}
+              onClick={() => setConfirmDeleteAvatarModal(false)}
+              className="!rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              loading={avatarLoading}
+              onClick={handleRemoveAvatar}
+              className="!rounded-xl flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" /> Confirm & Remove
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* Image 2: Filter Bookings Modal */}
@@ -996,7 +1105,7 @@ function BookingCard({ booking, onCancel }: { booking: Booking; onCancel: () => 
           {booking.status === 'cancelled' ? (
             <div className="p-5 rounded-2xl bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200/80 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2">
               <XCircle className="w-5 h-5 text-rose-500 shrink-0" />
-              <span>This service booking has been cancelled. Refunds or credit notes will be credited to your Concierge Wallet.</span>
+              <span>This service booking has been cancelled. Refunds will be processed to your original payment method.</span>
             </div>
           ) : (
             <>

@@ -65,19 +65,38 @@ export const apiClient = {
     return res.data;
   },
 
-  // 2. Users CRUD
+  // 2. Users CRUD & Profile Picture
+  async getCurrentUser() {
+    const res = await api.get('/users/me');
+    return res.data;
+  },
+
+  async uploadProfilePicture(file: File) {
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await api.post('/users/profile-picture', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
+
+  async removeProfilePicture() {
+    const res = await api.delete('/users/profile-picture');
+    return res.data;
+  },
+
   async getUsers() {
     const res = await api.get('/users');
     return res.data;
   },
 
-  async addUser(userData: any) {
-    const res = await api.post('/users', userData);
+  async updateUser(id: string, userData: any) {
+    const res = await api.put(`/users/${id}`, userData);
     return res.data;
   },
 
-  async updateUser(id: string, userData: any) {
-    const res = await api.put(`/users/${id}`, userData);
+  async addUser(userData: any) {
+    const res = await api.post('/users', userData);
     return res.data;
   },
 
@@ -133,7 +152,7 @@ export const apiClient = {
   },
 
   // 4. Bookings APIs
-  async getBookings(params: { userId?: string; role?: string; name?: string }) {
+  async getBookings(params: { userId?: string; role?: string; name?: string; email?: string }) {
     const res = await api.get('/bookings', { params });
     return res.data;
   },

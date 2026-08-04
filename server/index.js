@@ -35,23 +35,32 @@ connectDB();
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-// Multer setup: store files in server/uploads/
-const storage = multer.diskStorage({
+// Multer avatar upload setup (5MB max, JPG/JPEG/PNG/WEBP only)
+const avatarStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `svc_${Date.now()}${ext}`);
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || '.png';
+    const userId = req.user?.id || 'usr';
+    const cleanId = String(userId).replace(/[^a-zA-Z0-9_-]/g, '');
+    cb(null, `avatar_${cleanId}_${Date.now()}${ext}`);
   },
 });
-const upload = multer({
-  storage,
+
+const avatarUpload = multer({
+  storage: avatarStorage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
   fileFilter: (_req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (allowed.includes(file.mimetype)) cb(null, true);
-    else cb(new Error('Only image files are allowed'));
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowedExts = ['.jpg', '.jpeg', '.png', '.webp'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedTypes.includes(file.mimetype.toLowerCase()) || allowedExts.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid image format. Only JPG, JPEG, PNG, and WEBP files are allowed.'));
+    }
   },
 });
+const upload = avatarUpload;
 
 const app = express();
 const server = http.createServer(app);
@@ -130,9 +139,11 @@ const db = new sqlite3.Database(dbFile, (err) => {
           role TEXT NOT NULL DEFAULT 'customer',
           is_verified INTEGER DEFAULT 0,
           status TEXT NOT NULL DEFAULT 'pending',
+          avatar TEXT DEFAULT '',
           created_at TEXT NOT NULL
         )
       `);
+      db.run("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''", () => {});
       db.run(`
         CREATE TABLE IF NOT EXISTS otps (
           id TEXT PRIMARY KEY,
@@ -904,7 +915,15 @@ app.post('/api/auth/verify-email', async (req, res) => {
     return res.status(200).json({
       success: true,
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, isVerified: true },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isVerified: true,
+        avatar: user.avatar || '',
+        profileImage: user.avatar || '',
+      },
       message: 'Email verified successfully.',
     });
   } catch (err) {
@@ -1061,7 +1080,15 @@ app.post('/api/auth/login', async (req, res) => {
     return res.status(200).json({
       success: true,
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, isVerified: true },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isVerified: true,
+        avatar: user.avatar || '',
+        profileImage: user.avatar || '',
+      },
     });
   } catch (err) {
     console.error('Login Error:', err);
@@ -1230,8 +1257,169 @@ app.post('/api/auth/reset-password', async (req, res) => {
 });
 
 // ==========================================
-// 2. Users Management CRUD
+// 2. Users Management CRUD & PROFILE PICTURE
 // ==========================================
+
+// Get Current Logged In User Profile
+app.get('/api/users/me', authenticateToken, async (req, res) => {
+  try {
+    const user = await dbGet('SELECT id, name, email, role, status, is_verified, avatar FROM users WHERE id = ?', [req.user.id]);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User account not found.' });
+    }
+    return res.status(200).json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        isVerified: Boolean(user.is_verified),
+        avatar: user.avatar || '',
+        profileImage: user.avatar || '',
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Upload Permanent Profile Picture
+app.post('/api/users/profile-picture', authenticateToken, (req, res) => {
+  const uploadSingle = avatarUpload.single('image');
+  uploadSingle(req, res, async (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ success: false, error: 'Image file size exceeds 5MB limit.' });
+        }
+        return res.status(400).json({ success: false, error: err.message });
+      }
+      return res.status(400).json({ success: false, error: err.message || 'Invalid image file.' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No image file uploaded.' });
+    }
+
+    try {
+      const userId = req.user.id;
+      const user = await dbGet('SELECT * FROM users WHERE id = ?', [userId]);
+      if (!user) {
+        return res.status(404).json({ success: false, error: 'User account not found.' });
+      }
+
+      // Delete old avatar file from server storage to prevent orphaned files
+      if (user.avatar && user.avatar.startsWith('/uploads/')) {
+        const oldFileName = path.basename(user.avatar.split('?')[0]);
+        const oldFilePath = path.join(uploadsDir, oldFileName);
+        if (fs.existsSync(oldFilePath)) {
+          try {
+            fs.unlinkSync(oldFilePath);
+          } catch (unlinkErr) {
+            console.warn('[Avatar Cleanup Warning]:', unlinkErr.message);
+          }
+        }
+      }
+
+      const avatarUrl = `/uploads/${req.file.filename}`;
+
+      // Update SQLite DB
+      await dbRun('UPDATE users SET avatar = ? WHERE id = ?', [avatarUrl, userId]);
+
+      // Update MongoDB DB if active
+      try {
+        if (mongoose.connection.readyState === 1) {
+          await User.findByIdAndUpdate(userId, { avatar: avatarUrl, profileImage: avatarUrl });
+        }
+      } catch (mErr) {
+        // ignore fallback mongo error
+      }
+
+      const updatedUser = await dbGet('SELECT id, name, email, role, status, is_verified, avatar FROM users WHERE id = ?', [userId]);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Profile picture uploaded successfully.',
+        avatar: avatarUrl,
+        profileImage: avatarUrl,
+        user: {
+          id: updatedUser.id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          role: updatedUser.role,
+          status: updatedUser.status,
+          isVerified: Boolean(updatedUser.is_verified),
+          avatar: updatedUser.avatar || '',
+          profileImage: updatedUser.avatar || '',
+        },
+      });
+    } catch (dbErr) {
+      console.error('Profile Picture Upload DB Error:', dbErr);
+      return res.status(500).json({ success: false, error: 'Failed to update profile picture in database.' });
+    }
+  });
+});
+
+// Remove Profile Picture
+app.delete('/api/users/profile-picture', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await dbGet('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User account not found.' });
+    }
+
+    // Delete image file from server storage
+    if (user.avatar && user.avatar.startsWith('/uploads/')) {
+      const oldFileName = path.basename(user.avatar.split('?')[0]);
+      const oldFilePath = path.join(uploadsDir, oldFileName);
+      if (fs.existsSync(oldFilePath)) {
+        try {
+          fs.unlinkSync(oldFilePath);
+        } catch (unlinkErr) {
+          console.warn('[Avatar Delete File Warning]:', unlinkErr.message);
+        }
+      }
+    }
+
+    // Clear avatar in SQLite DB
+    await dbRun("UPDATE users SET avatar = '' WHERE id = ?", [userId]);
+
+    // Clear avatar in MongoDB DB
+    try {
+      if (mongoose.connection.readyState === 1) {
+        await User.findByIdAndUpdate(userId, { avatar: '', profileImage: '' });
+      }
+    } catch (mErr) {
+      // ignore fallback mongo error
+    }
+
+    const updatedUser = await dbGet('SELECT id, name, email, role, status, is_verified, avatar FROM users WHERE id = ?', [userId]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile picture removed successfully.',
+      avatar: '',
+      profileImage: '',
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        status: updatedUser.status,
+        isVerified: Boolean(updatedUser.is_verified),
+        avatar: '',
+        profileImage: '',
+      },
+    });
+  } catch (err) {
+    console.error('Remove Profile Picture Error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to remove profile picture.' });
+  }
+});
+
 app.get('/api/users', async (req, res) => {
   try {
     const users = await dbAll('SELECT id, name, email, role, status, created_at FROM users');
@@ -1269,7 +1457,7 @@ app.post('/api/users', authenticateToken, requireRole(['admin']), async (req, re
 
 app.put('/api/users/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { name, email, role, password } = req.body;
+  const { name, email, role, password, avatar } = req.body;
 
   try {
     const user = await dbGet('SELECT * FROM users WHERE id = ?', [id]);
@@ -1277,6 +1465,11 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
 
     let sql = 'UPDATE users SET name = ?, email = ?';
     const params = [name || user.name, email || user.email];
+
+    if (avatar !== undefined) {
+      sql += ', avatar = ?';
+      params.push(avatar);
+    }
 
     if (role && req.user.role === 'admin') {
       sql += ', role = ?';
@@ -1294,7 +1487,7 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
     await dbRun(sql, params);
     await addAuditLog(req.user.id, req.user.role, 'Update User', `Updated details for ${name || user.name}`);
 
-    const updatedUser = await dbGet('SELECT id, name, email, role, status FROM users WHERE id = ?', [id]);
+    const updatedUser = await dbGet('SELECT id, name, email, role, status, avatar FROM users WHERE id = ?', [id]);
     res.json(updatedUser);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1782,7 +1975,7 @@ app.post('/api/services/:id/duplicate', async (req, res) => {
 // 4. Bookings Management CRUD & TIMELINE
 // ==========================================
 app.get('/api/bookings', async (req, res) => {
-  const { userId, role, name } = req.query;
+  const { userId, role, name, email } = req.query;
   try {
     let sql = 'SELECT * FROM bookings';
     const params = [];
@@ -1790,9 +1983,9 @@ app.get('/api/bookings', async (req, res) => {
     if (role === 'professional') {
       sql += ' WHERE professional_name = ?';
       params.push(name);
-    } else if (userId) {
-      sql += ' WHERE user_id = ?';
-      params.push(userId);
+    } else if (userId || email) {
+      sql += ' WHERE user_id = ? OR user_id = ?';
+      params.push(userId || '', email || '');
     }
 
     sql += ' ORDER BY created_at DESC';
