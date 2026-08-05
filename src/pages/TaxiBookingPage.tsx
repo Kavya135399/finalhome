@@ -100,6 +100,50 @@ const packagesData = [
   }
 ];
 
+const todayStr = (() => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+})();
+
+const timeSlots = [
+  '09:00 AM - 10:30 AM',
+  '11:00 AM - 12:30 PM',
+  '01:00 PM - 02:30 PM',
+  '03:00 PM - 04:30 PM',
+  '05:00 PM - 06:30 PM',
+  '07:00 PM - 08:30 PM',
+  '09:00 PM - 10:30 PM',
+];
+
+const getSlotStartTimeIST = (dateStr: string, slotStr: string) => {
+  if (!slotStr) return null;
+  const startPart = slotStr.split(' - ')[0]; // e.g. "09:00 AM"
+  const match = startPart.match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return null;
+  
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const ampm = match[3].toUpperCase();
+  
+  if (ampm === 'PM' && hours < 12) hours += 12;
+  if (ampm === 'AM' && hours === 12) hours = 0;
+  
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const isoStr = `${dateStr}T${pad(hours)}:${pad(minutes)}:00+05:30`;
+  return new Date(isoStr);
+};
+
+const isTaxiSlotInvalid = (dateStr: string, slotStr: string) => {
+  const startTime = getSlotStartTimeIST(dateStr, slotStr);
+  if (!startTime) return true;
+  
+  const now = new Date();
+  return startTime.getTime() <= now.getTime();
+};
+
 export function TaxiBookingPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -116,7 +160,7 @@ export function TaxiBookingPage() {
   const [pickup, setPickup] = useState('');
   const [drop, setDrop] = useState('');
   const [passengers, setPassengers] = useState(1);
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState(todayStr);
   const [time, setTime] = useState('');
   const [luggage, setLuggage] = useState('');
   const [propertyAssociation, setPropertyAssociation] = useState('No property association');
@@ -130,6 +174,12 @@ export function TaxiBookingPage() {
   useEffect(() => {
     fetchVehicles();
   }, []);
+
+  useEffect(() => {
+    if (time && isTaxiSlotInvalid(date, time)) {
+      setTime('');
+    }
+  }, [date]);
 
   const fetchVehicles = async () => {
     try {
@@ -191,6 +241,10 @@ export function TaxiBookingPage() {
     }
     if (!pickup || !drop || !date || !time) {
       toast('Please fill in pickup location, drop destination, date, and pickup time', 'error');
+      return;
+    }
+    if (isTaxiSlotInvalid(date, time)) {
+      toast('Please select a valid future time slot', 'error');
       return;
     }
 
@@ -450,12 +504,31 @@ export function TaxiBookingPage() {
                     <input
                       type="date"
                       value={date}
+                      min={todayStr}
                       onChange={(e) => setDate(e.target.value)}
                       required
                       className="w-full h-11 px-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-750 text-xs text-gray-900 dark:text-white outline-none"
                     />
                   </div>
-                  <Input label="Pickup Time" placeholder="e.g. 05:30 AM" value={time} onChange={(e) => setTime(e.target.value)} required />
+                  <div>
+                    <label className="block text-[9px] uppercase tracking-wider text-gray-400 font-extrabold mb-1.5">Pickup Time Slot</label>
+                    <select
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
+                      required
+                      className="w-full h-11 px-3 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-150 dark:border-slate-750 text-xs text-gray-900 dark:text-white outline-none focus:border-brand-500 transition font-semibold"
+                    >
+                      <option value="">Select Time Slot</option>
+                      {timeSlots.map((slotOption) => {
+                        const disabled = isTaxiSlotInvalid(date, slotOption);
+                        return (
+                          <option key={slotOption} value={slotOption} disabled={disabled}>
+                            {slotOption} {disabled ? '(Unavailable)' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
                 </div>
 
                 <Input label="Luggage Details (Optional)" placeholder="e.g. 2 large bags, 1 handbag" value={luggage} onChange={(e) => setLuggage(e.target.value)} />

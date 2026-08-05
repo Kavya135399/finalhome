@@ -146,10 +146,33 @@ export function DashboardPage() {
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
-  const [addresses, setAddresses] = useState<SavedAddress[]>(savedAddresses);
+  const [addresses, setAddresses] = useState<SavedAddress[]>(() => {
+    try {
+      const stored = localStorage.getItem('homeseva.addresses');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return savedAddresses;
+  });
   const [notifList, setNotifList] = useState(notifications);
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
   const [newAddr, setNewAddr] = useState({ label: '', address: '', city: '', pincode: '' });
+  const [editName, setEditName] = useState(user?.name || '');
+  const [editEmail, setEditEmail] = useState(user?.email || '');
+  const [editPhone, setEditPhone] = useState(user?.phone || '');
+  const [editCity, setEditCity] = useState(user?.city || 'Patan / Ahmedabad');
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  useEffect(() => {
+    if (tab === 'edit_profile' && user) {
+      setEditName(user.name || '');
+      setEditEmail(user.email || '');
+      setEditPhone(user.phone || '');
+      setEditCity(user.city || 'Patan / Ahmedabad');
+    }
+  }, [tab, user]);
 
   useEffect(() => {
     if (user) {
@@ -235,13 +258,17 @@ export function DashboardPage() {
       toast('Please fill all fields', 'error');
       return;
     }
-    setAddresses((prev) => [...prev, { ...newAddr, id: `a${Date.now()}`, isDefault: false }]);
+    const updated = [...addresses, { ...newAddr, id: `a${Date.now()}`, isDefault: false }];
+    setAddresses(updated);
+    localStorage.setItem('homeseva.addresses', JSON.stringify(updated));
     setNewAddr({ label: '', address: '', city: '', pincode: '' });
     toast('Address added', 'success');
   };
 
   const removeAddress = (id: string) => {
-    setAddresses((prev) => prev.filter((a) => a.id !== id));
+    const updated = addresses.filter((a) => a.id !== id);
+    setAddresses(updated);
+    localStorage.setItem('homeseva.addresses', JSON.stringify(updated));
     toast('Address removed', 'success');
   };
 
@@ -823,10 +850,32 @@ export function DashboardPage() {
                 </div>
 
                 <div className="space-y-4 pt-2">
-                  <Input label="Full Name" defaultValue={userName} className="!rounded-xl" />
-                  <Input label="Email Address" defaultValue={userEmail} className="!rounded-xl" />
-                  <Input label="Phone Number" placeholder="+91 98765 43210" className="!rounded-xl" />
-                  <Input label="Primary City" defaultValue="Patan / Ahmedabad" className="!rounded-xl" />
+                  <Input
+                    label="Full Name"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="!rounded-xl"
+                  />
+                  <Input
+                    label="Email Address"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    className="!rounded-xl"
+                    disabled
+                  />
+                  <Input
+                    label="Phone Number"
+                    placeholder="+91 98765 43210"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    className="!rounded-xl"
+                  />
+                  <Input
+                    label="Primary City"
+                    value={editCity}
+                    onChange={(e) => setEditCity(e.target.value)}
+                    className="!rounded-xl"
+                  />
                 </div>
                 
                 <div className="flex gap-4 mt-8 pt-4 border-t border-gray-100 dark:border-slate-800">
@@ -837,9 +886,31 @@ export function DashboardPage() {
                     size="sm"
                     className="!px-10 !py-3 !rounded-[1.2rem] !font-extrabold"
                     leftIcon={<Check className="w-4.5 h-4.5" />}
-                    onClick={() => {
-                      toast('Profile updated successfully', 'success');
-                      setTab('profile');
+                    loading={savingProfile}
+                    disabled={savingProfile}
+                    onClick={async () => {
+                      if (!user) return;
+                      setSavingProfile(true);
+                      try {
+                        await apiClient.updateUser(user.id, {
+                          name: editName,
+                          email: editEmail,
+                          phone: editPhone,
+                          city: editCity,
+                        });
+                        updateUser({
+                          name: editName,
+                          email: editEmail,
+                          phone: editPhone,
+                          city: editCity,
+                        });
+                        toast('Profile updated successfully', 'success');
+                        setTab('profile');
+                      } catch (err: any) {
+                        toast(err.message || 'Failed to save changes', 'error');
+                      } finally {
+                        setSavingProfile(false);
+                      }
                     }}
                   >
                     Save Changes

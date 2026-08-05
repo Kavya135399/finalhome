@@ -144,6 +144,7 @@ const db = new sqlite3.Database(dbFile, (err) => {
         )
       `);
       db.run("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''", () => {});
+      db.run("ALTER TABLE users ADD COLUMN city TEXT DEFAULT ''", () => {});
       db.run(`
         CREATE TABLE IF NOT EXISTS otps (
           id TEXT PRIMARY KEY,
@@ -669,6 +670,15 @@ const db = new sqlite3.Database(dbFile, (err) => {
       });
       // Ensure admin & demo accounts are verified in database
       db.run("UPDATE users SET is_verified = 1, status = 'active' WHERE role = 'admin' OR email IN ('admin@example.com', 'vikram@example.com', 'rajesh@example.com')");
+
+      // Initialize Subscriptions table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS subscriptions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          email TEXT NOT NULL UNIQUE,
+          created_at TEXT NOT NULL
+        )
+      `);
     });
   }
 });
@@ -1088,11 +1098,54 @@ app.post('/api/auth/login', async (req, res) => {
         isVerified: true,
         avatar: user.avatar || '',
         profileImage: user.avatar || '',
+        phone: user.mobile || '',
+        city: user.city || '',
       },
     });
   } catch (err) {
     console.error('Login Error:', err);
     return res.status(500).json({ success: false, error: err.message || 'Internal login error.' });
+  }
+});
+
+app.post('/api/subscribe', async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: 'Email address is required.' });
+  }
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+    await dbRun('INSERT OR IGNORE INTO subscriptions (email, created_at) VALUES (?, ?)', [cleanEmail, new Date().toISOString()]);
+    
+    // Auto-create promo/offer notifications if a user account exists for this email
+    const user = await dbGet('SELECT id FROM users WHERE LOWER(email) = ?', [cleanEmail]);
+    if (user) {
+      await saveNotification(
+        user.id,
+        '🎉 20% Off Deep Cleaning!',
+        'Thank you for subscribing! Use coupon code CLEAN20 to get 20% off on all deep cleaning services.',
+        'promo'
+      );
+      await saveNotification(
+        user.id,
+        '🍲 Flat ₹500 Off Catering',
+        'Special subscription discount! Use coupon code FESTIVE500 to get flat ₹500 off on food & catering services.',
+        'promo'
+      );
+      await saveNotification(
+        user.id,
+        '🏠 Welcome Offer Activated!',
+        'Use coupon code FIRSTHOME to save ₹250 on your first booking with us.',
+        'promo'
+      );
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Subscribed successfully! Offer notifications have been sent to your account.' 
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -1263,7 +1316,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 // Get Current Logged In User Profile
 app.get('/api/users/me', authenticateToken, async (req, res) => {
   try {
-    const user = await dbGet('SELECT id, name, email, role, status, is_verified, avatar FROM users WHERE id = ?', [req.user.id]);
+    const user = await dbGet('SELECT id, name, email, role, status, is_verified, avatar, mobile, city FROM users WHERE id = ?', [req.user.id]);
     if (!user) {
       return res.status(404).json({ success: false, error: 'User account not found.' });
     }
@@ -1278,6 +1331,8 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
         isVerified: Boolean(user.is_verified),
         avatar: user.avatar || '',
         profileImage: user.avatar || '',
+        phone: user.mobile || '',
+        city: user.city || '',
       },
     });
   } catch (err) {
@@ -1457,7 +1512,7 @@ app.post('/api/users', authenticateToken, requireRole(['admin']), async (req, re
 
 app.put('/api/users/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { name, email, role, password, avatar } = req.body;
+  const { name, email, role, password, avatar, phone, mobile, city } = req.body;
 
   try {
     const user = await dbGet('SELECT * FROM users WHERE id = ?', [id]);
@@ -1465,6 +1520,17 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
 
     let sql = 'UPDATE users SET name = ?, email = ?';
     const params = [name || user.name, email || user.email];
+
+    const finalPhone = phone !== undefined ? phone : mobile;
+    if (finalPhone !== undefined) {
+      sql += ', mobile = ?';
+      params.push(finalPhone);
+    }
+
+    if (city !== undefined) {
+      sql += ', city = ?';
+      params.push(city);
+    }
 
     if (avatar !== undefined) {
       sql += ', avatar = ?';
@@ -1487,8 +1553,18 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
     await dbRun(sql, params);
     await addAuditLog(req.user.id, req.user.role, 'Update User', `Updated details for ${name || user.name}`);
 
-    const updatedUser = await dbGet('SELECT id, name, email, role, status, avatar FROM users WHERE id = ?', [id]);
-    res.json(updatedUser);
+    const updatedUser = await dbGet('SELECT id, name, email, role, status, avatar, mobile, city FROM users WHERE id = ?', [id]);
+    res.json({
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      status: updatedUser.status,
+      avatar: updatedUser.avatar || '',
+      profileImage: updatedUser.avatar || '',
+      phone: updatedUser.mobile || '',
+      city: updatedUser.city || '',
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2010,10 +2086,43 @@ app.get('/api/bookings', async (req, res) => {
   }
 });
 
+const getSlotStartTimeIST = (dateStr, slotStr) => {
+  if (!slotStr) return null;
+  const startPart = slotStr.split(' - ')[0]; // e.g. "09:00 AM"
+  const match = startPart.match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return null;
+  
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const ampm = match[3].toUpperCase();
+  
+  if (ampm === 'PM' && hours < 12) hours += 12;
+  if (ampm === 'AM' && hours === 12) hours = 0;
+  
+  const pad = (n) => String(n).padStart(2, '0');
+  const isoStr = `${dateStr}T${pad(hours)}:${pad(minutes)}:00+05:30`;
+  return new Date(isoStr);
+};
+
+const isSlotInvalidIST = (dateStr, slotStr) => {
+  const startTime = getSlotStartTimeIST(dateStr, slotStr);
+  if (!startTime) return true;
+  
+  const now = new Date();
+  const diffMs = startTime.getTime() - now.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+  
+  return diffHours < 2;
+};
+
 app.post('/api/bookings', authenticateToken, async (req, res) => {
   const { serviceId, serviceName, serviceImage, price, date, timeSlot, address, paymentMethod, userId, utr } = req.body;
   if (!serviceId || !date || !timeSlot || !address || !userId) {
     return res.status(400).json({ error: 'Required checkout parameters missing' });
+  }
+
+  if (isSlotInvalidIST(date, timeSlot)) {
+    return res.status(400).json({ error: 'Please select a valid time slot' });
   }
 
   try {

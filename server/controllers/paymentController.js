@@ -98,11 +98,59 @@ export const createOrder = async (req, res) => {
   }
 };
 
-/**
- * 2. Cryptographic Signature Verification & Booking Creation
- */
+const getSlotStartTimeIST = (dateStr, slotStr) => {
+  if (!slotStr) return null;
+  const startPart = slotStr.split(' - ')[0]; // e.g. "09:00 AM"
+  const match = startPart.match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return null;
+  
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const ampm = match[3].toUpperCase();
+  
+  if (ampm === 'PM' && hours < 12) hours += 12;
+  if (ampm === 'AM' && hours === 12) hours = 0;
+  
+  const pad = (n) => String(n).padStart(2, '0');
+  const isoStr = `${dateStr}T${pad(hours)}:${pad(minutes)}:00+05:30`;
+  return new Date(isoStr);
+};
+
+const isSlotInvalidIST = (dateStr, slotStr) => {
+  const startTime = getSlotStartTimeIST(dateStr, slotStr);
+  if (!startTime) return true;
+  
+  const now = new Date();
+  const diffMs = startTime.getTime() - now.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+  
+  return diffHours < 2;
+};
+
 export const verifyPayment = async (req, res) => {
   try {
+    const validationDetails = req.body?.bookingDetails || {};
+    const bDate = validationDetails.bookingDate || new Date().toISOString().slice(0, 10);
+    const bTime = validationDetails.bookingTime || '10:00 AM - 11:30 AM';
+    
+    const prodId = validationDetails.productId || '';
+    const isTaxi = typeof prodId === 'string' && (prodId.startsWith('t_') || prodId === 't_cab');
+    
+    const startTime = getSlotStartTimeIST(bDate, bTime);
+    let invalid = true;
+    if (startTime) {
+      const now = new Date();
+      const diffMs = startTime.getTime() - now.getTime();
+      const diffHours = diffMs / (1000 * 60 * 60);
+      invalid = isTaxi ? (diffHours <= 0) : (diffHours < 2);
+    }
+    
+    if (invalid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please select a valid time slot. Booking not created.',
+      });
+    }
     console.log('[DEBUG PAYMENT VERIFY-PAYMENT] HEADERS:', req.headers);
     console.log('[DEBUG PAYMENT VERIFY-PAYMENT] BODY:', req.body);
 

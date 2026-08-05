@@ -10,6 +10,8 @@ interface AuthUser {
   name: string;
   role: Role;
   avatar?: string;
+  phone?: string;
+  city?: string;
 }
 
 interface AuthContextValue {
@@ -35,6 +37,8 @@ function mapUser(user: User | null): AuthUser | null {
     email: user.email ?? '',
     name: meta.name ?? (user.email ? user.email.split('@')[0] : 'User'),
     role: (meta.role as Role) ?? 'customer',
+    phone: meta.phone ?? meta.mobile ?? '',
+    city: meta.city ?? '',
   };
 }
 

@@ -61,6 +61,35 @@ const timeSlots = [
   '05:00 PM - 06:30 PM',
 ];
 
+function getSlotStartTimeIST(dateStr: string, slotStr: string): Date | null {
+  if (!slotStr) return null;
+  const startPart = slotStr.split(' - ')[0]; // e.g. "09:00 AM"
+  const match = startPart.match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return null;
+  
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const ampm = match[3].toUpperCase();
+  
+  if (ampm === 'PM' && hours < 12) hours += 12;
+  if (ampm === 'AM' && hours === 12) hours = 0;
+  
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const isoStr = `${dateStr}T${pad(hours)}:${pad(minutes)}:00+05:30`;
+  return new Date(isoStr);
+}
+
+function isSlotInvalidIST(dateStr: string, slotStr: string): boolean {
+  const startTime = getSlotStartTimeIST(dateStr, slotStr);
+  if (!startTime) return true;
+  
+  const now = new Date();
+  const diffMs = startTime.getTime() - now.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+  
+  return diffHours < 2;
+}
+
 const getServiceIconConfig = (s: Service, isSelected: boolean) => {
   const text = `${s.slug || ''} ${s.name || ''} ${s.categoryName || ''} ${s.icon || ''}`.toLowerCase();
   
@@ -132,19 +161,56 @@ export function ServicesPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Address & Scheduling State
-  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(defaultAddresses);
-  const [selectedAddressId, setSelectedAddressId] = useState<string>('addr-1');
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(() => {
+    try {
+      const stored = localStorage.getItem('homeseva.addresses');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((a: any) => ({
+            id: a.id,
+            title: a.label || a.title || 'Saved Address',
+            address: a.address,
+            city: a.city,
+            pincode: a.pincode,
+          }));
+        }
+      }
+    } catch {}
+    return defaultAddresses;
+  });
+  const [selectedAddressId, setSelectedAddressId] = useState<string>(() => {
+    try {
+      const stored = localStorage.getItem('homeseva.addresses');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed[0].id;
+        }
+      }
+    } catch {}
+    return 'addr-1';
+  });
   const [isChangingAddress, setIsChangingAddress] = useState<boolean>(false);
   const [newAddressForm, setNewAddressForm] = useState({ title: '', address: '', city: 'Ahmedabad', pincode: '' });
   
-  const tomorrow = useMemo(() => {
+  const todayStr = useMemo(() => {
     const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().split('T')[0];
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }, []);
-  const [selectedDate, setSelectedDate] = useState<string>(tomorrow);
-  const [selectedTime, setSelectedTime] = useState<string>('11:00 AM - 12:30 PM');
+  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
+  const [selectedTime, setSelectedTime] = useState<string>('');
   const [processingPayment, setProcessingPayment] = useState<boolean>(false);
+
+  // Clear selected slot if it becomes invalid on date change
+  useEffect(() => {
+    if (selectedTime && isSlotInvalidIST(selectedDate, selectedTime)) {
+      setSelectedTime('');
+    }
+  }, [selectedDate]);
 
   // Dynamically fetch active services from backend database
   useEffect(() => {
@@ -222,7 +288,24 @@ export function ServicesPage() {
       city: newAddressForm.city || 'Ahmedabad',
       pincode: newAddressForm.pincode,
     };
-    setSavedAddresses([created, ...savedAddresses]);
+    const updated = [created, ...savedAddresses];
+    setSavedAddresses(updated);
+    
+    // Save to localStorage in label format for compatibility
+    try {
+      const storageFormat = updated.map((a) => ({
+        id: a.id,
+        label: a.title,
+        address: a.address,
+        city: a.city,
+        pincode: a.pincode,
+        isDefault: false,
+      }));
+      localStorage.setItem('homeseva.addresses', JSON.stringify(storageFormat));
+    } catch (err) {
+      console.warn('Failed to save address to localStorage:', err);
+    }
+    
     setSelectedAddressId(created.id);
     setNewAddressForm({ title: '', address: '', city: 'Ahmedabad', pincode: '' });
     setIsChangingAddress(false);
@@ -230,6 +313,12 @@ export function ServicesPage() {
   };
 
   const handleProceedToPayment = async () => {
+    if (isSlotInvalidIST(selectedDate, selectedTime)) {
+      toast('Please select a valid time slot', 'error');
+      setStep(3);
+      return;
+    }
+
     if (selectedServices.length === 0) {
       toast('Please select at least one service', 'info');
       setStep(1);
@@ -726,7 +815,13 @@ export function ServicesPage() {
                 <input
                   type="date"
                   value={selectedDate}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={(() => {
+                    const d = new Date();
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                  })()}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   className="w-full h-12 px-4 rounded-xl border border-gray-200/90 bg-white text-gray-900 font-bold text-sm outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-500/10 shadow-xs cursor-pointer"
                 />
@@ -742,14 +837,18 @@ export function ServicesPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {timeSlots.map((slot) => {
                   const isActive = selectedTime === slot;
+                  const disabled = isSlotInvalidIST(selectedDate, slot);
                   return (
                     <button
                       key={slot}
+                      disabled={disabled}
                       onClick={() => setSelectedTime(slot)}
                       className={`h-12 px-3 sm:px-4 rounded-xl border text-xs sm:text-sm transition-all duration-200 flex items-center justify-center font-bold ${
-                        isActive
-                          ? 'border-brand-600 bg-brand-50/70 text-brand-600 shadow-xs ring-1 ring-brand-600/40'
-                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50/50'
+                        disabled
+                          ? 'opacity-40 cursor-not-allowed border-gray-150 bg-gray-50/50 text-gray-400'
+                          : isActive
+                          ? 'border-brand-600 bg-brand-50/70 text-brand-600 shadow-xs ring-1 ring-brand-600/40 active:scale-95'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50/50 active:scale-95'
                       }`}
                     >
                       <span>{slot}</span>
@@ -772,6 +871,10 @@ export function ServicesPage() {
                 onClick={() => {
                   if (!selectedDate || !selectedTime) {
                     toast('Please choose both date and time slot to proceed', 'info');
+                    return;
+                  }
+                  if (isSlotInvalidIST(selectedDate, selectedTime)) {
+                    toast('Please select a valid time slot', 'error');
                     return;
                   }
                   setStep(4);
