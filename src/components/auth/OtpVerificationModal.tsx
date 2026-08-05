@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mail, ShieldCheck, RefreshCw, X, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useAuth } from '../../context/AuthContext';
+import { apiClient } from '../../services/apiClient';
 
 interface OtpVerificationModalProps {
   isOpen: boolean;
@@ -17,6 +19,7 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
   onSuccess,
   type = 'verification',
 }) => {
+  const { verifyEmail } = useAuth();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -91,29 +94,30 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
     setSuccessMsg('');
 
     try {
-      const endpoint = type === 'forgot_password' ? '/api/auth/verify-reset-otp' : '/api/auth/verify-email';
-      const res = await fetch(`http://localhost:5000${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp: otpCode }),
-      });
-
-      const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Verification failed');
+      if (type === 'verification') {
+        const verifiedUser = await verifyEmail(email, otpCode);
+        setSuccessMsg('Email verified successfully!');
+        const token = localStorage.getItem('homeseva.token') || localStorage.getItem('token') || undefined;
+        setTimeout(() => {
+          onSuccess(token, verifiedUser);
+        }, 1000);
+      } else {
+        const data = await apiClient.verifyResetOtp(email, otpCode);
+        if (!data.success) {
+          throw new Error(data.error || 'Verification failed');
+        }
+        setSuccessMsg('OTP verified successfully!');
+        if (data.token && data.user) {
+          localStorage.setItem('homeseva.token', data.token);
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('homeseva.currentUser', JSON.stringify(data.user));
+        }
+        setTimeout(() => {
+          onSuccess(data.token, data.user);
+        }, 1000);
       }
-
-      setSuccessMsg('Email verified successfully!');
-      if (data.token && data.user) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('homeseva_user', JSON.stringify(data.user));
-      }
-
-      setTimeout(() => {
-        onSuccess(data.token, data.user);
-      }, 1000);
     } catch (err: any) {
-      setError(err.message || 'Invalid or expired OTP.');
+      setError(err?.message || err?.response?.data?.error || 'Invalid or expired OTP.');
     } finally {
       setLoading(false);
     }
@@ -126,13 +130,7 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
     setSuccessMsg('');
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/resend-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, type }),
-      });
-
-      const data = await res.json();
+      const data = await apiClient.resendOtp(email, type);
       if (!data.success) {
         throw new Error(data.error || 'Failed to resend OTP');
       }
@@ -140,7 +138,7 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
       setSuccessMsg('A new OTP has been sent to your email.');
       setCooldown(60); // Reset 60s cooldown
     } catch (err: any) {
-      setError(err.message || 'Failed to resend OTP. Please try again.');
+      setError(err?.message || err?.response?.data?.error || 'Failed to resend OTP. Please try again.');
     } finally {
       setResending(false);
     }

@@ -45,11 +45,14 @@ export function LoginPage() {
         navigate('/');
       }
     } catch (err: any) {
-      if (err.requiresVerification || err.response?.data?.requiresVerification) {
-        toast('Please verify your email before logging in.', 'info');
+      const errorMsg = err?.message || '';
+      const requiresVerif = err?.requiresVerification || err?.response?.data?.requiresVerification || errorMsg.toLowerCase().includes('verify your email');
+      
+      if (requiresVerif) {
+        toast('Please verify your email to continue. We sent an OTP code to your inbox.', 'info');
         setShowOtpModal(true);
       } else {
-        toast(err.message || 'Login failed', 'error');
+        toast(errorMsg || 'Login failed', 'error');
       }
     } finally {
       setLoading(false);

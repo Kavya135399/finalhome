@@ -141,7 +141,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
           msg = 'Network error: Unable to connect to the server. Please check your internet connection or try again later.';
         }
-        throw new Error(msg);
+        const customError: any = new Error(msg);
+        customError.response = err.response;
+        if (err.response?.data?.requiresVerification || err.requiresVerification) {
+          customError.requiresVerification = true;
+        }
+        throw customError;
       }
     }
 
@@ -161,7 +166,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
         msg = 'Network error: Unable to connect to the server. Please check your internet connection or try again later.';
       }
-      throw new Error(msg);
+      const customError: any = new Error(msg);
+      customError.response = err.response;
+      throw customError;
     }
   };
 
