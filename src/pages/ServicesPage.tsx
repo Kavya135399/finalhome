@@ -392,15 +392,8 @@ export function ServicesPage() {
     <div className="flex flex-col flex-1 bg-[#F8FAFC] text-gray-900 select-none pb-24 pt-6">
       <div className="max-w-5xl mx-auto w-full px-4 sm:px-6">
         
-        {/* Wizard Header Bar with Consistent Back Button across all steps */}
-        <div className="flex items-center justify-between text-sm font-semibold mb-3 px-1">
-          <button
-            onClick={handleBackNavigation}
-            className="flex items-center gap-1.5 text-gray-600 hover:text-brand-600 font-bold text-sm transition py-1"
-          >
-            <ArrowLeft className="w-4 h-4 text-gray-600" />
-            <span>{step === 1 ? 'Home' : 'Back'}</span>
-          </button>
+        {/* Wizard Header Bar */}
+        <div className="flex items-center justify-end text-sm font-semibold mb-3 px-1">
           <span className="text-xs font-extrabold text-gray-500 tracking-wide">
             Step {step} of 4
           </span>
@@ -638,15 +631,15 @@ export function ServicesPage() {
             
             {/* Selected Services Summary Banner */}
             <div className="p-4 sm:p-5 rounded-2xl border border-gray-200 bg-gray-50/70 flex items-center justify-between gap-4 mb-8">
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-center gap-3.5 flex-1 min-w-0">
                 <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 font-black text-xs shadow-xs">
                   ✓
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-900">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-900 truncate">
                     {selectedServices.length} {selectedServices.length === 1 ? 'Service' : 'Services'} Selected
                   </p>
-                  <p className="text-xs text-gray-500 font-medium truncate max-w-[220px] sm:max-w-sm">
+                  <p className="text-xs text-gray-500 font-medium truncate">
                     {selectedServices.map(s => s.name).join(', ')}
                   </p>
                 </div>
@@ -656,9 +649,9 @@ export function ServicesPage() {
                   setStep(1);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                className="px-3.5 py-2 rounded-xl border border-brand-200 bg-white text-brand-600 hover:bg-brand-50 font-extrabold text-xs transition whitespace-nowrap shadow-xs"
+                className="shrink-0 px-3.5 py-2 rounded-xl border border-brand-200 bg-white text-brand-600 hover:bg-brand-50 font-extrabold text-xs transition whitespace-nowrap shadow-xs"
               >
-                Change Services
+                Change
               </button>
             </div>
 
@@ -668,14 +661,14 @@ export function ServicesPage() {
             </p>
 
             <div className="p-4 sm:p-5 rounded-2xl border border-gray-200 bg-white flex items-center justify-between gap-4 shadow-xs mb-6">
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
                 <MapPin className="w-5 h-5 text-brand-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-extrabold text-gray-900">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-extrabold text-gray-900 truncate">
                     {currentAddress ? `${currentAddress.title} — ${currentAddress.city}` : 'Select Delivery Address'}
                   </p>
                   {currentAddress && (
-                    <p className="text-xs text-gray-500 font-medium mt-0.5">
+                    <p className="text-xs text-gray-500 font-medium mt-0.5 truncate">
                       {currentAddress.address}, {currentAddress.city} - {currentAddress.pincode}
                     </p>
                   )}
@@ -683,7 +676,7 @@ export function ServicesPage() {
               </div>
               <button
                 onClick={() => setIsChangingAddress(!isChangingAddress)}
-                className="text-brand-600 hover:text-brand-700 font-extrabold text-xs sm:text-sm transition px-2 py-1"
+                className="shrink-0 text-brand-600 hover:text-brand-700 font-extrabold text-xs sm:text-sm transition px-2 py-1"
               >
                 {isChangingAddress ? 'Close' : 'Change'}
               </button>

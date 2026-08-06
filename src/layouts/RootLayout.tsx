@@ -190,26 +190,11 @@ export function RootLayout() {
       <header className="fixed top-0 inset-x-0 h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-b border-gray-150 dark:border-slate-800/60 z-40 select-none">
         <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            {showBackButton ? (
-              <button
-                onClick={() => navigate(-1)}
-                className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 active-scale"
-                aria-label="Go back"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-            ) : (
-              <button
-                onClick={() => setDrawerOpen(true)}
-                className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 active-scale"
-                aria-label="Open drawer menu"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            )}
-            <span className="text-base font-extrabold font-display tracking-tight text-gray-900 dark:text-white truncate max-w-[200px]">
-              {pageTitle}
-            </span>
+            <Link to="/" className="flex items-center px-1">
+              <span className="text-[17px] font-extrabold tracking-tight text-gray-900 dark:text-white font-display">
+                HomeSeva
+              </span>
+            </Link>
           </div>
 
           <div className="flex items-center gap-1.5 relative">

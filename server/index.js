@@ -1554,6 +1554,14 @@ app.put('/api/users/:id', authenticateToken, async (req, res) => {
     await addAuditLog(req.user.id, req.user.role, 'Update User', `Updated details for ${name || user.name}`);
 
     const updatedUser = await dbGet('SELECT id, name, email, role, status, avatar, mobile, city FROM users WHERE id = ?', [id]);
+    
+    // Dispatch Email Notifications for account updates
+    if (password) {
+      sendCustomerAccountNotification('password_changed', updatedUser).catch(e => console.error('Email error:', e));
+    } else {
+      sendCustomerAccountNotification('profile_updated', updatedUser).catch(e => console.error('Email error:', e));
+    }
+
     res.json({
       id: updatedUser.id,
       name: updatedUser.name,
