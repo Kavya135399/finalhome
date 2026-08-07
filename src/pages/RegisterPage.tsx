@@ -171,7 +171,7 @@ export function RegisterPage() {
       title={step === 'form' ? 'Create your account' : 'Verify Email OTP'}
       subtitle={
         step === 'form'
-          ? 'Join HomeSeva to book trusted home services.'
+          ? 'Join Bhale Padharya to book trusted home services.'
           : `We sent a 6-digit verification code to ${email}`
       }
     >

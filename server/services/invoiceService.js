@@ -10,7 +10,7 @@ export const generateInvoicePDF = (bookingData) => {
       doc.on('end', () => resolve(Buffer.concat(buffers)));
       doc.on('error', (err) => reject(err));
 
-      const companyName = process.env.COMPANY_NAME || 'HomeSeva Services Pvt Ltd';
+      const companyName = process.env.COMPANY_NAME || 'Bhale Padharya Services Pvt Ltd';
       const companyGst = process.env.COMPANY_GST || '27AAACH6542R1Z2';
       const companyAddress = process.env.COMPANY_ADDRESS || 'Suite 404, Tech Park, Mumbai, MH, 400001';
       const companyPhone = process.env.COMPANY_PHONE || '+91 98765 43210';
@@ -174,12 +174,12 @@ export const generateInvoicePDF = (bookingData) => {
       doc.fillColor(primaryColor)
          .font('Helvetica-Bold')
          .fontSize(10)
-         .text('Thank you for choosing HomeSeva!', 50, footerTop + 12, { align: 'center' });
+         .text('Thank you for choosing Bhale Padharya!', 50, footerTop + 12, { align: 'center' });
 
       doc.fillColor(grayColor)
          .font('Helvetica')
          .fontSize(8)
-         .text('This is a computer-generated tax invoice issued by HomeSeva Services Pvt Ltd.', 50, footerTop + 30, { align: 'center' })
+         .text('This is a computer-generated tax invoice issued by Bhale Padharya Services Pvt Ltd.', 50, footerTop + 30, { align: 'center' })
          .text('For questions or support, reach us at bhalepadharya.app@gmail.com or call +91 98765 43210.', 50, footerTop + 42, { align: 'center' });
 
       doc.end();

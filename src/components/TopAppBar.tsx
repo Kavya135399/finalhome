@@ -18,7 +18,7 @@ export function TopAppBar() {
   const isRootScreen = ['/', '/services', '/dashboard'].includes(path);
 
   // Determine Title based on path
-  let title = 'HomeSeva';
+  let title = 'Bhale Padharya';
   if (path === '/services') title = 'Explore';
   else if (path === '/memberships') title = 'My Subscriptions';
   else if (path === '/memberships-info') title = 'Membership Plans & Pricing';
@@ -85,10 +85,10 @@ export function TopAppBar() {
         {path === '/' ? (
           <Link to="/" className="flex items-center gap-1.5">
             <div className="w-6.5 h-6.5 rounded-lg bg-brand-600 flex items-center justify-center shadow-glow">
-              <span className="text-white text-xs font-black">H</span>
+              <span className="text-white text-xs font-black">B</span>
             </div>
             <span className="text-base font-extrabold tracking-tight font-display text-gray-900 dark:text-white">
-              Home<span className="text-brand-600">Seva</span>
+              Bhale<span className="text-brand-600">Padharya</span>
             </span>
           </Link>
         ) : (

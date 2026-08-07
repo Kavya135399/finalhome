@@ -5,7 +5,7 @@ import { getTemplateHtml } from './emailTemplates.js';
 const getFromEmail = () => {
   const from = process.env.EMAIL_FROM;
   if (!from || from.includes('noreply@homeseva.com')) {
-    return 'HomeSeva <bhalepadharya.app@gmail.com>';
+    return 'Bhale Padharya <bhalepadharya.app@gmail.com>';
   }
   return from;
 };
@@ -47,7 +47,7 @@ export const dispatchEmail = async ({ to, subject, html, text, attachments = [] 
         'X-Priority': '1 (Highest)',
         'X-MSMail-Priority': 'High',
         'Importance': 'High',
-        'X-Mailer': 'HomeSeva Mailer v1.0',
+        'X-Mailer': 'Bhale Padharya Mailer v1.0',
       },
       attachments,
     };
@@ -97,7 +97,7 @@ export const sendOrderNotification = async (templateKey, orderData) => {
     try {
       const pdfBuffer = await generateInvoicePDF(orderData);
       attachments.push({
-        filename: `Invoice_${orderData.invoiceNumber || orderData.bookingId || 'HomeSeva'}.pdf`,
+        filename: `Invoice_${orderData.invoiceNumber || orderData.bookingId || 'BhalePadharya'}.pdf`,
         content: pdfBuffer,
         contentType: 'application/pdf',
       });
@@ -108,7 +108,7 @@ export const sendOrderNotification = async (templateKey, orderData) => {
 
   return await dispatchEmail({
     to: recipient,
-    subject: subjects[templateKey] || `HomeSeva Order Update - ${orderData.bookingId || 'Notification'}`,
+    subject: subjects[templateKey] || `Bhale Padharya Order Update - ${orderData.bookingId || 'Notification'}`,
     html,
     attachments,
   });
@@ -126,11 +126,11 @@ export const sendCustomerAccountNotification = async (templateKey, userData) => 
   if (!recipient) return false;
 
   const subjects = {
-    welcome: 'Welcome to HomeSeva',
-    verify_email: 'Verify your HomeSeva email address',
-    resend_otp: 'Your HomeSeva verification code',
-    forgot_password: 'Reset your HomeSeva password',
-    forgot_password_otp: 'Your HomeSeva password reset code',
+    welcome: 'Welcome to Bhale Padharya',
+    verify_email: 'Verify your Bhale Padharya email address',
+    resend_otp: 'Your Bhale Padharya verification code',
+    forgot_password: 'Reset your Bhale Padharya password',
+    forgot_password_otp: 'Your Bhale Padharya password reset code',
     password_changed: 'Security Alert: Password Changed Successfully',
     profile_updated: 'Security Alert: Profile Details Updated',
     address_changed: 'Security Alert: Address Book Updated',
@@ -138,14 +138,14 @@ export const sendCustomerAccountNotification = async (templateKey, userData) => 
 
   const html = getTemplateHtml(templateKey, userData);
   const plainText = templateKey === 'verify_email' || templateKey === 'resend_otp'
-    ? `Hello ${userData.name || 'User'},\n\nYour 6-digit verification code for HomeSeva is: ${userData.otp}\n\nThis OTP is valid for 10 minutes. If you did not request this code, please ignore this email.\n\nRegards,\nHomeSeva Team`
+    ? `Hello ${userData.name || 'User'},\n\nYour 6-digit verification code for Bhale Padharya is: ${userData.otp}\n\nThis OTP is valid for 10 minutes. If you did not request this code, please ignore this email.\n\nRegards,\nBhale Padharya Team`
     : templateKey === 'forgot_password_otp'
-    ? `Hello ${userData.name || 'User'},\n\nYour password reset code for HomeSeva is: ${userData.otp}\n\nThis OTP is valid for 10 minutes. Do not share this code with anyone.\n\nRegards,\nHomeSeva Team`
+    ? `Hello ${userData.name || 'User'},\n\nYour password reset code for Bhale Padharya is: ${userData.otp}\n\nThis OTP is valid for 10 minutes. Do not share this code with anyone.\n\nRegards,\nBhale Padharya Team`
     : stripHtmlToText(html);
 
   return await dispatchEmail({
     to: recipient,
-    subject: subjects[templateKey] || 'HomeSeva Account Security Update',
+    subject: subjects[templateKey] || 'Bhale Padharya Account Security Update',
     html,
     text: plainText,
   });
@@ -168,7 +168,7 @@ export const sendPaymentNotification = async (templateKey, paymentData) => {
   const html = getTemplateHtml(templateKey, paymentData);
   return await dispatchEmail({
     to: recipient,
-    subject: subjects[templateKey] || 'HomeSeva Payment Update',
+    subject: subjects[templateKey] || 'Bhale Padharya Payment Update',
     html,
   });
 };
@@ -182,7 +182,7 @@ export const sendMarketingBroadcast = async (promoData, recipientList = []) => {
     return { count: 0 };
   }
 
-  const subject = promoData.subject || promoData.title || '🎁 Special Offer from HomeSeva!';
+  const subject = promoData.subject || promoData.title || '🎁 Special Offer from Bhale Padharya!';
   const html = getTemplateHtml('offer_announcement', promoData);
 
   let successCount = 0;
@@ -222,7 +222,7 @@ export const sendReviewRequestEmail = async (orderData) => {
   const html = getTemplateHtml('review_request', orderData);
   return await dispatchEmail({
     to: recipient,
-    subject: `⭐ How was your service? Rate your experience with HomeSeva`,
+    subject: `⭐ How was your service? Rate your experience with Bhale Padharya`,
     html,
   });
 };
@@ -240,7 +240,7 @@ export const sendReminderEmail = async (templateKey, reminderData) => {
   const html = getTemplateHtml(templateKey, reminderData);
   return await dispatchEmail({
     to: recipient,
-    subject: subjects[templateKey] || 'HomeSeva Reminder',
+    subject: subjects[templateKey] || 'Bhale Padharya Reminder',
     html,
   });
 };
@@ -259,7 +259,7 @@ export const sendCateringCustomerEmail = async (requestData) => {
       </div>
       <div style="padding: 24px; color: #1e293b;">
         <p style="font-size: 16px;">Hello <strong>${requestData.user_name || requestData.customer_name}</strong>,</p>
-        <p>Thank you for submitting your catering request with HomeSeva! We have received your inquiry and our food curation team is reviewing it.</p>
+        <p>Thank you for submitting your catering request with Bhale Padharya! We have received your inquiry and our food curation team is reviewing it.</p>
         <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin: 20px 0;">
           <p style="margin: 4px 0;"><strong>Request ID:</strong> #${requestData.id}</p>
           <p style="margin: 4px 0;"><strong>Package:</strong> ${requestData.package_title || 'Custom Catering Request'}</p>
@@ -269,14 +269,14 @@ export const sendCateringCustomerEmail = async (requestData) => {
           <p style="margin: 4px 0;"><strong>Status:</strong> <span style="color: #d97706; font-weight: bold;">PENDING (Under Review)</span></p>
         </div>
         <p>Our team will reach out to you at <strong>${requestData.contact_phone || requestData.phone}</strong> shortly to discuss the menu, customization, and confirmed quotations.</p>
-        <p style="margin-top: 24px; color: #64748b; font-size: 14px;">Best regards,<br/>HomeSeva Catering Team</p>
+        <p style="margin-top: 24px; color: #64748b; font-size: 14px;">Best regards,<br/>Bhale Padharya Catering Team</p>
       </div>
     </div>
   `;
 
   return await dispatchEmail({
     to: recipient,
-    subject: `🍽️ Catering Request Received - #${requestData.id} | HomeSeva`,
+    subject: `🍽️ Catering Request Received - #${requestData.id} | Bhale Padharya`,
     html,
   });
 };
@@ -290,7 +290,7 @@ export const sendCateringAdminEmail = async (requestData) => {
         <h2 style="margin: 0; font-size: 20px;">🚨 New Catering Request Received</h2>
       </div>
       <div style="padding: 24px; color: #1e293b;">
-        <p>A new catering booking has just been submitted on HomeSeva:</p>
+        <p>A new catering booking has just been submitted on Bhale Padharya:</p>
         <div style="background-color: #f1f5f9; padding: 16px; border-radius: 8px; margin: 16px 0;">
           <p style="margin: 4px 0;"><strong>ID:</strong> #${requestData.id}</p>
           <p style="margin: 4px 0;"><strong>Customer Name:</strong> ${requestData.user_name || requestData.customer_name}</p>
@@ -338,14 +338,14 @@ export const sendCateringStatusEmail = async (requestData, newStatus) => {
         </div>
         ${requestData.admin_notes ? `<p style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px;"><strong>Message from Team:</strong> ${requestData.admin_notes}</p>` : ''}
         <p>If you have any questions or require modifications, please reply to this email or contact us at our customer service line.</p>
-        <p style="margin-top: 24px; color: #64748b; font-size: 14px;">Thank you for choosing HomeSeva!</p>
+        <p style="margin-top: 24px; color: #64748b; font-size: 14px;">Thank you for choosing Bhale Padharya!</p>
       </div>
     </div>
   `;
 
   return await dispatchEmail({
     to: recipient,
-    subject: `✨ Catering Order #${requestData.id} Status: ${newStatus} | HomeSeva`,
+    subject: `✨ Catering Order #${requestData.id} Status: ${newStatus} | Bhale Padharya`,
     html,
   });
 };

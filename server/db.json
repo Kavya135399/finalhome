@@ -244,16 +244,16 @@
     }
   ],
   "settings": {
-    "appName": "HomeSeva Pro",
-    "contactEmail": "support@homeseva.com",
+    "appName": "Bhale Padharya Pro",
+    "contactEmail": "support@bhalepadharya.com",
     "contactPhone": "+91 98765 43210",
     "backupTimestamp": "2026-07-17T22:30:00.000Z",
     "address": "221B, Hill Road, Bandra West, Mumbai, India",
     "currency": "INR",
     "socialLinks": {
-      "twitter": "https://twitter.com/homeseva",
-      "facebook": "https://facebook.com/homeseva",
-      "instagram": "https://instagram.com/homeseva"
+      "twitter": "https://twitter.com/bhalepadharya",
+      "facebook": "https://facebook.com/bhalepadharya",
+      "instagram": "https://instagram.com/bhalepadharya"
     }
   },
   "logs": [

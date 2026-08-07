@@ -306,7 +306,7 @@ export function DashboardPage() {
   };
 
   const userName = user?.name ?? 'Guest User';
-  const userEmail = user?.email ?? 'guest@homeseva.com';
+  const userEmail = user?.email ?? 'guest@bhalepadharya.com';
 
   return (
     <div className="flex flex-col flex-1 bg-gray-50/60 dark:bg-slate-950 pb-20 min-h-screen">
@@ -391,7 +391,7 @@ export function DashboardPage() {
                   <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
                   <div>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/20 text-[10px] font-black tracking-widest uppercase mb-4">
-                      <Sparkles className="w-3.5 h-3.5" /> Executive HomeSeva Portal
+                      <Sparkles className="w-3.5 h-3.5" /> Executive Bhale Padharya Portal
                     </span>
                     <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight">Your Remote Heritage Home Concierge</h2>
                     <p className="text-sm text-gray-300 max-w-xl mt-2 font-medium leading-relaxed">
@@ -598,7 +598,7 @@ export function DashboardPage() {
                     <div className="border-b border-gray-100 dark:border-slate-800 pb-4 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                       <div>
                         <h2 className="text-xl font-black text-gray-900 dark:text-white leading-tight">Registered Properties & Addresses</h2>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Your ancestral homes and residencies under active HomeSeva management.</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Your ancestral homes and residencies under active Bhale Padharya management.</p>
                       </div>
                       <button
                         onClick={() => {
@@ -862,7 +862,7 @@ export function DashboardPage() {
                         <LogOut className="w-5 h-5 text-red-500 dark:text-red-400" />
                       </div>
                       <div>
-                        <span className="block text-base text-red-600 dark:text-red-400 font-extrabold">Sign Out of HomeSeva</span>
+                        <span className="block text-base text-red-600 dark:text-red-400 font-extrabold">Sign Out of Bhale Padharya</span>
                         <span className="block text-xs text-red-400/80 dark:text-red-500/80 font-medium mt-0.5">Securely close session</span>
                       </div>
                     </div>

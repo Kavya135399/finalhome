@@ -152,7 +152,7 @@ export const processUPIPayment = async (options: PaymentOptions) => {
       key: orderData.keyId,
       amount: orderData.amount, // in paise
       currency: orderData.currency || 'INR',
-      name: 'HomeSeva Services & Store',
+      name: 'Bhale Padharya Services & Store',
       description: `Payment for ${options.productName}`,
       order_id: orderData.orderId,
       prefill: {

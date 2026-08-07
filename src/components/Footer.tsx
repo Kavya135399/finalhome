@@ -24,7 +24,7 @@ export function Footer() {
               <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center">
                 <HomeIcon className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-extrabold font-display text-white">Home<span className="text-brand-400">Seva</span></span>
+              <span className="text-xl font-extrabold font-display text-white">Bhale<span className="text-brand-400">Padharya</span></span>
             </Link>
             <p className="text-xs sm:text-sm leading-relaxed text-gray-400 max-w-xs">
               Trusted home services at your fingertips. Book verified professionals for 20+ services across 35+ cities.
@@ -67,15 +67,15 @@ export function Footer() {
           <div>
             <h4 className="text-xs font-bold text-white mb-3 sm:mb-4 uppercase tracking-wider">Get in Touch</h4>
             <ul className="space-y-2.5 text-xs sm:text-sm text-gray-400">
-              <li className="flex items-start gap-2.5"><Mail className="w-4 h-4 mt-0.5 text-brand-400 shrink-0" /> <span className="break-all">support@homeseva.com</span></li>
+              <li className="flex items-start gap-2.5"><Mail className="w-4 h-4 mt-0.5 text-brand-400 shrink-0" /> <span className="break-all">support@bhalepadharya.com</span></li>
               <li className="flex items-start gap-2.5"><Phone className="w-4 h-4 mt-0.5 text-brand-400 shrink-0" /> 1800-200-3000</li>
-              <li className="flex items-start gap-2.5"><MapPin className="w-4 h-4 mt-0.5 text-brand-400 shrink-0" /> HomeSeva Tower, BKC, Mumbai 400051</li>
+              <li className="flex items-start gap-2.5"><MapPin className="w-4 h-4 mt-0.5 text-brand-400 shrink-0" /> Bhale Padharya Tower, BKC, Mumbai 400051</li>
             </ul>
           </div>
         </div>
 
         <div className="mt-10 sm:mt-12 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-          <p className="text-[11px] sm:text-xs text-gray-500">© {new Date().getFullYear()} HomeSeva Technologies Pvt. Ltd. All rights reserved.</p>
+          <p className="text-[11px] sm:text-xs text-gray-500">© {new Date().getFullYear()} Bhale Padharya Technologies Pvt. Ltd. All rights reserved.</p>
           <div className="flex items-center gap-4 sm:gap-5">
             {legalLinks.map((l) => (
               <Link key={l.to} to={l.to} className="text-[11px] sm:text-xs text-gray-500 hover:text-gray-300 transition py-1">{l.label}</Link>

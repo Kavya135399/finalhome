@@ -304,7 +304,7 @@ export function OverviewTab({
             <span className="text-[11px] font-black tracking-[0.2em] text-brand-600 uppercase">Admin Portal</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-2">Admin Dashboard</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base font-medium">Platform overview and key metrics for HomeSeva premium properties.</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base font-medium">Platform overview and key metrics for Bhale Padharya premium properties.</p>
         </div>
 
         {/* Pill Toggle Header */}

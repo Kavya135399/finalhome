@@ -11,7 +11,7 @@ const values = [
 ];
 
 const milestones = [
-  { year: '2019', event: 'HomeSeva founded in Mumbai with 3 services' },
+  { year: '2019', event: 'Bhale Padharya founded in Mumbai with 3 services' },
   { year: '2021', event: 'Expanded to 10 cities, 500+ professionals' },
   { year: '2023', event: 'Crossed 10M services, launched mobile app' },
   { year: '2025', event: '35+ cities, 50K+ professionals, 12M+ customers' },
@@ -23,12 +23,12 @@ export function AboutPage() {
       
       {/* Intro Header */}
       <section className="py-6 text-center">
-        <p className="text-[10px] font-extrabold text-brand-600 dark:text-brand-400 uppercase tracking-wider mb-2">About HomeSeva</p>
+        <p className="text-[10px] font-extrabold text-brand-600 dark:text-brand-400 uppercase tracking-wider mb-2">About Bhale Padharya</p>
         <h1 className="text-xl font-black font-display text-gray-900 dark:text-white leading-tight">
           Making home care effortless for everyone
         </h1>
         <p className="mt-3 text-xs text-gray-550 dark:text-gray-400 leading-relaxed max-w-sm mx-auto">
-          HomeSeva connects you with trusted professionals for 20+ home services, prioritizing quality, speed, and safety.
+          Bhale Padharya connects you with trusted professionals for 20+ home services, prioritizing quality, speed, and safety.
         </p>
       </section>
 
@@ -109,7 +109,7 @@ export function AboutPage() {
 
       {/* CTA links */}
       <section className="py-6 text-center">
-        <h2 className="text-base font-extrabold text-gray-900 dark:text-white">Join HomeSeva</h2>
+        <h2 className="text-base font-extrabold text-gray-900 dark:text-white">Join Bhale Padharya</h2>
         <p className="text-[10px] text-gray-550 dark:text-gray-400 mt-1">Ready to book a service or work with us?</p>
         <div className="flex gap-2.5 mt-4 justify-center">
           <Link to="/register" className="flex-1 max-w-[140px]"><Button fullWidth size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>Get started</Button></Link>

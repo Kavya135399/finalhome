@@ -21,7 +21,7 @@ const UPI_NAME = 'Tulsibhai Parmar';
 const BANNERS = [
   { id: 1, tag: 'EMERGENCY READY', title: 'Critical supplies always available', subtitle: 'From medicines to cleaning — we have it', badge: 'Priority ✓', bg: 'from-violet-700 via-purple-700 to-indigo-800', icon: Zap, iconColor: 'text-yellow-300' },
   { id: 2, tag: 'MEMBERS EXCLUSIVE', title: 'Fresh groceries delivered in 30 min', subtitle: 'Same-day delivery, quality guaranteed', badge: 'Fresh ✓', bg: 'from-emerald-600 via-teal-600 to-cyan-700', icon: Package, iconColor: 'text-emerald-200' },
-  { id: 3, tag: 'PREMIUM PICKS', title: 'Handpicked quality products', subtitle: 'Curated selection for HomeSeva members', badge: 'Premium ✓', bg: 'from-amber-600 via-orange-600 to-rose-700', icon: Crown, iconColor: 'text-yellow-200' },
+  { id: 3, tag: 'PREMIUM PICKS', title: 'Handpicked quality products', subtitle: 'Curated selection for Bhale Padharya members', badge: 'Premium ✓', bg: 'from-amber-600 via-orange-600 to-rose-700', icon: Crown, iconColor: 'text-yellow-200' },
 ];
 const PAYMENT_METHODS = [
   { id: 'phonepe', label: 'PhonePe Payment Gateway', icon: '🟣', desc: 'Pay via PhonePe', available: true },
@@ -426,7 +426,7 @@ export function StorePage() {
       const { processUPIPayment } = await import('../services/razorpay');
 
       await processUPIPayment({
-        productName: `HomeSeva Store Order (${cartCount} item${cartCount > 1 ? 's' : ''})`,
+        productName: `Bhale Padharya Store Order (${cartCount} item${cartCount > 1 ? 's' : ''})`,
         productId: 'store_order',
         amount: total, // exact discounted final amount
         discount: discount,

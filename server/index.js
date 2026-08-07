@@ -428,7 +428,7 @@ const db = new sqlite3.Database(dbFile, (err) => {
             { id: 'm2', name: 'Royal Punjabi Butter Paneer & Naan Combo', category: 'North Indian', caterer: 'Amritsari Tadka Caterers', food_type: 'veg', rating: 4.8, reviews: 980, prep_time: '30 mins', calories: 620, serves: '1-2 Persons', price: 249, original_price: 299, discount_badge: 'POPULAR', popular: 1, bestseller: 0, image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&q=80&w=800', description: 'Rich Creamy Shahi Paneer Butter Masala served with 2 Butter Garlic Naan and Jeera Rice.', ingredients: JSON.stringify(['Fresh Cottage Cheese', 'Butter', 'Tomato Gravy', 'Garlic', 'Basmati Rice']), nutrition: JSON.stringify({ calories: 620, protein: '22g', carbs: '70g', fat: '28g' }), spice_level: 'Mild' },
             { id: 'm3', name: 'Healthy Protein Quinoa & Grilled Veggie Bowl', category: 'Healthy Meals', caterer: 'NutriFit Kitchens', food_type: 'veg', rating: 4.9, reviews: 650, prep_time: '15 mins', calories: 380, serves: '1 Person', price: 220, original_price: 280, discount_badge: 'HEALTHY', popular: 0, bestseller: 0, image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800', description: 'High-protein organic quinoa bowl topped with avocado, roasted chickpeas, broccoli, and lemon tahini dressing.', ingredients: JSON.stringify(['Organic Quinoa', 'Avocado', 'Broccoli', 'Chickpeas', 'Tahini']), nutrition: JSON.stringify({ calories: 380, protein: '18g', carbs: '45g', fat: '12g' }), spice_level: 'Mild' },
             { id: 'm4', name: 'South Indian Mini Tiffin Feast', category: 'South Indian', caterer: 'Madras Special Tiffin', food_type: 'veg', rating: 4.7, reviews: 1120, prep_time: '20 mins', calories: 410, serves: '1 Person', price: 175, original_price: 220, discount_badge: '15% OFF', popular: 0, bestseller: 1, image: 'https://images.unsplash.com/photo-1610192244261-3f33de3f55e4?auto=format&fit=crop&q=80&w=800', description: 'Assorted 2 Ghee Mini Idlis, 1 Medu Vada, Mini Masala Dosa, Piping Hot Sambar & 3 Chutneys.', ingredients: JSON.stringify(['Fermented Rice & Lentil Batter', 'Pure Ghee', 'Fresh Coconut', 'Curry Leaves']), nutrition: JSON.stringify({ calories: 410, protein: '14g', carbs: '65g', fat: '10g' }), spice_level: 'Medium' },
-            { id: 'm5', name: 'Family Feast Combo (Serves 4-5)', category: 'Family Pack', caterer: 'HomeSeva Signature Kitchen', food_type: 'veg', rating: 4.9, reviews: 2150, prep_time: '40 mins', calories: 1200, serves: '4-5 Persons', price: 799, original_price: 999, discount_badge: 'SAVE ₹200', popular: 1, bestseller: 1, image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&q=80&w=800', description: 'Grand family feast box: Paneer Tikka Masala, Dal Makhani, 8 Butter Phulkas, Veg Pulao, Gulab Jamun & Salad.', ingredients: JSON.stringify(['Paneer', 'Black Lentils', 'Basmati Rice', 'Whole Wheat', 'Khoya']), nutrition: JSON.stringify({ calories: 1200, protein: '48g', carbs: '140g', fat: '52g' }), spice_level: 'Medium' },
+            { id: 'm5', name: 'Family Feast Combo (Serves 4-5)', category: 'Family Pack', caterer: 'Bhale Padharya Signature Kitchen', food_type: 'veg', rating: 4.9, reviews: 2150, prep_time: '40 mins', calories: 1200, serves: '4-5 Persons', price: 799, original_price: 999, discount_badge: 'SAVE ₹200', popular: 1, bestseller: 1, image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&q=80&w=800', description: 'Grand family feast box: Paneer Tikka Masala, Dal Makhani, 8 Butter Phulkas, Veg Pulao, Gulab Jamun & Salad.', ingredients: JSON.stringify(['Paneer', 'Black Lentils', 'Basmati Rice', 'Whole Wheat', 'Khoya']), nutrition: JSON.stringify({ calories: 1200, protein: '48g', carbs: '140g', fat: '52g' }), spice_level: 'Medium' },
             { id: 'm6', name: 'Jain Shuddh Special Satvik Thali', category: 'Jain', caterer: 'Satvik Pure Jain Caterers', food_type: 'jain', rating: 4.9, reviews: 890, prep_time: '25 mins', calories: 450, serves: '1 Person', price: 210, original_price: 260, discount_badge: 'PURE SATVIK', popular: 0, bestseller: 0, image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=800', description: 'No onion, no garlic, 100% Jain Satvik thali with Gatte ki Sabzi, Paneer Makhhania, Phulkas, and Kheer.', ingredients: JSON.stringify(['Gram Flour Gatta', 'Fresh Cottage Cheese', 'Cow Ghee', 'Cumin', 'Rock Salt']), nutrition: JSON.stringify({ calories: 450, protein: '17g', carbs: '58g', fat: '16g' }), spice_level: 'Mild' },
             { id: 'm7', name: 'Mumbai Special Pav Bhaji & Extra Butter Pav', category: 'Snacks', caterer: 'Juhu Chopati Express', food_type: 'veg', rating: 4.8, reviews: 1450, prep_time: '15 mins', calories: 520, serves: '1 Person', price: 140, original_price: 180, discount_badge: 'HOT SELLER', popular: 1, bestseller: 1, image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&q=80&w=800', description: 'Mashed buttery veg bhaji cooked in pure Amul butter, served with 2 toasted soft pavs, onions, and lemon.', ingredients: JSON.stringify(['Potatoes', 'Peas', 'Capsicum', 'Amul Butter', 'Pav Bread']), nutrition: JSON.stringify({ calories: 520, protein: '12g', carbs: '68g', fat: '22g' }), spice_level: 'Medium' },
             { id: 'm8', name: 'Desi Ghee Indori Poha & Sev Snacks', category: 'Breakfast', caterer: 'Malwa Express', food_type: 'veg', rating: 4.7, reviews: 780, prep_time: '10 mins', calories: 290, serves: '1 Person', price: 80, original_price: 110, discount_badge: 'BREAKFAST SPECIAL', popular: 0, bestseller: 0, image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&q=80&w=800', description: 'Steamed yellow poha topped with crunchy Ratlami sev, pomegranate seeds, roasted peanuts & lemon.', ingredients: JSON.stringify(['Flattened Rice', 'Ratlami Sev', 'Peanuts', 'Mustard Seeds', 'Turmeric']), nutrition: JSON.stringify({ calories: 290, protein: '8g', carbs: '48g', fat: '7g' }), spice_level: 'Mild' },
@@ -916,7 +916,7 @@ app.post('/api/auth/verify-email', async (req, res) => {
 
     // Send Welcome Email
     sendCustomerAccountNotification('welcome', { name: user.name, email: cleanEmail }).catch(() => {});
-    saveNotification(user.id, 'Welcome to HomeSeva!', 'Your email has been verified successfully. Explore our home services!', 'system');
+    saveNotification(user.id, 'Welcome to Bhale Padharya!', 'Your email has been verified successfully. Explore our home services!', 'system');
     await addAuditLog(user.id, user.name, 'Email Verified', 'User successfully verified email address.');
 
     // Issue JWT Token
@@ -1214,7 +1214,7 @@ app.post('/api/auth/verify-reset-otp', async (req, res) => {
 
   try {
     const cleanEmail = email.trim().toLowerCase();
-    const cleanOtp = otp.toString().trim();
+    const cleanOtp = Array.isArray(otp) ? otp.join('').trim() : otp.toString().replace(/,/g, '').trim();
 
     const otpRecord = await dbGet(
       'SELECT * FROM otps WHERE LOWER(email) = ? ORDER BY expires_at DESC LIMIT 1',
@@ -1271,7 +1271,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 
   try {
     const cleanEmail = email.trim().toLowerCase();
-    const cleanOtp = otp.toString().trim();
+    const cleanOtp = Array.isArray(otp) ? otp.join('').trim() : otp.toString().replace(/,/g, '').trim();
 
     const user = await dbGet('SELECT * FROM users WHERE LOWER(email) = ?', [cleanEmail]);
     if (!user) {
@@ -3986,6 +3986,6 @@ app.get('/api/admin/payments/categorized', authenticateToken, async (req, res) =
 // Start Express server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`Relational HomeSeva backend running on http://localhost:${PORT}`);
+  console.log(`Relational Bhale Padharya backend running on http://localhost:${PORT}`);
   verifyTransporter();
 });

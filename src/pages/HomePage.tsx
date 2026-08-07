@@ -103,7 +103,7 @@ export function HomePage() {
       {/* Why Choose Us (Compact 2x2 Grid, 4 columns on desktop with 3D animation) */}
       <section className="bg-white dark:bg-slate-900 border-y border-gray-150 dark:border-slate-800/60">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <h2 className="text-sm font-extrabold text-gray-900 dark:text-white mb-4">Why HomeSeva</h2>
+          <h2 className="text-sm font-extrabold text-gray-900 dark:text-white mb-4">Why Bhale Padharya</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {whyChoose.map((item) => (
               <div

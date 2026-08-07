@@ -8,9 +8,9 @@ const contactInfo = [
   {
     icon: Mail,
     label: 'Direct Email Support',
-    value: 'support@homeseva.com',
+    value: 'support@bhalepadharya.com',
     sub: 'For general & billing queries',
-    href: 'mailto:support@homeseva.com',
+    href: 'mailto:support@bhalepadharya.com',
     color: 'from-blue-500/15 to-indigo-500/10 text-blue-600 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/50',
   },
   {

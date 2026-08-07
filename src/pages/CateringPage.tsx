@@ -601,13 +601,13 @@ export function CateringPage() {
                     </div>
                     <h3 className="text-2xl font-black text-slate-900">Sign in to track orders</h3>
                     <p className="text-slate-500 text-sm mt-2 mb-6 leading-relaxed">
-                      Please log in to your HomeSeva account to monitor your catering bookings, check quotation reviews, and track live statuses.
+                      Please log in to your Bhale Padharya account to monitor your catering bookings, check quotation reviews, and track live statuses.
                     </p>
                     <button
                       onClick={() => navigate('/login', { state: { from: '/catering?tab=my-requests' } })}
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-full shadow-md transition-all text-base"
                     >
-                      Sign In to HomeSeva
+                      Sign In to Bhale Padharya
                     </button>
                   </div>
                 ) : (

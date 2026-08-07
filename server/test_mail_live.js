@@ -5,13 +5,13 @@ async function testLiveMail() {
   const transporter = createTransporter();
   try {
     const result = await transporter.sendMail({
-      from: 'HomeSeva <bhalepadharya.app@gmail.com>',
+      from: 'Bhale Padharya <bhalepadharya.app@gmail.com>',
       to: 'bhalepadharya.app@gmail.com',
-      subject: 'Test Verification OTP - HomeSeva',
+      subject: 'Test Verification OTP - Bhale Padharya',
       html: `
         <div style="padding: 20px; font-family: sans-serif;">
           <h2>Your OTP Verification Code: <strong>849201</strong></h2>
-          <p>This is a live test email from HomeSeva OTP Verification system.</p>
+          <p>This is a live test email from Bhale Padharya OTP Verification system.</p>
         </div>
       `,
     });

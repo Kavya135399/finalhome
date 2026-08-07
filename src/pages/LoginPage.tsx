@@ -112,7 +112,7 @@ export function LoginPage() {
       </form>
 
       <p className="text-center text-sm text-gray-600 dark:text-gray-400 mt-6">
-        New to HomeSeva? <Link to="/register" className="text-brand-600 font-semibold hover:underline">Create an account</Link>
+        New to Bhale Padharya? <Link to="/register" className="text-brand-600 font-semibold hover:underline">Create an account</Link>
       </p>
 
       {/* OTP Modal */}

@@ -24,7 +24,7 @@ const emailWrapper = (title, headerColor, contentHtml) => `
           <!-- Header -->
           <tr>
             <td style="background: ${headerColor}; padding: 30px 24px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; tracking: -0.5px;">HomeSeva</h1>
+              <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 700; tracking: -0.5px;">Bhale Padharya</h1>
               <p style="color: rgba(255,255,255,0.9); margin: 6px 0 0 0; font-size: 15px;">${title}</p>
             </td>
           </tr>
@@ -37,9 +37,9 @@ const emailWrapper = (title, headerColor, contentHtml) => `
           <!-- Footer -->
           <tr>
             <td style="background-color: ${lightBg}; padding: 24px; text-align: center; border-top: 1px solid #E5E7EB; font-size: 13px; color: #6B7280;">
-              <p style="margin: 0 0 8px 0; font-weight: 600; color: ${darkColor};">HomeSeva Services Pvt Ltd</p>
+              <p style="margin: 0 0 8px 0; font-weight: 600; color: ${darkColor};">Bhale Padharya Services Pvt Ltd</p>
               <p style="margin: 0 0 12px 0;">Need assistance? Contact us at <a href="mailto:bhalepadharya.app@gmail.com" style="color: ${primaryColor}; text-decoration: none;">bhalepadharya.app@gmail.com</a> or +91 98765 43210.</p>
-              <p style="margin: 0; font-size: 11px; color: #9CA3AF;">© 2026 HomeSeva. All rights reserved.</p>
+              <p style="margin: 0; font-size: 11px; color: #9CA3AF;">© 2026 Bhale Padharya. All rights reserved.</p>
             </td>
           </tr>
         </table>
@@ -77,7 +77,7 @@ export const getTemplateHtml = (templateName, data = {}) => {
       return emailWrapper('Order Placed Successfully', primaryColor, `
         <h2 style="color: ${darkColor}; margin-top: 0;">Order Received! 📦</h2>
         <p>Dear <strong>${data.customerName || 'Customer'}</strong>,</p>
-        <p>Thank you for choosing HomeSeva. We have received your order and are currently processing it.</p>
+        <p>Thank you for choosing Bhale Padharya. We have received your order and are currently processing it.</p>
         ${renderOrderSummaryTable(data)}
         <p style="color: #6B7280; font-size: 14px;">We will notify you as soon as your order status changes.</p>
       `);
@@ -123,7 +123,7 @@ export const getTemplateHtml = (templateName, data = {}) => {
       return emailWrapper('Order Delivered', secondaryColor, `
         <h2 style="color: ${darkColor}; margin-top: 0;">Order Successfully Delivered! 🎉</h2>
         <p>Dear <strong>${data.customerName || 'Customer'}</strong>,</p>
-        <p>Your order has been delivered successfully. Thank you for booking with HomeSeva!</p>
+        <p>Your order has been delivered successfully. Thank you for booking with Bhale Padharya!</p>
         ${renderOrderSummaryTable(data)}
         <div style="text-align: center; margin: 30px 0;">
           <a href="${downloadInvoiceUrl}" target="_blank" style="background-color: ${primaryColor}; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; margin-right: 10px;">📄 Download Invoice</a>
@@ -175,12 +175,12 @@ export const getTemplateHtml = (templateName, data = {}) => {
 
     // 🔔 CUSTOMER & OTP NOTIFICATIONS
     case 'welcome':
-      return emailWrapper('Welcome to HomeSeva!', primaryColor, `
-        <h2 style="color: ${darkColor}; margin-top: 0;">Welcome to the HomeSeva Family! 👋</h2>
+      return emailWrapper('Welcome to Bhale Padharya!', primaryColor, `
+        <h2 style="color: ${darkColor}; margin-top: 0;">Welcome to the Bhale Padharya Family! 👋</h2>
         <p>Dear <strong>${data.name || 'User'}</strong>,</p>
-        <p>Your email address has been verified successfully. We are excited to have you on board! HomeSeva provides top-quality home services, instant booking, and seamless store deliveries right to your doorstep.</p>
+        <p>Your email address has been verified successfully. We are excited to have you on board! Bhale Padharya provides top-quality home services, instant booking, and seamless store deliveries right to your doorstep.</p>
         <div style="background-color: #EEF2FF; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #C7D2FE;">
-          <h4 style="margin: 0 0 8px 0; color: ${primaryColor};">What you can do with HomeSeva:</h4>
+          <h4 style="margin: 0 0 8px 0; color: ${primaryColor};">What you can do with Bhale Padharya:</h4>
           <ul style="margin: 0; padding-left: 20px; color: ${darkColor}; line-height: 1.8;">
             <li>Book expert cleaning, plumbing, & electric services</li>
             <li>Shop home essentials & electronics from our store</li>
@@ -188,7 +188,7 @@ export const getTemplateHtml = (templateName, data = {}) => {
           </ul>
         </div>
         <div style="text-align: center; margin: 25px 0;">
-          <a href="${appUrl}" target="_blank" style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Explore HomeSeva Services</a>
+          <a href="${appUrl}" target="_blank" style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Explore Bhale Padharya Services</a>
         </div>
       `);
 
@@ -197,7 +197,7 @@ export const getTemplateHtml = (templateName, data = {}) => {
       return emailWrapper('Verify Your Email Address', primaryColor, `
         <h2 style="color: ${darkColor}; margin-top: 0;">Verify Your Email Account 🔒</h2>
         <p>Dear <strong>${data.name || 'User'}</strong>,</p>
-        <p>Please use the 6-digit verification code below to verify your HomeSeva account email:</p>
+        <p>Please use the 6-digit verification code below to verify your Bhale Padharya account email:</p>
         <div style="text-align: center; margin: 25px 0;">
           <div style="display: inline-block; background-color: #F3F4F6; border: 2px dashed ${primaryColor}; padding: 15px 30px; font-size: 32px; font-weight: 800; color: ${primaryColor}; letter-spacing: 6px; border-radius: 10px;">
             ${data.otp || '592814'}
@@ -225,7 +225,7 @@ export const getTemplateHtml = (templateName, data = {}) => {
       return emailWrapper('Security Alert: Password Changed', secondaryColor, `
         <h2 style="color: ${darkColor}; margin-top: 0;">Password Changed Successfully 🛡️</h2>
         <p>Dear <strong>${data.name || 'User'}</strong>,</p>
-        <p>Your HomeSeva account password was updated successfully on <strong>${new Date().toLocaleString()}</strong>.</p>
+        <p>Your Bhale Padharya account password was updated successfully on <strong>${new Date().toLocaleString()}</strong>.</p>
         <p style="color: #6B7280;">If you did not make this change, please immediately contact our support team at bhalepadharya.app@gmail.com.</p>
       `);
 
@@ -233,7 +233,7 @@ export const getTemplateHtml = (templateName, data = {}) => {
       return emailWrapper('Security Alert: Profile Updated', primaryColor, `
         <h2 style="color: ${darkColor}; margin-top: 0;">Profile Information Updated 🛡️</h2>
         <p>Dear <strong>${data.name || 'User'}</strong>,</p>
-        <p>Your HomeSeva profile details were updated on <strong>${new Date().toLocaleString()}</strong>.</p>
+        <p>Your Bhale Padharya profile details were updated on <strong>${new Date().toLocaleString()}</strong>.</p>
         <p style="color: #6B7280;">If you did not make this change, please contact bhalepadharya.app@gmail.com.</p>
       `);
 
@@ -241,13 +241,13 @@ export const getTemplateHtml = (templateName, data = {}) => {
       return emailWrapper('Security Alert: Address Updated', primaryColor, `
         <h2 style="color: ${darkColor}; margin-top: 0;">Address Book Updated 🏠</h2>
         <p>Dear <strong>${data.name || 'User'}</strong>,</p>
-        <p>A new address was added or modified in your HomeSeva account.</p>
+        <p>A new address was added or modified in your Bhale Padharya account.</p>
         <p><strong>Address:</strong> ${data.address || 'New address registered'}</p>
       `);
 
     // 🎁 MARKETING & OFFERS
     case 'offer_announcement':
-      return emailWrapper(data.subject || 'Special Festival Offer from HomeSeva!', primaryColor, `
+      return emailWrapper(data.subject || 'Special Festival Offer from Bhale Padharya!', primaryColor, `
         <div style="text-align: center; margin-bottom: 20px;">
           <img src="${data.bannerUrl || 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=600&q=80'}" alt="Offer Banner" style="width: 100%; max-height: 240px; object-fit: cover; border-radius: 8px;" />
         </div>
@@ -279,9 +279,9 @@ export const getTemplateHtml = (templateName, data = {}) => {
     // ⭐ REVIEW REQUEST
     case 'review_request':
       return emailWrapper('Rate Your Service Experience', primaryColor, `
-        <h2 style="color: ${darkColor}; margin-top: 0;">How was your HomeSeva service? ⭐</h2>
+        <h2 style="color: ${darkColor}; margin-top: 0;">How was your Bhale Padharya service? ⭐</h2>
         <p>Dear <strong>${data.customerName || 'Customer'}</strong>,</p>
-        <p>We hope you loved your experience with <strong>${data.serviceName || 'HomeSeva Service'}</strong>!</p>
+        <p>We hope you loved your experience with <strong>${data.serviceName || 'Bhale Padharya Service'}</strong>!</p>
         <p>Your feedback helps us continuously improve our quality.</p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${appUrl}/services" target="_blank" style="background-color: ${primaryColor}; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">⭐ Rate & Write a Review</a>
@@ -300,9 +300,9 @@ export const getTemplateHtml = (templateName, data = {}) => {
       `);
 
     default:
-      return emailWrapper('HomeSeva Notification', primaryColor, `
-        <h2>HomeSeva Update</h2>
-        <p>${data.message || 'Thank you for using HomeSeva.'}</p>
+      return emailWrapper('Bhale Padharya Notification', primaryColor, `
+        <h2>Bhale Padharya Update</h2>
+        <p>${data.message || 'Thank you for using Bhale Padharya.'}</p>
       `);
   }
 };

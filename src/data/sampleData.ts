@@ -77,9 +77,9 @@ export const reviews: Review[] = [
 ];
 
 export const testimonials: Testimonial[] = [
-  { id: 't1', author: 'Ananya Krishnan', avatar: avatar('Ananya'), location: 'Mumbai', rating: 5, text: 'HomeSeva handled our birthday catering beautifully. The food and setup were both excellent.', service: 'Birthday Catering' },
+  { id: 't1', author: 'Ananya Krishnan', avatar: avatar('Ananya'), location: 'Mumbai', rating: 5, text: 'Bhale Padharya handled our birthday catering beautifully. The food and setup were both excellent.', service: 'Birthday Catering' },
   { id: 't2', author: 'Siddharth Rao', avatar: avatar('Siddharth'), location: 'Bengaluru', rating: 5, text: 'I booked a deep cleaning service and was amazed by the attention to detail. The team was professional and courteous.', service: 'Full Home Cleaning' },
-  { id: 't3', author: 'Pooja Nair', avatar: avatar('Pooja'), location: 'Delhi', rating: 5, text: 'Transparent pricing, verified professionals, and live tracking. HomeSeva truly delivers on its promise.', service: 'Taxi' },
+  { id: 't3', author: 'Pooja Nair', avatar: avatar('Pooja'), location: 'Delhi', rating: 5, text: 'Transparent pricing, verified professionals, and live tracking. Bhale Padharya truly delivers on its promise.', service: 'Taxi' },
   { id: 't4', author: 'Karan Malhotra', avatar: avatar('Karan'), location: 'Pune', rating: 4, text: 'Great platform. The plumbing work was clean, quick, and professionally handled.', service: 'Pipe Leak Repair' },
 ];
 
@@ -100,7 +100,7 @@ export const notifications: Notification[] = [
   { id: 'n1', type: 'booking', title: 'Booking Confirmed', message: 'Your Wedding Catering is confirmed for Aug 20, 6:00 PM.', time: '2h ago', read: false },
   { id: 'n2', type: 'promo', title: '20% Off Cleaning', message: 'Use code CLEAN20 on your next deep cleaning booking.', time: '1d ago', read: false },
   { id: 'n3', type: 'review', title: 'Rate your experience', message: 'How was your Electrical visit on Dec 28?', time: '3d ago', read: true },
-  { id: 'n4', type: 'system', title: 'Welcome to HomeSeva', message: 'Complete your profile for personalized service.', time: '1w ago', read: true },
+  { id: 'n4', type: 'system', title: 'Welcome to Bhale Padharya', message: 'Complete your profile for personalized service.', time: '1w ago', read: true },
 ];
 
 export const walletTransactions: WalletTransaction[] = [
@@ -126,7 +126,7 @@ export const stats = [
 ];
 
 export const faqs = [
-  { q: 'How does HomeSeva verify professionals?', a: 'Every professional undergoes a background check, skill assessment, and in-person training before joining our platform. We verify identity, address, and experience.' },
+  { q: 'How does Bhale Padharya verify professionals?', a: 'Every professional undergoes a background check, skill assessment, and in-person training before joining our platform. We verify identity, address, and experience.' },
   { q: 'Can I reschedule or cancel my booking?', a: 'Yes. You can reschedule or cancel free of charge up to 2 hours before your appointment from your dashboard. Same-day changes may incur a nominal fee.' },
   { q: 'What payment methods are accepted?', a: 'We accept UPI, credit/debit cards, net banking, and cash on service. Wallet payments and gift cards are also supported.' },
   { q: 'Is there a service warranty?', a: 'Most services come with a 30-90 day warranty. If the issue recurs within the warranty period, we re-service at no extra cost.' },

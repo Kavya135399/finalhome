@@ -76,7 +76,7 @@ export function Navbar() {
               <HomeIcon className="w-5 h-5 text-white" />
             </div>
             <span className="text-xl font-extrabold font-display tracking-tight">
-              Home<span className="text-brand-600">Seva</span>
+              Bhale<span className="text-brand-600">Padharya</span>
             </span>
           </Link>
 

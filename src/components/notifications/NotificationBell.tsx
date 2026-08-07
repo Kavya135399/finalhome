@@ -190,7 +190,7 @@ export const NotificationBell: React.FC = () => {
 
           {/* Footer */}
           <div className="p-2.5 bg-gray-50 dark:bg-gray-800/60 border-t border-gray-200 dark:border-gray-800 text-center text-[11px] text-gray-500">
-            HomeSeva Realtime Notification System
+            Bhale Padharya Realtime Notification System
           </div>
         </div>
       )}

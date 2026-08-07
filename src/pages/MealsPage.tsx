@@ -121,7 +121,7 @@ const SAMPLE_MEALS: MealItem[] = [
     id: 'm5',
     name: 'Family Celebration Meal Box (Serves 4-5)',
     category: 'Family Pack',
-    caterer: 'HomeSeva Signature Kitchen',
+    caterer: 'Bhale Padharya Signature Kitchen',
     foodType: 'veg',
     rating: 4.9,
     reviews: 2150,

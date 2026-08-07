@@ -64,18 +64,18 @@ async function runFullDiagnosis() {
   
   console.log(`\n[DEBUG STEP 7] Executing transporter.sendMail() to ${targetEmail}...`);
   const mailOptions = {
-    from: process.env.EMAIL_FROM || `HomeSeva <${user}>`,
+    from: process.env.EMAIL_FROM || `Bhale Padharya <${user}>`,
     to: targetEmail,
     subject: `🔐 Live Diagnostic OTP: ${testOtp}`,
     html: `
       <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f5;">
-        <h2 style="color: #4f46e5;">HomeSeva Live OTP Verification Audit</h2>
+        <h2 style="color: #4f46e5;">Bhale Padharya Live OTP Verification Audit</h2>
         <p>Your 6-digit OTP code is:</p>
         <h1 style="font-size: 32px; letter-spacing: 5px; color: #1e1b4b; background: #e0e7ff; padding: 10px; display: inline-block; rounded: 8px;">${testOtp}</h1>
         <p>Generated at: ${new Date().toLocaleString()}</p>
       </div>
     `,
-    text: `Your HomeSeva diagnostic OTP is: ${testOtp}`,
+    text: `Your Bhale Padharya diagnostic OTP is: ${testOtp}`,
   };
 
   console.log('[DEBUG STEP 4] Request Body (mailOptions):', JSON.stringify({ to: mailOptions.to, from: mailOptions.from, subject: mailOptions.subject }));

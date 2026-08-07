@@ -496,7 +496,7 @@ export function AdminDashboardPage() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50 dark:bg-slate-950 min-h-screen text-center">
         <RefreshCw className="w-10 h-10 text-brand-600 animate-spin mb-4" />
-        <p className="text-sm font-bold text-gray-700 dark:text-slate-300">Connecting to HomeSeva Core Database...</p>
+        <p className="text-sm font-bold text-gray-700 dark:text-slate-300">Connecting to Bhale Padharya Core Database...</p>
         <p className="text-xs text-gray-400 mt-1">Syncing Services, Store Products, Taxi Fleet, Memberships, & Payment Records</p>
       </div>
     );
@@ -511,10 +511,10 @@ export function AdminDashboardPage() {
           <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-slate-800">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center text-white font-black shadow-lg shadow-brand-500/20">
-                HS
+                BP
               </div>
               <div>
-                <h1 className="font-extrabold text-sm text-gray-900 dark:text-white">HomeSeva Admin</h1>
+                <h1 className="font-extrabold text-sm text-gray-900 dark:text-white">Bhale Padharya Admin</h1>
                 <p className="text-[10px] font-semibold text-brand-600">Full-Stack Control</p>
               </div>
             </div>
@@ -899,7 +899,7 @@ export function AdminDashboardPage() {
                             <p className="hidden sm:block text-xs text-gray-400 line-clamp-2 mt-0.5">{meal.description}</p>
                             <div className="sm:hidden flex items-center gap-2 mt-0.5">
                               <span className="text-xs font-black text-brand-600">₹{meal.price}</span>
-                              <span className="text-[10px] text-gray-400 truncate">{meal.caterer || 'HomeSeva Kitchen'}</span>
+                              <span className="text-[10px] text-gray-400 truncate">{meal.caterer || 'Bhale Padharya Kitchen'}</span>
                             </div>
                           </div>
                         </div>
@@ -907,7 +907,7 @@ export function AdminDashboardPage() {
                         <div className="sm:mt-4 sm:pt-3 sm:border-t border-gray-100 dark:border-slate-800 flex items-center justify-end sm:justify-between shrink-0">
                           <div className="hidden sm:block">
                             <p className="text-sm font-black text-brand-600">₹{meal.price}</p>
-                            <p className="text-[10px] text-gray-400">{meal.caterer || 'HomeSeva Kitchen'}</p>
+                            <p className="text-[10px] text-gray-400">{meal.caterer || 'Bhale Padharya Kitchen'}</p>
                           </div>
                           <div className="flex flex-col sm:flex-row gap-1.5 shrink-0">
                             <button

@@ -229,7 +229,7 @@ export function BookingPage() {
       amount: total,
       discount: discount,
       customerName: user.name || 'Valued Customer',
-      email: user.email || 'customer@homeseva.com',
+      email: user.email || 'customer@bhalepadharya.com',
       phoneNumber: (user as any)?.phone || '9876543210',
       address: finalAddressObj,
       bookingDate: selectedDate,

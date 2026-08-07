@@ -136,7 +136,7 @@ export function RootLayout() {
   const pathname = location.pathname;
 
   // Determine page title
-  let pageTitle = 'HomeSeva';
+  let pageTitle = 'Bhale Padharya';
   if (pathname === '/services') pageTitle = 'Explore Services';
   else if (pathname.startsWith('/services/')) pageTitle = 'Service Details';
   else if (pathname.startsWith('/book/')) pageTitle = 'Book Service';
@@ -192,7 +192,7 @@ export function RootLayout() {
           <div className="flex items-center gap-2">
             <Link to="/" className="flex items-center px-1">
               <span className="text-[17px] font-extrabold tracking-tight text-gray-900 dark:text-white font-display">
-                HomeSeva
+                Bhale Padharya
               </span>
             </Link>
           </div>
@@ -409,7 +409,7 @@ export function RootLayout() {
                     <HomeIcon className="w-4.5 h-4.5 text-white" />
                   </div>
                   <span className="text-lg font-black font-display text-gray-900 dark:text-white">
-                    Home<span className="text-brand-600">Seva</span>
+                    Bhale<span className="text-brand-600">Padharya</span>
                   </span>
                 </div>
                 <button
@@ -477,7 +477,7 @@ export function RootLayout() {
                     className="group flex items-center gap-3.5 px-3.5 py-3 rounded-2xl text-sm font-semibold text-gray-600 dark:text-gray-300 border border-transparent hover:border-brand-100/40 dark:hover:border-brand-900/30 hover:bg-brand-50/50 dark:hover:bg-slate-800/50 hover:shadow-soft hover:-translate-y-0.5 active:translate-y-0 active:shadow-none transition-all duration-200"
                   >
                     <Info className="w-5 h-5 text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 group-hover:scale-110 transition-transform duration-200 shrink-0" />
-                    <span className="group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors duration-200">About HomeSeva</span>
+                    <span className="group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors duration-200">About Bhale Padharya</span>
                   </Link>
                   
                   <Link

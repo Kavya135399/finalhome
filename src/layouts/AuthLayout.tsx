@@ -24,7 +24,7 @@ export function AuthLayout({ children, title, subtitle }: { children: ReactNode;
             <HomeIcon className="w-3.5 h-3.5 text-white" />
           </div>
           <span className="text-sm font-extrabold tracking-tight font-display text-gray-900 dark:text-white">
-            Home<span className="text-brand-600">Seva</span>
+            Bhale<span className="text-brand-600">Padharya</span>
           </span>
         </Link>
       </div>
@@ -49,7 +49,7 @@ export function AuthLayout({ children, title, subtitle }: { children: ReactNode;
 
       {/* Footer text */}
       <p className="text-[10px] text-gray-400 text-center shrink-0 mt-4 select-none">
-        © {new Date().getFullYear()} HomeSeva Technologies. Secure Connection.
+        © {new Date().getFullYear()} Bhale Padharya Technologies. Secure Connection.
       </p>
 
     </div>

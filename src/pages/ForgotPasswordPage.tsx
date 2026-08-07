@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, ArrowLeft, KeyRound, ShieldCheck, Lock, Eye, EyeOff, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import { AuthLayout } from '../layouts/AuthLayout';
@@ -20,6 +20,15 @@ export function ForgotPasswordPage() {
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(60);
   const [error, setError] = useState('');
+
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Focus first input when step changes to 'otp'
+  useEffect(() => {
+    if (step === 'otp') {
+      setTimeout(() => inputRefs.current[0]?.focus(), 100);
+    }
+  }, [step]);
 
   // 60-second Cooldown timer for resend button in step 2
   useEffect(() => {
@@ -130,6 +139,26 @@ export function ForgotPasswordPage() {
     newOtp[index] = val.slice(-1);
     setOtp(newOtp);
     setError('');
+
+    // Auto-focus next input
+    if (val && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').trim();
+    if (pasted.length === 6) {
+      setOtp(pasted.split(''));
+      inputRefs.current[5]?.focus();
+    }
   };
 
   return (
@@ -140,7 +169,7 @@ export function ForgotPasswordPage() {
           ? "Enter your email address and we'll send a 6-digit OTP code."
           : step === 'otp'
           ? `Verification OTP sent to ${email}`
-          : 'Set a strong password for your HomeSeva account.'
+          : 'Set a strong password for your Bhale Padharya account.'
       }
     >
       {error && (
@@ -175,10 +204,14 @@ export function ForgotPasswordPage() {
             {otp.map((digit, idx) => (
               <input
                 key={idx}
+                ref={(el) => (inputRefs.current[idx] = el)}
                 type="text"
+                inputMode="numeric"
                 maxLength={1}
                 value={digit}
                 onChange={(e) => handleOtpChange(idx, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(idx, e)}
+                onPaste={idx === 0 ? handlePaste : undefined}
                 className="w-10 sm:w-12 h-12 sm:h-14 text-center text-xl font-extrabold text-indigo-600 dark:text-indigo-400 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
               />
             ))}

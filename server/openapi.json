@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "HomeSeva Pro REST API",
+    "title": "Bhale Padharya Pro REST API",
     "version": "1.0.0",
-    "description": "Production-ready administrative backend endpoints for HomeSeva mobile application catalog and dashboard."
+    "description": "Production-ready administrative backend endpoints for Bhale Padharya mobile application catalog and dashboard."
   },
   "servers": [
     {

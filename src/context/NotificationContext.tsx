@@ -26,7 +26,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<NotificationItem[]>([
-    { id: 'n1', type: 'system', title: 'Welcome to HomeSeva', message: 'Complete your profile for personalized service.', time: 'Just now', read: false },
+    { id: 'n1', type: 'system', title: 'Welcome to Bhale Padharya', message: 'Complete your profile for personalized service.', time: 'Just now', read: false },
     { id: 'n2', type: 'promo', title: '20% Off Cleaning', message: 'Use code CLEAN20 on your next deep cleaning booking.', time: '1d ago', read: false }
   ]);
 

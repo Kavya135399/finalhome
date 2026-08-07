@@ -121,7 +121,7 @@ export function MembershipCheckoutModal({ isOpen, onClose, plan, onSuccess }: Me
       fullAddress: `${streetAddress}, ${city} - ${pincode}`,
     };
 
-    const productName = `HomeSeva ${plan.name} (${selectedTenure.label})`;
+    const productName = `Bhale Padharya ${plan.name} (${selectedTenure.label})`;
     const productId = `mem_${plan.id}_${selectedTenure.id}`;
 
     await processUPIPayment({

@@ -35,7 +35,7 @@ export function MembershipsPage() {
             </div>
 
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white">
-              HomeSeva Membership Care
+              Bhale Padharya Membership Care
             </h1>
             <p className="text-slate-300 text-sm sm:text-base font-medium mt-2 max-w-xl leading-relaxed">
               Enjoy active property care, priority scheduling, dedicated assistance, and transparent digital monitoring.
@@ -176,7 +176,7 @@ export function MembershipsPage() {
                 No active membership plan
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto leading-relaxed">
-                You are currently on the free tier. Subscribe to a HomeSeva care plan for regular inspections, maintenance & digital property tracking.
+                You are currently on the free tier. Subscribe to a Bhale Padharya care plan for regular inspections, maintenance & digital property tracking.
               </p>
               <button
                 onClick={() => navigate('/memberships-info')}
