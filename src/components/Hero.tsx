@@ -17,7 +17,7 @@ import {
   Star,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { cities } from '../data/sampleData';
+import { cities, services, categories } from '../data/sampleData';
 import { apiClient } from '../services/apiClient';
 import { useGreeting } from '../hooks/useGreeting';
 
@@ -82,6 +82,7 @@ export function Hero() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [query, setQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [city, setCity] = useState('Patan, Gujarat');
   const [cityOpen, setCityOpen] = useState(false);
   const greeting = useGreeting(user?.name);
@@ -116,6 +117,34 @@ export function Hero() {
 
   const displayPromos = livePromos.length > 0 ? livePromos : promoBanners;
 
+  const unifiedSearchData = [
+    ...heroServices.map(h => ({
+      id: `hero-${h.id}`,
+      name: h.name,
+      categoryName: 'Page / Section',
+      path: h.path,
+    })),
+    ...categories.map(c => ({
+      id: `cat-${c.id}`,
+      name: c.name,
+      categoryName: 'Category',
+      path: `/services?q=${encodeURIComponent(c.name)}`,
+    })),
+    ...services.map(s => ({
+      id: `svc-${s.id}`,
+      name: s.name,
+      categoryName: s.categoryName,
+      path: `/services?q=${encodeURIComponent(s.name)}`,
+    }))
+  ];
+
+  const filteredServices = query.trim()
+    ? unifiedSearchData.filter(s => 
+        s.name.toLowerCase().includes(query.toLowerCase()) || 
+        s.categoryName.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 5)
+    : [];
+
   const renderPromoIcon = (iconVal: any) => {
     if (typeof iconVal !== 'string') {
       const IconComp = iconVal || Gift;
@@ -135,6 +164,7 @@ export function Hero() {
   const handleSearch = (e: FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
+    setShowSuggestions(false);
     navigate(`/services?q=${encodeURIComponent(query)}`);
   };
 
@@ -191,16 +221,52 @@ export function Hero() {
         </div>
 
         {/* Search Input */}
-        <form onSubmit={handleSearch} className="mb-7 sm:mb-8 relative">
+        <form onSubmit={handleSearch} className="mb-7 sm:mb-8 relative z-40">
           <div className="relative">
             <Search className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-gray-400" />
             <input
               type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               placeholder="Search services & products..."
               className="w-full h-12 sm:h-14 pl-11 sm:pl-13 pr-5 rounded-2xl sm:rounded-3xl bg-[#F1F5F9] dark:bg-slate-800 text-sm sm:text-base font-medium text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-all duration-200 focus:ring-2 focus:ring-brand-500/20 focus:bg-white dark:focus:bg-slate-900 border border-transparent focus:border-brand-500 shadow-sm"
             />
+            
+            {/* Live Search Suggestions Dropdown */}
+            {showSuggestions && query.trim() && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-2xl shadow-soft-lg border border-gray-100 dark:border-slate-700 overflow-hidden z-50">
+                {filteredServices.length > 0 ? (
+                  filteredServices.map(service => (
+                    <button
+                      key={service.id}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault(); // Prevent focus loss
+                        setQuery(service.name);
+                        setShowSuggestions(false);
+                        navigate(service.path);
+                      }}
+                      className="w-full text-left px-5 py-3 hover:bg-gray-50 dark:hover:bg-slate-700 transition flex items-center gap-3 border-b border-gray-50 dark:border-slate-700/50 last:border-0"
+                    >
+                      <Search className="w-4 h-4 text-gray-400 shrink-0" />
+                      <div>
+                        <div className="text-sm font-bold text-gray-900 dark:text-white">{service.name}</div>
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400">{service.categoryName}</div>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-5 py-4 text-center text-sm font-semibold text-gray-500 dark:text-gray-400">
+                    No service found for "{query}"
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </form>
 
@@ -229,7 +295,7 @@ export function Hero() {
 
             {/* Subtitle */}
             <p className="text-sm sm:text-base text-gray-300 mt-1 max-w-sm sm:max-w-md font-medium leading-relaxed drop-shadow">
-              Your Patan ancestral home, professionally managed — even when you&apos;re away.
+              Your Patan ancestral home, professionall  y managed — even when you're away.
             </p>
 
             {/* CTA Button */}
@@ -281,10 +347,10 @@ export function Hero() {
                 <Tag className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg sm:text-xl md:text-2xl font-black font-display text-gray-900 dark:text-white tracking-tight">
+                <h2 className="text-lg sm:text-xl font-bold font-display text-gray-900 dark:text-white tracking-tight">
                   Special Offers & Promos
                 </h2>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium mt-0.5">
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                   Exclusive discount codes and seasonal deals for your bookings
                 </p>
               </div>

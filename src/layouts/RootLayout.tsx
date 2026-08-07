@@ -24,6 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useNotifications } from '../context/NotificationContext';
 import { apiClient } from '../services/apiClient';
+import { NotificationBell } from '../components/notifications/NotificationBell';
 
 function getAvatarSrc(avatarUrl?: string) {
   if (!avatarUrl) return '';
@@ -187,7 +188,7 @@ export function RootLayout() {
       
       {/* Top App Bar */}
       {!isAdminView && (
-      <header className="fixed top-0 inset-x-0 h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-b border-gray-150 dark:border-slate-800/60 z-40 select-none">
+      <header className="fixed top-0 inset-x-0 h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-b border-gray-150 dark:border-slate-800/60 z-50 select-none">
         <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <Link to="/" className="flex items-center px-1">
@@ -201,89 +202,7 @@ export function RootLayout() {
             {user ? (
               <>
                 {/* Notification Bell */}
-                <div className="relative">
-                  <button
-                    onClick={() => {
-                      setNotificationsMenuOpen((v) => !v);
-                      setProfileMenuOpen(false);
-                    }}
-                    className="p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800 relative active-scale transition"
-                    aria-label="Notifications"
-                  >
-                    <Bell className="w-4.5 h-4.5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-white rounded-full text-[9px] font-bold flex items-center justify-center border border-white dark:border-slate-900 select-none">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </button>
-
-                  <AnimatePresence>
-                    {notificationsMenuOpen && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setNotificationsMenuOpen(false)} />
-                        <motion.div
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 8 }}
-                          className="absolute right-[-40px] sm:right-0 top-full mt-2.5 w-72 bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 rounded-2xl py-2 shadow-soft-lg z-50 text-left flex flex-col max-h-[350px]"
-                        >
-                          <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
-                            <span className="text-xs font-bold text-gray-900 dark:text-white">Notifications</span>
-                            {unreadCount > 0 && (
-                              <button
-                                onClick={() => {
-                                  markAllAsRead();
-                                  toast('All notifications marked as read', 'success');
-                                }}
-                                className="text-[10px] text-brand-600 hover:underline font-semibold"
-                              >
-                                Mark all read
-                              </button>
-                            )}
-                          </div>
-                          <div className="flex-1 overflow-y-auto no-scrollbar py-1">
-                            {notifications.length > 0 ? (
-                              notifications.map((n) => (
-                                <div
-                                  key={n.id}
-                                  onClick={() => {
-                                    markAsRead(n.id);
-                                    if (n.type === 'booking') {
-                                      navigate('/dashboard?tab=bookings');
-                                    }
-                                    setNotificationsMenuOpen(false);
-                                  }}
-                                  className={`px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-slate-850 transition cursor-pointer text-xs flex items-start gap-2.5 border-b border-gray-50/50 dark:border-slate-800/40 last:border-0 ${
-                                    !n.read ? 'bg-brand-50/10 dark:bg-brand-950/10' : ''
-                                  }`}
-                                >
-                                  <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${!n.read ? 'bg-brand-600' : 'bg-transparent'}`} />
-                                  <div className="flex-1">
-                                    <p className={`font-bold ${!n.read ? 'text-gray-905 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>{n.title}</p>
-                                    <p className="text-[10px] text-gray-500 leading-normal mt-0.5">{n.message}</p>
-                                    <span className="text-[9px] text-gray-400 mt-1 block">{n.time}</span>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <p className="text-xs text-gray-500 text-center py-6">No notifications</p>
-                            )}
-                          </div>
-                          <div className="px-4 py-2 border-t border-gray-100 dark:border-slate-800 text-center">
-                            <Link
-                              to="/dashboard?tab=notifications"
-                              onClick={() => setNotificationsMenuOpen(false)}
-                              className="text-[10px] text-brand-600 font-bold hover:underline"
-                            >
-                              See all notifications
-                            </Link>
-                          </div>
-                        </motion.div>
-                      </>
-                    )}
-                  </AnimatePresence>
-                </div>
+                <NotificationBell />
 
                 {/* Profile Circle Dropdown */}
                 <div className="relative">

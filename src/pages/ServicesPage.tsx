@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Wrench,
   Droplets,
@@ -151,6 +151,8 @@ const getServiceIconConfig = (s: Service, isSelected: boolean) => {
 
 export function ServicesPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const queryParam = searchParams.get('q') || '';
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -245,9 +247,16 @@ export function ServicesPage() {
     if (selectedCategory !== 'All') {
       list = list.filter((s) => s.categoryName === selectedCategory);
     }
+    if (queryParam) {
+      const q = queryParam.toLowerCase();
+      list = list.filter((s) => 
+        s.name.toLowerCase().includes(q) || 
+        (s.categoryName && s.categoryName.toLowerCase().includes(q))
+      );
+    }
     list.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
     return list;
-  }, [servicesList, selectedCategory]);
+  }, [servicesList, selectedCategory, queryParam]);
 
   const selectedServices = useMemo(() => {
     return servicesList.filter((s) => selectedIds.includes(s.id));
@@ -525,9 +534,13 @@ export function ServicesPage() {
             ) : displayedServices.length === 0 ? (
               <div className="py-16 text-center flex flex-col items-center justify-center">
                 <Wrench className="w-12 h-12 text-gray-300 mb-3" />
-                <h3 className="text-base font-extrabold text-gray-800">No Active Services Available</h3>
+                <h3 className="text-base font-extrabold text-gray-800">
+                  {queryParam ? `No services found for "${queryParam}"` : 'No Active Services Available'}
+                </h3>
                 <p className="text-xs text-gray-400 max-w-sm mt-1">
-                  There are currently no active services. Add services from the Admin panel to display them here.
+                  {queryParam 
+                    ? 'Try adjusting your search query or browse other categories.' 
+                    : 'There are currently no active services. Add services from the Admin panel to display them here.'}
                 </p>
               </div>
             ) : (

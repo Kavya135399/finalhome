@@ -146,46 +146,47 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[1.5rem] p-5 sm:p-6 max-w-sm w-full shadow-2xl relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+          className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
 
-        <div className="text-center space-y-3 mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center mx-auto text-indigo-600 dark:text-indigo-400">
-            <ShieldCheck className="w-7 h-7" />
+        <div className="flex justify-center mb-4 mt-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-extrabold uppercase tracking-widest">
+            <ShieldCheck className="w-3.5 h-3.5" /> SECURE VERIFICATION
           </div>
+        </div>
 
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+        <div className="text-center space-y-1.5 mb-6">
+          <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
             Verify OTP Code
           </h2>
-
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            We sent a 6-digit OTP code to <br />
+          <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            We sent a 6-digit code to <br />
             <strong className="text-slate-900 dark:text-slate-100 font-semibold">{email}</strong>
           </p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+          <div className="mb-4 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-[11px] flex items-center gap-2">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <div className="mb-4 p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-[11px] flex items-center gap-2">
+            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
             <span>{successMsg}</span>
           </div>
         )}
 
-        <form onSubmit={handleVerify} className="space-y-6">
+        <form onSubmit={handleVerify} className="space-y-5">
           {/* 6 Digit OTP Inputs */}
-          <div className="flex items-center justify-between gap-2 sm:gap-3" onPaste={handlePaste}>
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2" onPaste={handlePaste}>
             {otp.map((digit, idx) => (
               <input
                 key={idx}
@@ -195,17 +196,17 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
                 value={digit}
                 onChange={(e) => handleChange(idx, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(idx, e)}
-                className="w-10 sm:w-12 h-12 sm:h-14 text-center text-xl font-extrabold text-indigo-600 dark:text-indigo-400 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                className="flex-1 w-0 max-w-[2.25rem] sm:max-w-[2.5rem] aspect-square text-center text-base sm:text-lg font-bold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-md sm:rounded-lg focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all shadow-sm"
               />
             ))}
           </div>
 
-          <p className="text-[11px] text-slate-400 text-center">
-            OTP is valid for <strong>10 minutes</strong>. Max 5 wrong attempts allowed.
+          <p className="text-[10px] text-slate-400 text-center">
+            Valid for <strong>10 mins</strong>. Max 5 wrong attempts.
           </p>
 
-          <Button type="submit" fullWidth size="lg" loading={loading} disabled={otp.join('').length !== 6}>
-            Verify Email OTP
+          <Button type="submit" fullWidth size="default" loading={loading} disabled={otp.join('').length !== 6}>
+            Verify Code
           </Button>
 
           {/* Resend Cooldown Section */}
