@@ -10,6 +10,8 @@ interface AuthUser {
   name: string;
   role: Role;
   avatar?: string;
+  phone?: string;
+  city?: string;
 }
 
 interface AuthContextValue {
@@ -35,6 +37,8 @@ function mapUser(user: User | null): AuthUser | null {
     email: user.email ?? '',
     name: meta.name ?? (user.email ? user.email.split('@')[0] : 'User'),
     role: (meta.role as Role) ?? 'customer',
+    phone: meta.phone ?? meta.mobile ?? '',
+    city: meta.city ?? '',
   };
 }
 
@@ -137,7 +141,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
           msg = 'Network error: Unable to connect to the server. Please check your internet connection or try again later.';
         }
-        throw new Error(msg);
+        const customError: any = new Error(msg);
+        customError.response = err.response;
+        if (err.response?.data?.requiresVerification || err.requiresVerification) {
+          customError.requiresVerification = true;
+        }
+        throw customError;
       }
     }
 
@@ -157,7 +166,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
         msg = 'Network error: Unable to connect to the server. Please check your internet connection or try again later.';
       }
-      throw new Error(msg);
+      const customError: any = new Error(msg);
+      customError.response = err.response;
+      throw customError;
     }
   };
 

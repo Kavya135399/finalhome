@@ -14,6 +14,7 @@ import { Hero } from '../components/Hero';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../context/ToastContext';
 import { faqs } from '../data/sampleData';
+import { apiClient } from '../services/apiClient';
 
 const whyChoose = [
   {
@@ -82,11 +83,16 @@ export function HomePage() {
   const [email, setEmail] = useState('');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const subscribe = (e: React.FormEvent) => {
+  const subscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-    toast('Subscribed successfully!', 'success');
-    setEmail('');
+    try {
+      await apiClient.subscribeNewsletter(email);
+      toast('Subscribed successfully!', 'success');
+      setEmail('');
+    } catch (err: any) {
+      toast(err.response?.data?.error || 'Subscription failed', 'error');
+    }
   };
 
   return (

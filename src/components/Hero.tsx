@@ -205,37 +205,42 @@ export function Hero() {
         </form>
 
         {/* Elite Remote Home Management Banner Card */}
-        <div className="group relative w-full rounded-[24px] sm:rounded-[28px] overflow-hidden bg-[#0F172A] dark:bg-[#090F1D] border border-slate-800/80 shadow-xl p-5 sm:p-7 md:p-8 mb-8 sm:mb-10 text-left relative">
-          {/* Background Luxury Architectural Image with Dark Gradient Overlay */}
+        <div className="group relative w-full rounded-[24px] sm:rounded-[32px] overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl p-6 sm:p-8 md:p-10 mb-8 sm:mb-10 text-left">
+          {/* Background Luxury Architectural Image with Enhanced Blending */}
           <div 
-            className="absolute inset-0 bg-cover bg-center opacity-40 transition-transform duration-700 ease-out group-hover:scale-105 pointer-events-none" 
+            className="absolute inset-0 bg-cover bg-center opacity-40 transition-transform duration-1000 ease-out group-hover:scale-105 pointer-events-none mix-blend-luminosity" 
             style={{ backgroundImage: "url('https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg?auto=compress&cs=tinysrgb&w=1400&h=600&fit=crop')" }} 
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/95 to-slate-900/60 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/80 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent pointer-events-none" />
 
           {/* Card Content */}
-          <div className="relative z-10">
+          <div className="relative z-10 flex flex-col items-start">
             {/* Premium Care Badge */}
-            <div className="inline-flex items-center bg-[#07382A] text-[#2ED39A] font-bold text-[11px] sm:text-xs px-3 py-1 rounded-md mb-3 tracking-wider uppercase select-none shadow-sm">
-              PREMIUM CARE
+            <div className="inline-flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-black text-[10px] sm:text-xs px-3.5 py-1.5 rounded-full mb-4 tracking-widest uppercase shadow-sm backdrop-blur-md">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Premium Care
             </div>
 
             {/* Title */}
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold font-display text-white tracking-tight leading-tight">
-              Elite Remote Home Management
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black font-display text-white tracking-tight leading-[1.1] mb-2.5 drop-shadow-md">
+              Elite Remote Home<br className="hidden sm:block" /> Management
             </h2>
 
             {/* Subtitle */}
-            <p className="text-xs sm:text-sm md:text-base text-gray-300 dark:text-gray-300 mt-1 sm:mt-1.5 max-w-2xl font-normal leading-relaxed">
+            <p className="text-sm sm:text-base text-gray-300 mt-1 max-w-sm sm:max-w-md font-medium leading-relaxed drop-shadow">
               Your Patan ancestral home, professionally managed — even when you&apos;re away.
             </p>
 
-            {/* Sign In to Dashboard Button */}
+            {/* CTA Button */}
             <button
               onClick={() => navigate(user ? (user.role === 'admin' ? '/admin' : '/dashboard') : '/login')}
-              className="w-full mt-5 sm:mt-6 py-3 px-6 bg-white hover:bg-gray-100 text-slate-900 font-bold rounded-[20px] text-sm sm:text-base transition-all duration-200 shadow hover:shadow-lg active:scale-[0.99]"
+              className="mt-6 sm:mt-8 w-full sm:w-auto inline-flex items-center justify-center gap-2 py-3.5 px-7 bg-white text-slate-900 hover:bg-gray-50 font-extrabold rounded-2xl text-sm transition-all duration-300 shadow-xl hover:shadow-2xl active:scale-95 group/btn"
             >
-              {user ? 'Go to Dashboard' : 'Sign In to Dashboard'}
+              <span>{user ? 'Go to Dashboard' : 'Sign In to Dashboard'}</span>
+              <svg className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+              </svg>
             </button>
           </div>
         </div>

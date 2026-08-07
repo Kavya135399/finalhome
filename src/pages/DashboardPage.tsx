@@ -30,6 +30,8 @@ import {
   ArrowRight,
   Camera,
   Loader2,
+  Menu,
+  X,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -43,7 +45,7 @@ import { userBookings, savedAddresses, notifications, services } from '../data/s
 import { apiClient } from '../services/apiClient';
 import type { Booking, SavedAddress } from '../types';
 
-type Tab = 'dashboard' | 'bookings' | 'favorites' | 'addresses' | 'notifications' | 'profile' | 'edit_profile' | 'food' | 'taxi';
+type Tab = 'dashboard' | 'bookings' | 'favorites' | 'addresses' | 'notifications' | 'profile' | 'edit_profile' | 'change_password' | 'food' | 'taxi';
 
 export function DashboardPage() {
   const { user, signOut, updateUser } = useAuth();
@@ -146,10 +148,45 @@ export function DashboardPage() {
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
-  const [addresses, setAddresses] = useState<SavedAddress[]>(savedAddresses);
+  const [addresses, setAddresses] = useState<SavedAddress[]>(() => {
+    try {
+      const stored = localStorage.getItem('homeseva.addresses');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return savedAddresses;
+  });
   const [notifList, setNotifList] = useState(notifications);
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
   const [newAddr, setNewAddr] = useState({ label: '', address: '', city: '', pincode: '' });
+  const [editName, setEditName] = useState(user?.name || '');
+  const [editEmail, setEditEmail] = useState(user?.email || '');
+  const [editPhone, setEditPhone] = useState(user?.phone || '');
+  const [editCity, setEditCity] = useState(user?.city || 'Patan / Ahmedabad');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  useEffect(() => {
+    if (tab === 'edit_profile' && user) {
+      setEditName(user.name || '');
+      setEditEmail(user.email || '');
+      setEditPhone(user.phone || '');
+      setEditCity(user.city || 'Patan / Ahmedabad');
+    }
+  }, [tab, user]);
+
+  useEffect(() => {
+    if (tab === 'change_password') {
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+  }, [tab, user]);
 
   useEffect(() => {
     if (user) {
@@ -212,6 +249,20 @@ export function DashboardPage() {
   const favoriteServices = services.filter((s) => isFavorite(s.id));
   const unreadCount = notifList.filter((n) => !n.read).length;
 
+  const DASHBOARD_TABS = useMemo(() => [
+    { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+    { id: 'profile', label: 'Personal Info', icon: User },
+    { id: 'addresses', label: 'Properties', icon: Building, count: addresses.length },
+    { id: 'bookings', label: 'Bookings', icon: Calendar, count: bookings.length },
+    { id: 'favorites', label: 'Saved', icon: Shield },
+    { id: 'notifications', label: 'Alerts', icon: Bell, count: unreadCount > 0 ? unreadCount : undefined },
+    { id: 'food', label: 'Food', icon: ChefHat },
+    { id: 'taxi', label: 'Taxi', icon: Car },
+  ], [addresses.length, bookings.length, unreadCount]);
+
+  const activeTabLabel = DASHBOARD_TABS.find(t => t.id === tab || (tab === 'edit_profile' && t.id === 'profile') || (tab === 'change_password' && t.id === 'profile'))?.label || 'Overview';
+  const ActiveIcon = DASHBOARD_TABS.find(t => t.id === tab || (tab === 'edit_profile' && t.id === 'profile') || (tab === 'change_password' && t.id === 'profile'))?.icon;
+
   const cancelBooking = async () => {
     if (!cancelTarget) return;
     try {
@@ -235,13 +286,17 @@ export function DashboardPage() {
       toast('Please fill all fields', 'error');
       return;
     }
-    setAddresses((prev) => [...prev, { ...newAddr, id: `a${Date.now()}`, isDefault: false }]);
+    const updated = [...addresses, { ...newAddr, id: `a${Date.now()}`, isDefault: false }];
+    setAddresses(updated);
+    localStorage.setItem('homeseva.addresses', JSON.stringify(updated));
     setNewAddr({ label: '', address: '', city: '', pincode: '' });
     toast('Address added', 'success');
   };
 
   const removeAddress = (id: string) => {
-    setAddresses((prev) => prev.filter((a) => a.id !== id));
+    const updated = addresses.filter((a) => a.id !== id);
+    setAddresses(updated);
+    localStorage.setItem('homeseva.addresses', JSON.stringify(updated));
     toast('Address removed', 'success');
   };
 
@@ -263,58 +318,59 @@ export function DashboardPage() {
         onChange={handleAvatarUpload}
       />
       
-      {/* 1. Executive Greeting Hero */}
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 pt-8 pb-6 text-left">
-        <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-gray-950 dark:text-white flex items-center flex-wrap">
-          <span>Welcome,</span>
-          <span className="text-brand-600 dark:text-brand-400 font-black italic ml-2 mr-1">
-            {userName.split(' ')[0].toLowerCase()}
-          </span>
-          <span>.</span>
-        </h1>
-        <p className="text-xs sm:text-sm md:text-base text-gray-500 dark:text-gray-400 mt-1 sm:mt-1.5 font-medium">
-          Your remote home management dashboard.
-        </p>
-      </div>
-
-      {/* 2. Horizontal Navigation Tabs Bar */}
-      <div className="w-full border-y border-gray-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 flex items-center gap-6 sm:gap-9 overflow-x-auto no-scrollbar">
-          {[
-            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-            { id: 'profile', label: 'Personal Info', icon: User },
-            { id: 'addresses', label: 'Properties', icon: Building, count: addresses.length },
-            { id: 'bookings', label: 'Bookings', icon: Calendar, count: bookings.length },
-            { id: 'favorites', label: 'Memberships & Saved', icon: Shield },
-            { id: 'notifications', label: 'Notifications', icon: Bell, count: unreadCount > 0 ? unreadCount : undefined },
-            { id: 'food', label: 'Food Arrangements', icon: ChefHat },
-            { id: 'taxi', label: 'Taxi Bookings', icon: Car },
-          ].map((item) => {
-            const isActive = tab === item.id || (tab === 'edit_profile' && item.id === 'profile');
-            return (
-              <button
-                key={item.id}
-                onClick={() => setTab(item.id as Tab)}
-                className={`py-4 flex items-center gap-2 text-xs sm:text-sm whitespace-nowrap transition-all border-b-[2.5px] -mb-[1px] font-bold ${
-                  isActive
-                    ? 'border-gray-950 text-gray-950 dark:border-white dark:text-white font-black'
-                    : 'border-transparent text-gray-400 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-                }`}
-              >
-                <item.icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-brand-600 dark:text-brand-400 stroke-[2.3]' : 'text-gray-400 stroke-[1.8]'}`} />
-                <span>{item.label}</span>
-                {item.count !== undefined && item.count >= 0 && (
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                    isActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300' : 'bg-gray-100 dark:bg-slate-800 text-gray-500'
-                  }`}>
-                    {item.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+      {/* 1. Executive Greeting Hero (Only on Dashboard Overview) */}
+      {tab === 'dashboard' && (
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 pt-8 pb-6 text-left">
+          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-gray-950 dark:text-white flex items-center flex-wrap">
+            <span>Welcome,</span>
+            <span className="text-brand-600 dark:text-brand-400 font-black italic ml-2 mr-1">
+              {userName.split(' ')[0].toLowerCase()}
+            </span>
+            <span>.</span>
+          </h1>
+          <p className="text-xs sm:text-sm md:text-base text-gray-500 dark:text-gray-400 mt-1 sm:mt-1.5 font-medium">
+            Your remote home management dashboard.
+          </p>
         </div>
-      </div>
+      )}
+
+      {/* 2. Premium Horizontal Navigation Tabs Bar */}
+      {tab !== 'bookings' && (
+        <div className="w-full bg-white dark:bg-slate-900 shadow-sm border-b border-gray-100 dark:border-slate-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-8 relative">
+            <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar py-3.5">
+              {DASHBOARD_TABS.map((item) => {
+                const isActive = tab === item.id || (tab === 'edit_profile' && item.id === 'profile') || (tab === 'change_password' && item.id === 'profile');
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setTab(item.id as Tab)}
+                    className={`shrink-0 px-4 py-2.5 rounded-full flex items-center gap-2 text-sm transition-all font-bold border ${
+                      isActive
+                        ? 'bg-gray-900 border-gray-900 text-white dark:bg-white dark:border-white dark:text-gray-900 shadow-md'
+                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:bg-slate-900 dark:border-slate-700 dark:text-gray-400 dark:hover:bg-slate-800 dark:hover:text-white'
+                    }`}
+                  >
+                    <item.icon className={`w-4 h-4 transition-colors ${isActive ? 'text-white dark:text-gray-900' : 'text-gray-400'}`} />
+                    <span>{item.label}</span>
+                    {item.count !== undefined && item.count >= 0 && (
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ml-1 ${
+                        isActive 
+                          ? 'bg-white/20 text-white dark:bg-gray-900/10 dark:text-gray-900' 
+                          : 'bg-gray-100 text-gray-500 dark:bg-slate-800 dark:text-gray-400'
+                      }`}>
+                        {item.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+
 
       {/* 3. Premium Rounded Content Card Workspace */}
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 pt-8 flex-1">
@@ -539,17 +595,17 @@ export function DashboardPage() {
                   </div>
                 ) : (
                   <div>
-                    <div className="border-b border-gray-100 dark:border-slate-800 pb-4 mb-6 flex justify-between items-center">
+                    <div className="border-b border-gray-100 dark:border-slate-800 pb-4 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                       <div>
-                        <h2 className="text-xl font-black text-gray-900 dark:text-white">Registered Properties & Addresses</h2>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Your ancestral homes and residencies under active HomeSeva management.</p>
+                        <h2 className="text-xl font-black text-gray-900 dark:text-white leading-tight">Registered Properties & Addresses</h2>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Your ancestral homes and residencies under active HomeSeva management.</p>
                       </div>
                       <button
                         onClick={() => {
                           const form = document.getElementById('add-address-form');
                           if (form) form.scrollIntoView({ behavior: 'smooth' });
                         }}
-                        className="px-4 py-2 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-extrabold rounded-xl text-xs hover:bg-brand-100 transition"
+                        className="px-5 py-2.5 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-extrabold rounded-xl text-xs hover:bg-brand-100 transition shrink-0 w-full sm:w-auto text-center"
                       >
                         + Add New Property
                       </button>
@@ -662,10 +718,12 @@ export function DashboardPage() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Left Column: Personal Card */}
-                  <div className="lg:col-span-2 p-6 sm:p-8 rounded-[2rem] border border-gray-200/80 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/30 flex flex-col sm:flex-row items-start sm:items-center gap-6 relative overflow-hidden">
+                  <div className="lg:col-span-2 p-6 sm:p-8 rounded-[2.5rem] border border-gray-200/80 dark:border-slate-800 bg-white dark:bg-slate-800/30 flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-8 relative overflow-hidden shadow-soft hover:shadow-soft-md transition-shadow">
+                    <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-brand-500/5 blur-3xl pointer-events-none" />
+                    
                     <div
                       onClick={() => !avatarLoading && fileInputRef.current?.click()}
-                      className="w-24 h-24 rounded-full bg-gradient-to-br from-brand-600 to-blue-800 text-white text-3xl font-black flex items-center justify-center shrink-0 shadow-soft-lg border-2 border-white dark:border-slate-700 relative group cursor-pointer overflow-hidden"
+                      className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-brand-600 via-blue-500 to-indigo-500 text-white text-4xl font-black flex items-center justify-center shrink-0 shadow-lg border-4 border-white dark:border-slate-800 relative group cursor-pointer overflow-hidden ring-4 ring-brand-50 dark:ring-brand-900/20 transition-transform duration-300 hover:scale-105"
                       title="Click to upload new profile picture"
                     >
                       {avatarSrc ? (
@@ -674,25 +732,29 @@ export function DashboardPage() {
                         userName.charAt(0).toUpperCase()
                       )}
                       {avatarLoading ? (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white">
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white backdrop-blur-sm">
                           <Loader2 className="w-6 h-6 animate-spin" />
                         </div>
                       ) : (
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-extrabold gap-0.5">
-                          <Camera className="w-5 h-5" />
-                          <span>Change</span>
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-extrabold gap-1 backdrop-blur-[2px]">
+                          <Camera className="w-6 h-6" />
+                          <span>Change Photo</span>
                         </div>
                       )}
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-2xl font-black text-gray-950 dark:text-white capitalize tracking-tight">{userName}</h3>
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-200/60">
-                          <Check className="w-3 h-3 stroke-[3]" /> Verified Identity
-                        </span>
+                    
+                    <div className="space-y-3 relative z-10 w-full">
+                      <div>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <h3 className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white capitalize tracking-tight">{userName}</h3>
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-200/60 shadow-sm">
+                            <Check className="w-3 h-3 stroke-[3]" /> Verified Identity
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mt-1">{userEmail}</p>
                       </div>
-                      <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">{userEmail}</p>
-                      <div className="pt-2 flex items-center gap-2.5 flex-wrap text-xs font-bold">
+                      
+                      <div className="pt-3 flex items-center gap-3 flex-wrap text-xs font-bold border-t border-gray-100 dark:border-slate-800/60">
                         <Button
                           type="button"
                           variant="outline"
@@ -700,9 +762,9 @@ export function DashboardPage() {
                           disabled={avatarLoading}
                           loading={avatarLoading}
                           onClick={() => fileInputRef.current?.click()}
-                          className="!rounded-xl !text-xs !py-1.5 !px-3 !font-extrabold flex items-center gap-1.5"
+                          className="!rounded-xl !text-xs !py-2 !px-4 !font-extrabold flex items-center gap-2 shadow-sm hover:shadow"
                         >
-                          <Camera className="w-3.5 h-3.5" /> Upload Photo
+                          <Camera className="w-4 h-4" /> Upload New Photo
                         </Button>
                         {user?.avatar && (
                           <Button
@@ -711,9 +773,9 @@ export function DashboardPage() {
                             size="sm"
                             disabled={avatarLoading}
                             onClick={() => setConfirmDeleteAvatarModal(true)}
-                            className="!rounded-xl !text-xs !py-1.5 !px-3 !font-extrabold text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-1"
+                            className="!rounded-xl !text-xs !py-2 !px-4 !font-extrabold text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-1.5 shadow-sm hover:shadow"
                           >
-                            <Trash2 className="w-3.5 h-3.5 text-red-500" /> Remove Photo
+                            <Trash2 className="w-4 h-4 text-red-500" /> Remove Photo
                           </Button>
                         )}
                       </div>
@@ -721,50 +783,90 @@ export function DashboardPage() {
                   </div>
 
                   {/* Right Column: Stat Widgets */}
-                  <div className="grid grid-cols-1 gap-3">
-                    <div onClick={() => setTab('addresses')} className="p-4 rounded-3xl border border-gray-200/80 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/40 flex items-center justify-between cursor-pointer hover:border-brand-400 transition">
+                  <div className="grid grid-cols-1 gap-4">
+                    <div onClick={() => setTab('addresses')} className="p-6 sm:p-8 rounded-[2.5rem] border border-gray-200/80 dark:border-slate-800 bg-gradient-to-br from-gray-50 to-white dark:from-slate-800/40 dark:to-slate-800/20 flex flex-col justify-between cursor-pointer hover:border-brand-400 hover:shadow-soft transition group h-full relative overflow-hidden">
+                      <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-brand-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-brand-500/10 transition-colors" />
                       <div>
-                        <p className="text-[11px] font-extrabold text-gray-500 uppercase">Registered Properties</p>
-                        <p className="text-xl font-black text-gray-900 dark:text-white mt-0.5">{addresses.length} Properties</p>
+                        <p className="text-[11px] font-extrabold text-gray-500 uppercase tracking-wider mb-2">Registered Properties</p>
+                        <p className="text-3xl font-black text-gray-900 dark:text-white group-hover:text-brand-600 transition-colors">{addresses.length} Properties</p>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                      <div className="mt-4 flex items-center justify-between w-full">
+                         <div className="w-10 h-10 rounded-2xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                           <Building className="w-5 h-5" />
+                         </div>
+                         <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-700 shadow-sm flex items-center justify-center group-hover:translate-x-1 transition-transform border border-gray-100 dark:border-slate-600">
+                           <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-brand-600" />
+                         </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Quick Shortcuts & Role Switching */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
                   {user?.role === 'admin' && (
                     <Link
                       to="/admin"
-                      className="p-5 rounded-3xl bg-violet-600 hover:bg-violet-700 text-white font-extrabold text-sm flex items-center justify-between shadow-soft hover:shadow-lg transition-all"
+                      className="p-5 sm:p-6 rounded-[2rem] bg-gradient-to-r from-violet-600 to-violet-500 text-white font-bold text-sm flex items-center justify-between shadow-soft hover:shadow-md hover:-translate-y-0.5 transition-all group"
                     >
-                      <span className="flex items-center gap-3"><Shield className="w-5 h-5" /> Launch Admin Control Center</span>
-                      <ChevronRight className="w-5 h-5" />
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/30 transition-colors">
+                          <Shield className="w-6 h-6 text-white drop-shadow-sm" />
+                        </div>
+                        <div>
+                          <span className="block text-base font-extrabold drop-shadow-sm">Admin Control Center</span>
+                          <span className="block text-xs text-white/80 font-medium mt-0.5">Manage users, services & system</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </Link>
                   )}
                   {user?.role === 'professional' && (
                     <Link
                       to="/pro/dashboard"
-                      className="p-5 rounded-3xl bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-sm flex items-center justify-between shadow-soft hover:shadow-lg transition-all"
+                      className="p-5 sm:p-6 rounded-[2rem] bg-gradient-to-r from-brand-600 to-brand-500 text-white font-bold text-sm flex items-center justify-between shadow-soft hover:shadow-md hover:-translate-y-0.5 transition-all group"
                     >
-                      <span className="flex items-center gap-3"><Wrench className="w-5 h-5" /> Open Professional Workspace</span>
-                      <ChevronRight className="w-5 h-5" />
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/30 transition-colors">
+                          <Wrench className="w-6 h-6 text-white drop-shadow-sm" />
+                        </div>
+                        <div>
+                          <span className="block text-base font-extrabold drop-shadow-sm">Professional Workspace</span>
+                          <span className="block text-xs text-white/80 font-medium mt-0.5">View tasks, earnings & schedule</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </Link>
                   )}
                   <button
-                    onClick={() => setTab('edit_profile')}
-                    className="p-5 rounded-3xl border border-gray-200/80 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-900 dark:text-white font-bold text-sm flex items-center justify-between transition text-left"
+                    onClick={() => setTab('change_password')}
+                    className="p-5 sm:p-6 rounded-[2rem] border border-gray-200/80 dark:border-slate-800 bg-white hover:bg-gray-50 dark:bg-slate-800/20 dark:hover:bg-slate-800/40 text-gray-900 dark:text-white font-bold text-sm flex items-center justify-between transition text-left group shadow-sm hover:shadow-soft"
                   >
-                    <span className="flex items-center gap-3 text-gray-700 dark:text-gray-200 font-extrabold"><Settings className="w-5 h-5 text-gray-400" /> Update Contact & Password</span>
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-slate-700 flex items-center justify-center group-hover:bg-brand-50 dark:group-hover:bg-brand-500/20 transition-colors border border-gray-100 dark:border-slate-600">
+                        <Shield className="w-5 h-5 text-gray-500 group-hover:text-brand-600 dark:group-hover:text-brand-400" />
+                      </div>
+                      <div>
+                        <span className="block text-base text-gray-900 dark:text-white font-extrabold">Change Password</span>
+                        <span className="block text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Update your security credentials</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
                   </button>
                   <button
                     onClick={handleSignOut}
-                    className="p-5 rounded-3xl border border-red-200 dark:border-red-900/40 bg-red-50/50 hover:bg-red-50 dark:bg-red-950/10 dark:hover:bg-red-950/20 text-red-600 font-extrabold text-sm flex items-center justify-between transition text-left"
+                    className="p-5 sm:p-6 rounded-[2rem] border border-red-100 dark:border-red-900/40 bg-red-50/50 hover:bg-red-50 dark:bg-red-950/10 dark:hover:bg-red-950/20 text-red-600 font-bold text-sm flex items-center justify-between transition text-left group shadow-sm hover:shadow-soft"
                   >
-                    <span className="flex items-center gap-3"><LogOut className="w-5 h-5" /> Sign Out of HomeSeva</span>
-                    <ChevronRight className="w-5 h-5" />
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-white dark:bg-red-900/40 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-800/40 transition-colors border border-red-100 dark:border-red-800">
+                        <LogOut className="w-5 h-5 text-red-500 dark:text-red-400" />
+                      </div>
+                      <div>
+                        <span className="block text-base text-red-600 dark:text-red-400 font-extrabold">Sign Out of HomeSeva</span>
+                        <span className="block text-xs text-red-400/80 dark:text-red-500/80 font-medium mt-0.5">Securely close session</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-red-400 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>
               </div>
@@ -772,78 +874,238 @@ export function DashboardPage() {
 
             {/* 7. PROFILE EDITOR (SUB-TAB) */}
             {tab === 'edit_profile' && (
-              <div className="space-y-6 max-w-2xl">
-                <div className="border-b border-gray-100 dark:border-slate-800 pb-4">
-                  <h2 className="text-xl font-black text-gray-900 dark:text-white">Edit Personal Info & Credentials</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Keep your phone number and emergency residential address up to date.</p>
-                </div>
-                <div className="flex items-center gap-6 py-2">
-                  <div
-                    onClick={() => !avatarLoading && fileInputRef.current?.click()}
-                    className="w-20 h-20 rounded-full bg-brand-600 text-white flex items-center justify-center text-3xl font-black shadow-soft overflow-hidden cursor-pointer relative group"
-                  >
-                    {avatarSrc ? (
-                      <img src={avatarSrc} alt={userName} className="w-full h-full rounded-full object-cover" />
-                    ) : (
-                      userName.charAt(0).toUpperCase()
-                    )}
-                    {avatarLoading ? (
-                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white">
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      </div>
-                    ) : (
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                        <Camera className="w-5 h-5" />
-                      </div>
-                    )}
+              <div className="space-y-8 max-w-5xl mx-auto">
+                <div className="border-b border-gray-100 dark:border-slate-800 pb-6 flex items-center justify-between flex-wrap gap-4">
+                  <div>
+                    <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Edit Personal Info & Credentials</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Keep your contact details and security credentials up to date.</p>
                   </div>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={avatarLoading}
-                      loading={avatarLoading}
-                      className="!rounded-2xl !font-extrabold flex items-center gap-2"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <Camera className="w-4 h-4" /> Upload New Avatar
-                    </Button>
-                    {user?.avatar && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={avatarLoading}
-                        onClick={() => setConfirmDeleteAvatarModal(true)}
-                        className="!rounded-2xl !font-extrabold text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 flex items-center gap-1.5"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" /> Remove Picture
-                      </Button>
-                    )}
-                  </div>
+                  <Button variant="outline" size="sm" className="!rounded-[1.2rem] !font-bold shadow-sm hover:shadow" onClick={() => setTab('profile')}>
+                    Back to Profile
+                  </Button>
                 </div>
 
-                <div className="space-y-4 pt-2">
-                  <Input label="Full Name" defaultValue={userName} className="!rounded-xl" />
-                  <Input label="Email Address" defaultValue={userEmail} className="!rounded-xl" />
-                  <Input label="Phone Number" placeholder="+91 98765 43210" className="!rounded-xl" />
-                  <Input label="Primary City" defaultValue="Patan / Ahmedabad" className="!rounded-xl" />
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                  {/* Avatar Upload Section */}
+                  <div className="lg:col-span-4 space-y-6">
+                    <div className="p-8 rounded-[2.5rem] border border-gray-200/80 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/30 flex flex-col items-center text-center relative overflow-hidden shadow-soft">
+                      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-brand-500/5 blur-3xl pointer-events-none" />
+                      
+                      <div
+                        onClick={() => !avatarLoading && fileInputRef.current?.click()}
+                        className="w-32 h-32 rounded-full bg-gradient-to-tr from-brand-600 via-blue-500 to-indigo-500 text-white text-5xl font-black flex items-center justify-center shadow-lg border-4 border-white dark:border-slate-800 relative group cursor-pointer overflow-hidden ring-4 ring-brand-50 dark:ring-brand-900/20 transition-transform duration-300 hover:scale-105 mb-6 z-10"
+                      >
+                        {avatarSrc ? (
+                          <img src={avatarSrc} alt={userName} className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          userName.charAt(0).toUpperCase()
+                        )}
+                        {avatarLoading ? (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white backdrop-blur-sm">
+                            <Loader2 className="w-8 h-8 animate-spin" />
+                          </div>
+                        ) : (
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-extrabold gap-1 backdrop-blur-[2px]">
+                            <Camera className="w-6 h-6" />
+                            <span>Change</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <h4 className="text-lg font-bold text-gray-900 dark:text-white relative z-10">Profile Picture</h4>
+                      <p className="text-xs text-gray-500 mt-1 mb-5 relative z-10">Use a high-quality square image.</p>
+                      
+                      <div className="flex flex-col gap-3 w-full relative z-10">
+                        <Button
+                          variant="outline"
+                          disabled={avatarLoading}
+                          loading={avatarLoading}
+                          className="!rounded-xl !font-extrabold flex items-center justify-center gap-2 w-full shadow-sm hover:shadow text-sm !py-2.5"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <Camera className="w-4 h-4" /> Upload New Avatar
+                        </Button>
+                        {user?.avatar && (
+                          <Button
+                            variant="outline"
+                            disabled={avatarLoading}
+                            onClick={() => setConfirmDeleteAvatarModal(true)}
+                            className="!rounded-xl !font-extrabold text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 w-full shadow-sm hover:shadow text-sm !py-2.5"
+                          >
+                            <Trash2 className="w-4 h-4" /> Remove Picture
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Form Fields Section */}
+                  <div className="lg:col-span-8 p-6 sm:p-8 rounded-[2.5rem] border border-gray-200/80 dark:border-slate-800 bg-white dark:bg-slate-800/20 shadow-soft">
+                    <h4 className="text-base font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                      <User className="w-5 h-5 text-brand-600 dark:text-brand-400" /> Account Details
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div className="sm:col-span-2">
+                        <Input
+                          label="Full Name"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="!rounded-2xl"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <Input
+                          label="Email Address (Locked)"
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          className="!rounded-2xl opacity-70 cursor-not-allowed"
+                          disabled
+                        />
+                      </div>
+                      <Input
+                        label="Phone Number"
+                        placeholder="+91 98765 43210"
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        className="!rounded-2xl"
+                      />
+                      <Input
+                        label="Primary City"
+                        value={editCity}
+                        onChange={(e) => setEditCity(e.target.value)}
+                        className="!rounded-2xl"
+                      />
+                    </div>
+                    
+                    <div className="flex gap-4 mt-8 pt-6 border-t border-gray-100 dark:border-slate-800 justify-end">
+                      <Button variant="outline" className="!px-6 !py-3.5 !rounded-2xl !font-bold flex-1 sm:flex-none shadow-sm hover:shadow" onClick={() => setTab('profile')}>
+                        Cancel
+                      </Button>
+                      <Button
+                        className="!px-8 !py-3.5 !rounded-2xl !font-extrabold flex-1 sm:flex-none shadow-md hover:shadow-lg transition-shadow"
+                        leftIcon={<Check className="w-5 h-5" />}
+                        loading={savingProfile}
+                        disabled={savingProfile}
+                        onClick={async () => {
+                          if (!user) return;
+                          setSavingProfile(true);
+                          try {
+                            const payload: any = {
+                              name: editName,
+                              email: editEmail,
+                              phone: editPhone,
+                              city: editCity,
+                            };
+                            await apiClient.updateUser(user.id, payload);
+                            updateUser({
+                              name: editName,
+                              email: editEmail,
+                              phone: editPhone,
+                              city: editCity,
+                            });
+                            toast('Profile updated successfully', 'success');
+                            setTab('profile');
+                          } catch (err: any) {
+                            toast(err.message || 'Failed to save changes', 'error');
+                          } finally {
+                            setSavingProfile(false);
+                          }
+                        }}
+                      >
+                        Save Changes
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="flex gap-4 mt-8 pt-4 border-t border-gray-100 dark:border-slate-800">
-                  <Button variant="outline" size="sm" className="!px-8 !py-3 !rounded-[1.2rem] !font-bold" onClick={() => setTab('profile')}>
-                    Cancel
+              </div>
+            )}
+
+            {/* 7.5 CHANGE PASSWORD (SUB-TAB) */}
+            {tab === 'change_password' && (
+              <div className="space-y-8 max-w-3xl mx-auto">
+                <div className="border-b border-gray-100 dark:border-slate-800 pb-6 flex items-center justify-between flex-wrap gap-4">
+                  <div>
+                    <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">Change Password</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Update your security credentials.</p>
+                  </div>
+                  <Button variant="outline" size="sm" className="!rounded-[1.2rem] !font-bold shadow-sm hover:shadow" onClick={() => setTab('profile')}>
+                    Back to Profile
                   </Button>
-                  <Button
-                    size="sm"
-                    className="!px-10 !py-3 !rounded-[1.2rem] !font-extrabold"
-                    leftIcon={<Check className="w-4.5 h-4.5" />}
-                    onClick={() => {
-                      toast('Profile updated successfully', 'success');
-                      setTab('profile');
-                    }}
-                  >
-                    Save Changes
-                  </Button>
+                </div>
+
+                <div className="p-6 sm:p-8 rounded-[2.5rem] border border-gray-200/80 dark:border-slate-800 bg-white dark:bg-slate-800/20 shadow-soft">
+                  <h4 className="text-base font-extrabold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-brand-600 dark:text-brand-400" /> Security Settings
+                  </h4>
+                  
+                  <div className="space-y-5">
+                    <Input
+                      label="Current Password"
+                      type="password"
+                      placeholder="Enter current password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="!rounded-2xl"
+                    />
+                    <Input
+                      label="New Password"
+                      type="password"
+                      placeholder="Enter new password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="!rounded-2xl"
+                    />
+                    <Input
+                      label="Confirm New Password"
+                      type="password"
+                      placeholder="Re-enter new password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="!rounded-2xl"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-4 mt-8 pt-6 border-t border-gray-100 dark:border-slate-800 justify-end">
+                    <Button variant="outline" className="!px-6 !py-3.5 !rounded-2xl !font-bold flex-1 sm:flex-none shadow-sm hover:shadow" onClick={() => setTab('profile')}>
+                      Cancel
+                    </Button>
+                    <Button
+                      className="!px-8 !py-3.5 !rounded-2xl !font-extrabold flex-1 sm:flex-none shadow-md hover:shadow-lg transition-shadow"
+                      leftIcon={<Check className="w-5 h-5" />}
+                      loading={savingPassword}
+                      disabled={savingPassword || !currentPassword || !newPassword || !confirmPassword}
+                      onClick={async () => {
+                        if (!user) return;
+                        if (newPassword !== confirmPassword) {
+                          toast('New passwords do not match', 'error');
+                          return;
+                        }
+                        if (newPassword.length < 6) {
+                          toast('Password must be at least 6 characters', 'error');
+                          return;
+                        }
+                        setSavingPassword(true);
+                        try {
+                          // Verify current password first by attempting login
+                          const authRes = await apiClient.login(user.email, currentPassword);
+                          if (!authRes.token) {
+                            throw new Error('Incorrect current password');
+                          }
+                          // Proceed to update password
+                          await apiClient.updateUser(user.id, { password: newPassword });
+                          toast('Password changed successfully!', 'success');
+                          setTab('profile');
+                        } catch (err: any) {
+                          toast(err.response?.data?.error || err.message || 'Incorrect current password or failed to update', 'error');
+                        } finally {
+                          setSavingPassword(false);
+                        }
+                      }}
+                    >
+                      Update Password
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

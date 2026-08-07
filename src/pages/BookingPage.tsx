@@ -23,7 +23,7 @@ import { services, coupons, savedAddresses } from '../data/sampleData';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { processUPIPayment } from '../services/razorpay';
-import type { Service } from '../types';
+import type { Service, SavedAddress } from '../types';
 
 const steps = ['Schedule', 'Address', 'Coupon', 'Payment'];
 
@@ -51,6 +51,35 @@ function nextDays(count: number) {
   return days;
 }
 
+function getSlotStartTimeIST(dateStr: string, slotStr: string): Date | null {
+  if (!slotStr) return null;
+  const startPart = slotStr.split(' - ')[0]; // e.g. "09:00 AM"
+  const match = startPart.match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return null;
+  
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const ampm = match[3].toUpperCase();
+  
+  if (ampm === 'PM' && hours < 12) hours += 12;
+  if (ampm === 'AM' && hours === 12) hours = 0;
+  
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const isoStr = `${dateStr}T${pad(hours)}:${pad(minutes)}:00+05:30`;
+  return new Date(isoStr);
+}
+
+function isSlotInvalidIST(dateStr: string, slotStr: string): boolean {
+  const startTime = getSlotStartTimeIST(dateStr, slotStr);
+  if (!startTime) return true;
+  
+  const now = new Date();
+  const diffMs = startTime.getTime() - now.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+  
+  return diffHours < 2;
+}
+
 export function BookingPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -73,12 +102,30 @@ export function BookingPage() {
       });
   }, []);
 
+  // Reset selected slot if it becomes invalid on date change
+  useEffect(() => {
+    if (slot && isSlotInvalidIST(selectedDate, slot)) {
+      setSlot('');
+    }
+  }, [selectedDate]);
+
   const service = servicesList.find((s) => s.slug === slug);
 
   const [step, setStep] = useState(0);
   const [selectedDate, setSelectedDate] = useState(nextDays(1)[0].date);
   const [slot, setSlot] = useState('');
-  const [addressId, setAddressId] = useState(savedAddresses[0]?.id ?? '');
+  const addresses = useMemo<SavedAddress[]>(() => {
+    try {
+      const stored = localStorage.getItem('homeseva.addresses');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return savedAddresses;
+  }, []);
+
+  const [addressId, setAddressId] = useState(addresses[0]?.id ?? '');
   const [newAddr, setNewAddr] = useState({ label: '', address: '', city: '', pincode: '' });
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<(typeof coupons)[0] | null>(null);
@@ -126,7 +173,27 @@ export function BookingPage() {
     return true;
   };
 
+  const handleContinue = () => {
+    if (step === 0) {
+      if (!slot) {
+        toast('Please select a time slot', 'error');
+        return;
+      }
+      if (isSlotInvalidIST(selectedDate, slot)) {
+        toast('Please select a valid time slot', 'error');
+        return;
+      }
+    }
+    setStep(step + 1);
+  };
+
   const handleRazorpayUPIPayment = async () => {
+    if (isSlotInvalidIST(selectedDate, slot)) {
+      toast('Please select a valid time slot', 'error');
+      setStep(0);
+      return;
+    }
+
     if (!user) {
       toast('Please sign in to complete booking', 'error');
       navigate('/login');
@@ -135,7 +202,7 @@ export function BookingPage() {
 
     let finalAddressObj: any = {};
     if (addressId) {
-      const addr = savedAddresses.find((a) => a.id === addressId);
+      const addr = addresses.find((a) => a.id === addressId);
       finalAddressObj = {
         street: addr?.address || 'Selected Saved Address',
         city: addr?.city || 'Mumbai',
@@ -282,19 +349,25 @@ export function BookingPage() {
                     <Clock className="w-4 h-4 text-brand-600" /> Select Time Slot
                   </label>
                   <div className="grid grid-cols-2 gap-2.5">
-                    {timeSlots.map((ts) => (
-                      <button
-                        key={ts}
-                        onClick={() => setSlot(ts)}
-                        className={`p-3 rounded-2xl border text-xs text-left transition font-semibold active-scale ${
-                          slot === ts
-                            ? 'border-brand-600 bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 font-bold'
-                            : 'border-gray-200 dark:border-slate-800 text-gray-600 dark:text-gray-300 hover:border-gray-300'
-                        }`}
-                      >
-                        {ts}
-                      </button>
-                    ))}
+                    {timeSlots.map((ts) => {
+                      const disabled = isSlotInvalidIST(selectedDate, ts);
+                      return (
+                        <button
+                          key={ts}
+                          disabled={disabled}
+                          onClick={() => setSlot(ts)}
+                          className={`p-3 rounded-2xl border text-xs text-left transition font-semibold ${
+                            disabled
+                              ? 'opacity-40 cursor-not-allowed border-gray-150 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/50 text-gray-400'
+                              : slot === ts
+                              ? 'border-brand-600 bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 font-bold active-scale'
+                              : 'border-gray-200 dark:border-slate-800 text-gray-600 dark:text-gray-300 hover:border-gray-300 active-scale'
+                          }`}
+                        >
+                          {ts}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -308,7 +381,7 @@ export function BookingPage() {
                     <MapPin className="w-4 h-4 text-brand-600" /> Saved Addresses
                   </label>
                   <div className="space-y-2.5">
-                    {savedAddresses.map((a) => (
+                    {addresses.map((a) => (
                       <button
                         key={a.id}
                         onClick={() => setAddressId(a.id)}
@@ -459,7 +532,11 @@ export function BookingPage() {
           )}
 
           {step < steps.length - 1 ? (
-            <Button onClick={() => setStep(step + 1)} disabled={!canProceed()} className="h-12 px-6 rounded-xl font-bold active-scale">
+            <Button
+              onClick={handleContinue}
+              disabled={step === 0 ? !slot : !canProceed()}
+              className="h-12 px-6 rounded-xl font-bold active-scale"
+            >
               Continue
             </Button>
           ) : (

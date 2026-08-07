@@ -56,6 +56,11 @@ export const apiClient = {
     return res.data;
   },
 
+  async subscribeNewsletter(email: string) {
+    const res = await api.post('/subscribe', { email });
+    return res.data;
+  },
+
   async uploadImage(file: File): Promise<{ url: string; filename: string }> {
     const formData = new FormData();
     formData.append('image', file);
