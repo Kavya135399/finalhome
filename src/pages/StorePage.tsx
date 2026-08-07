@@ -423,72 +423,97 @@ export function StorePage() {
         qty: i.qty
       }));
 
-      const { processUPIPayment } = await import('../services/razorpay');
+      const { loadRazorpayScript } = await import('../services/razorpay');
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        throw new Error('Failed to load Razorpay SDK. Please check your internet connection.');
+      }
 
-      await processUPIPayment({
+      const res = await apiClient.createPaymentOrder({
+        amount: total,
         productName: `Bhale Padharya Store Order (${cartCount} item${cartCount > 1 ? 's' : ''})`,
-        productId: 'store_order',
-        amount: total, // exact discounted final amount
-        discount: discount,
-        customerName: selectedAddr.name || user?.name || 'Valued Customer',
-        email: user?.email || 'customer@example.com',
-        phoneNumber: selectedAddr.phone || '9876543210',
-        address: selectedAddr,
-        showAllMethods: false,
-        onSuccess: async (data: any) => {
-          try {
-            // Verify HMAC signature on backend & create store_order record
-            const orderRes = await apiClient.verifyStoreRazorpayPayment({
-              razorpay_order_id: data.razorpay_order_id || data.orderId,
-              razorpay_payment_id: data.razorpay_payment_id || data.paymentId,
-              razorpay_signature: data.razorpay_signature || data.signature,
-              orderDetails: {
-                userId: user?.id,
-                items: itemsPayload,
-                address: selectedAddr,
-                subtotal,
-                delivery_fee: deliveryFee,
-                platform_fee: storeSettings.platform_fee,
-                gst: 0,
-                coupon: couponApplied ? appliedCouponCode || coupon : '',
-                discount,
-                total,
-                notes: 'Paid via Razorpay'
-              }
-            });
-
-            if (orderRes.order) {
-              setPlacedOrder({
-                ...orderRes.order,
-                invoiceUrl: apiClient.downloadInvoicePdfUrl(orderRes.order.id)
-              });
-              setCart([]); // Clear cart only on successful payment verification
-              setCouponApplied(false);
-              setDiscount(0);
-              setCoupon('');
-              setAppliedCouponCode('');
-              setSheet('success');
-              toast('Payment Verified & Store Order Placed!', 'success');
-            }
-          } catch (verifyErr: any) {
-            toast(verifyErr.response?.data?.error || verifyErr.message || 'Payment Verification Failed', 'error');
-          } finally {
-            setPlacingOrder(false);
-          }
-        },
-        onFailure: (errMsg: string) => {
-          setPlacingOrder(false);
-          if (errMsg.includes('CANCELLED_BY_USER') || errMsg.toLowerCase().includes('cancelled by customer')) {
-            const cleanMsg = errMsg.replace('CANCELLED_BY_USER: ', '');
-            toast(cleanMsg || 'Payment cancelled. Items remain in your cart—try again whenever ready.', 'info');
-            return;
-          }
-          toast(errMsg, 'error');
-        }
+        productId: "store_order",
+        customerName: selectedAddr.name || user?.name || "Customer",
+        email: user?.email || "",
+        phoneNumber: selectedAddr.phone || user?.phone || "",
+        isStoreOrder: true
       });
+
+      if (!res.orderId || !res.keyId) {
+         throw new Error("Failed to initialize Razorpay");
+      }
+
+      const options = {
+        key: res.keyId,
+        amount: res.amount,
+        currency: res.currency,
+        name: "Bhale Padharya",
+        description: "Store Order Payment",
+        order_id: res.orderId,
+        handler: async function (response: any) {
+           try {
+              const orderRes = await apiClient.verifyStoreRazorpayPayment({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                orderDetails: {
+                  userId: user?.id,
+                  items: itemsPayload,
+                  address: selectedAddr,
+                  subtotal,
+                  delivery_fee: deliveryFee,
+                  platform_fee: storeSettings.platform_fee,
+                  gst: 0,
+                  coupon: couponApplied ? appliedCouponCode || coupon : '',
+                  discount,
+                  total,
+                  notes: 'Paid via Razorpay'
+                }
+              });
+              if (orderRes.order) {
+                setPlacedOrder({
+                  ...orderRes.order,
+                  invoiceUrl: apiClient.downloadInvoicePdfUrl(orderRes.order.id)
+                });
+                setCart([]); 
+                setCouponApplied(false);
+                setDiscount(0);
+                setCoupon('');
+                setAppliedCouponCode('');
+                setSheet('success');
+                toast('Payment Verified & Store Order Placed!', 'success');
+              }
+           } catch (verifyErr: any) {
+             toast(verifyErr.response?.data?.error || verifyErr.message || 'Payment Verification Failed', 'error');
+           } finally {
+             setPlacingOrder(false);
+           }
+        },
+        prefill: { name: selectedAddr.name || user?.name || '', email: user?.email || '', contact: selectedAddr.phone || user?.phone || '' },
+        theme: { color: "#3399cc" },
+        config: {
+          display: {
+            blocks: {
+              upi_qr: {
+                name: 'Scan QR Code or Pay via UPI',
+                instruments: [{ method: 'upi' }, { method: 'qr' }],
+              },
+            },
+            sequence: ['block.upi_qr'],
+            preferences: { show_default_blocks: false },
+          },
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        setPlacingOrder(false);
+        toast(response.error.description || 'Payment Failed', 'error');
+      });
+      rzp.open();
     } catch (err: any) {
       setPlacingOrder(false);
-      toast(err.message || 'Failed to initialize payment gateway', 'error');
+      toast(err.response?.data?.error || err.message || 'Failed to initialize payment gateway', 'error');
     }
   };
 
