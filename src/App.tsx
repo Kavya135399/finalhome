@@ -27,9 +27,15 @@ function safeLazy<T extends { [key: string]: any }>(
       })
       .catch((err) => {
         console.warn(`Dynamic import failed for ${String(exportName)}, auto-reloading:`, err);
-        // Automatically reload page seamlessly on HMR chunk mismatch
-        window.location.reload();
-        return new Promise(() => {});
+        const reloads = parseInt(sessionStorage.getItem('chunk_reload_retry') || '0');
+        if (reloads < 3) {
+          sessionStorage.setItem('chunk_reload_retry', (reloads + 1).toString());
+          window.location.reload();
+        } else {
+          console.error("Max chunk reloads reached. Halting.");
+          setTimeout(() => sessionStorage.removeItem('chunk_reload_retry'), 5000);
+          return Promise.reject(err);
+        }
       })
   );
 }
@@ -52,10 +58,19 @@ const MembershipsInfoPage = safeLazy(() => import('./pages/MembershipsInfoPage')
 function RouteErrorBoundary() {
   useEffect(() => {
     // Automatically reload silently when module update is detected
-    const timer = setTimeout(() => {
-      window.location.reload();
-    }, 100);
-    return () => clearTimeout(timer);
+    // Prevent infinite loops by checking sessionStorage
+    const reloads = parseInt(sessionStorage.getItem('error_reload_count') || '0');
+    if (reloads < 3) {
+      sessionStorage.setItem('error_reload_count', (reloads + 1).toString());
+      const timer = setTimeout(() => {
+        window.location.reload();
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      console.error("Max reloads reached. Halting auto-reload to prevent infinite loop.");
+      // Reset after some time so they can try again later
+      setTimeout(() => sessionStorage.removeItem('error_reload_count'), 5000);
+    }
   }, []);
 
   return (

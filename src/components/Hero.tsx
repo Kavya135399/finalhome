@@ -215,7 +215,7 @@ export function Hero() {
 
         {/* Hero Title */}
         <div className="mb-4">
-          <h1 className="text-xl font-bold font-display text-gray-900 dark:text-white leading-tight">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-tight">
             {greeting}
           </h1>
         </div>
@@ -289,7 +289,7 @@ export function Hero() {
             </div>
 
             {/* Title */}
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black font-display text-white tracking-tight leading-[1.1] mb-2.5 drop-shadow-md">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-[1.1] mb-2.5 drop-shadow-md">
               Elite Remote Home<br className="hidden sm:block" /> Management
             </h2>
 
@@ -347,7 +347,7 @@ export function Hero() {
                 <Tag className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-lg sm:text-xl font-bold font-display text-gray-900 dark:text-white tracking-tight">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white tracking-tight">
                   Special Offers & Promos
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
