@@ -334,47 +334,13 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* 2. Premium Horizontal Navigation Tabs Bar */}
-      {tab !== 'bookings' && (
-        <div className="w-full bg-white dark:bg-slate-900 shadow-sm border-b border-gray-100 dark:border-slate-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-8 relative">
-            <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar py-3.5">
-              {DASHBOARD_TABS.map((item) => {
-                const isActive = tab === item.id || (tab === 'edit_profile' && item.id === 'profile') || (tab === 'change_password' && item.id === 'profile');
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setTab(item.id as Tab)}
-                    className={`shrink-0 px-4 py-2.5 rounded-full flex items-center gap-2 text-sm transition-all font-bold border ${
-                      isActive
-                        ? 'bg-gray-900 border-gray-900 text-white dark:bg-white dark:border-white dark:text-gray-900 shadow-md'
-                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:bg-slate-900 dark:border-slate-700 dark:text-gray-400 dark:hover:bg-slate-800 dark:hover:text-white'
-                    }`}
-                  >
-                    <item.icon className={`w-4 h-4 transition-colors ${isActive ? 'text-white dark:text-gray-900' : 'text-gray-400'}`} />
-                    <span>{item.label}</span>
-                    {item.count !== undefined && item.count >= 0 && (
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ml-1 ${
-                        isActive 
-                          ? 'bg-white/20 text-white dark:bg-gray-900/10 dark:text-gray-900' 
-                          : 'bg-gray-100 text-gray-500 dark:bg-slate-800 dark:text-gray-400'
-                      }`}>
-                        {item.count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 2. Premium Horizontal Navigation Tabs Bar - Removed to clean up options from top */}
 
 
 
       {/* 3. Premium Rounded Content Card Workspace */}
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 pt-8 flex-1">
-        <div className="w-full bg-white dark:bg-slate-900 rounded-[2.5rem] border border-gray-200/80 dark:border-slate-800/80 shadow-soft-xl p-6 sm:p-12 text-left relative overflow-hidden min-h-[440px] flex flex-col justify-center">
+      <div className="w-full max-w-7xl mx-auto px-3 sm:px-8 pt-4 sm:pt-8 flex-1">
+        <div className="w-full bg-white dark:bg-slate-900 rounded-[1.5rem] sm:rounded-[2.5rem] border border-gray-200/80 dark:border-slate-800/80 shadow-soft-xl p-4 sm:p-12 text-left relative overflow-hidden min-h-[380px] sm:min-h-[440px] flex flex-col justify-center">
         <AnimatePresence mode="wait">
           <motion.div
             key={tab}
@@ -386,43 +352,43 @@ export function DashboardPage() {
           >
             {/* 0. OVERVIEW DASHBOARD TAB */}
             {tab === 'dashboard' && (
-              <div className="space-y-8">
-                <div className="rounded-[2.2rem] bg-gradient-to-br from-gray-950 via-slate-900 to-blue-950 p-8 sm:p-10 text-white relative overflow-hidden shadow-soft-xl flex flex-col justify-between min-h-[200px]">
+              <div className="space-y-6 sm:space-y-8">
+                <div className="rounded-[1.5rem] sm:rounded-[2.2rem] bg-gradient-to-br from-gray-950 via-slate-900 to-blue-950 p-5 sm:p-10 text-white relative overflow-hidden shadow-soft-xl flex flex-col justify-between min-h-[180px] sm:min-h-[200px]">
                   <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
                   <div>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/20 text-[10px] font-black tracking-widest uppercase mb-4">
                       <Sparkles className="w-3.5 h-3.5" /> Executive Bhale Padharya Portal
                     </span>
-                    <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight">Your Remote Heritage Home Concierge</h2>
-                    <p className="text-sm text-gray-300 max-w-xl mt-2 font-medium leading-relaxed">
+                    <h2 className="text-xl sm:text-4xl font-extrabold tracking-tight">Your Remote Heritage Home Concierge</h2>
+                    <p className="text-xs sm:text-sm text-gray-300 max-w-xl mt-2 font-medium leading-relaxed">
                       Effortlessly monitor your ancestral properties in Patan, schedule cleaning or repair appointments, and arrange authentic gourmet feasts with zero friction.
                     </p>
                   </div>
-                  <div className="pt-8 flex flex-wrap gap-3.5 z-10">
-                    <button onClick={() => setTab('bookings')} className="px-6 py-3 bg-white text-slate-950 hover:bg-gray-100 rounded-[1.2rem] font-black text-xs transition shadow-sm flex items-center gap-2">
+                  <div className="pt-6 sm:pt-8 flex flex-col sm:flex-row gap-3 z-10 w-full sm:w-auto">
+                    <button onClick={() => setTab('bookings')} className="w-full sm:w-auto justify-center px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-slate-950 hover:bg-gray-100 rounded-xl sm:rounded-[1.2rem] font-black text-xs transition shadow-sm flex items-center gap-2">
                       <span>View Live Bookings ({bookings.length})</span> <ArrowRight className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setTab('addresses')} className="px-6 py-3 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-[1.2rem] font-bold text-xs transition">
+                    <button onClick={() => setTab('addresses')} className="w-full sm:w-auto justify-center px-5 sm:px-6 py-2.5 sm:py-3 bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl sm:rounded-[1.2rem] font-bold text-xs transition text-center">
                       Manage Properties ({addresses.length})
                     </button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div onClick={() => setTab('bookings')} className="p-6 rounded-3xl border border-gray-200/80 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/40 hover:border-brand-500/40 transition cursor-pointer group">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Active Bookings</p>
-                    <p className="text-3xl font-black text-gray-900 dark:text-white mt-2 group-hover:text-brand-600 transition-colors">{bookings.length}</p>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 mt-3">View Service History →</span>
+                  <div onClick={() => setTab('bookings')} className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-gray-200/80 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/40 hover:border-brand-500/40 transition cursor-pointer group">
+                    <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">Active Bookings</p>
+                    <p className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white mt-1 sm:mt-2 group-hover:text-brand-600 transition-colors">{bookings.length}</p>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 mt-2 sm:mt-3">View Service History →</span>
                   </div>
-                  <div onClick={() => setTab('addresses')} className="p-6 rounded-3xl border border-gray-200/80 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/40 hover:border-brand-500/40 transition cursor-pointer group">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Saved Properties</p>
-                    <p className="text-3xl font-black text-gray-900 dark:text-white mt-2">{addresses.length}</p>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 mt-3">Register Residence →</span>
+                  <div onClick={() => setTab('addresses')} className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-gray-200/80 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/40 hover:border-brand-500/40 transition cursor-pointer group">
+                    <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">Saved Properties</p>
+                    <p className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white mt-1 sm:mt-2">{addresses.length}</p>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 mt-2 sm:mt-3">Register Residence →</span>
                   </div>
-                  <div onClick={() => setTab('notifications')} className="p-6 rounded-3xl border border-gray-200/80 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/40 hover:border-brand-500/40 transition cursor-pointer group">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">System Notifications</p>
-                    <p className="text-3xl font-black text-gray-900 dark:text-white mt-2">{unreadCount} Unread</p>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-600 dark:text-purple-400 mt-3">Check Alert Stream →</span>
+                  <div onClick={() => setTab('notifications')} className="p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-gray-200/80 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/40 hover:border-brand-500/40 transition cursor-pointer group">
+                    <p className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider">System Notifications</p>
+                    <p className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white mt-1 sm:mt-2">{unreadCount} Unread</p>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-600 dark:text-purple-400 mt-2 sm:mt-3">Check Alert Stream →</span>
                   </div>
                 </div>
               </div>
@@ -432,25 +398,30 @@ export function DashboardPage() {
             {tab === 'bookings' && (
               <div className="space-y-6 max-w-5xl">
                 {/* Image 1 Title Header */}
-                <div className="flex items-center gap-3.5 mb-2">
-                  <div className="w-12 h-12 rounded-[1.2rem] bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100/80 dark:border-blue-500/20 shadow-2xs">
-                    <Calendar className="w-6 h-6 stroke-[2.2]" />
+                <div className="flex items-center justify-between flex-wrap gap-4 border-b border-gray-100 dark:border-slate-800 pb-4 mb-2">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-[1.2rem] bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100/80 dark:border-blue-500/20 shadow-2xs">
+                      <Calendar className="w-6 h-6 stroke-[2.2]" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black text-gray-950 dark:text-white tracking-tight">Service Bookings</h2>
+                      <p className="text-xs font-semibold text-gray-400 mt-0.5">View your booking history</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-xl font-black text-gray-950 dark:text-white tracking-tight">Service Bookings</h2>
-                    <p className="text-xs font-semibold text-gray-400 mt-0.5">View your booking history</p>
-                  </div>
+                  <Button variant="outline" size="sm" className="!rounded-xl !font-bold shadow-2xs" onClick={() => setTab('profile')}>
+                    Back to Profile
+                  </Button>
                 </div>
 
                 {/* Image 1 Action Bar: + Book Service | Search Bar | Filter Button */}
-                <div className="flex items-center justify-between gap-3 mb-8 flex-wrap">
-                  <Link to="/services" className="shrink-0">
-                    <button className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-full shadow-soft hover:shadow-md transition flex items-center gap-1.5">
+                <div className="flex items-center justify-between gap-3 mb-6 flex-wrap w-full">
+                  <Link to="/services" className="shrink-0 w-full sm:w-auto">
+                    <button className="w-full sm:w-auto justify-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-full shadow-soft hover:shadow-md transition flex items-center gap-1.5">
                       <span>+ Book Service</span>
                     </button>
                   </Link>
 
-                  <div className="flex-1 min-w-[240px] relative">
+                  <div className="flex-1 min-w-[180px] sm:min-w-[240px] relative">
                     <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="text"
@@ -466,7 +437,7 @@ export function DashboardPage() {
 
                   <button
                     onClick={() => setFilterModalOpen(true)}
-                    className="px-5 py-2.5 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-200/80 dark:border-slate-700 text-gray-700 dark:text-gray-200 text-xs font-extrabold rounded-full shadow-2xs transition flex items-center gap-2 shrink-0"
+                    className="px-5 py-2.5 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 border border-gray-200/80 dark:border-slate-700 text-gray-700 dark:text-gray-200 text-xs font-extrabold rounded-full shadow-2xs transition flex items-center gap-2 shrink-0 w-full sm:w-auto justify-center"
                   >
                     <SlidersHorizontal className="w-4 h-4 text-gray-500" />
                     <span>Filter</span>
@@ -522,23 +493,28 @@ export function DashboardPage() {
             {/* 2. FAVORITES TAB */}
             {tab === 'favorites' && (
               <div className="space-y-6 max-w-5xl">
-                <div className="border-b border-gray-100 dark:border-slate-800 pb-4">
-                  <h2 className="text-xl font-black text-gray-900 dark:text-white">Saved Services & Bookmarks</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Quickly request your preferred cleaning, plumbing, and maintenance experts.</p>
+                <div className="border-b border-gray-100 dark:border-slate-800 pb-4 flex items-center justify-between flex-wrap gap-4">
+                  <div>
+                    <h2 className="text-xl font-black text-gray-900 dark:text-white">Saved Services & Bookmarks</h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Quickly request your preferred cleaning, plumbing, and maintenance experts.</p>
+                  </div>
+                  <Button variant="outline" size="sm" className="!rounded-xl !font-bold shadow-2xs" onClick={() => setTab('profile')}>
+                    Back to Profile
+                  </Button>
                 </div>
                 {favoriteServices.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {favoriteServices.map((s) => (
-                      <div key={s.id} className="p-4 rounded-3xl border border-gray-200/80 dark:border-slate-800 flex gap-4 bg-gray-50/50 dark:bg-slate-800/40 relative hover:shadow-soft transition-all">
-                        <img src={s.image} alt={s.name} className="w-24 h-24 object-cover rounded-2xl shrink-0 shadow-2xs" />
+                      <div key={s.id} className="p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl border border-gray-200/80 dark:border-slate-800 flex gap-3 sm:gap-4 bg-gray-50/50 dark:bg-slate-800/40 relative hover:shadow-soft transition-all">
+                        <img src={s.image} alt={s.name} className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl sm:rounded-2xl shrink-0 shadow-2xs" />
                         <div className="flex-1 flex flex-col justify-between text-left">
                           <div>
                             <h4 className="font-extrabold text-sm text-gray-900 dark:text-white line-clamp-1">{s.name}</h4>
                             <p className="text-xs font-medium text-brand-600 dark:text-brand-400 mt-0.5">{s.categoryName}</p>
                           </div>
-                          <div className="flex items-center justify-between mt-3">
+                          <div className="flex items-center justify-between mt-2.5">
                             <span className="font-black text-sm text-gray-900 dark:text-white">₹{s.price}</span>
-                            <div className="flex gap-2">
+                            <div className="flex gap-1.5">
                               <Link to={`/services/${s.slug}`}>
                                 <Button size="sm" variant="outline" className="!rounded-xl !text-xs !font-bold">Book Now</Button>
                               </Link>
@@ -577,21 +553,26 @@ export function DashboardPage() {
                 {addresses.length === 0 ? (
                   <div className="py-12 flex flex-col items-center justify-center text-center max-w-lg mx-auto">
                     <div className="w-20 h-20 rounded-[2rem] bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-6 shadow-2xs">
-                      <LayoutDashboard className="w-10 h-10 stroke-[2.2]" />
+                      <Building className="w-10 h-10 stroke-[2.2]" />
                     </div>
                     <h3 className="text-xl sm:text-2xl font-extrabold text-gray-950 dark:text-white tracking-tight">No Active Properties</h3>
                     <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-md leading-relaxed">
                       You need to add a property first before viewing the dashboard metrics.
                     </p>
-                    <button
-                      onClick={() => {
-                        const form = document.getElementById('add-address-form');
-                        if (form) form.scrollIntoView({ behavior: 'smooth' });
-                      }}
-                      className="mt-8 px-8 py-3.5 bg-gray-950 hover:bg-gray-800 dark:bg-white dark:text-gray-950 text-white text-sm font-extrabold rounded-[1.4rem] shadow-soft hover:shadow-lg transition-all active-scale"
-                    >
-                      Go to Properties
-                    </button>
+                    <div className="flex items-center gap-3 mt-8 justify-center flex-wrap">
+                      <button
+                        onClick={() => {
+                          const form = document.getElementById('add-address-form');
+                          if (form) form.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className="px-8 py-3.5 bg-gray-950 hover:bg-gray-800 dark:bg-white dark:text-gray-950 text-white text-sm font-extrabold rounded-[1.4rem] shadow-soft hover:shadow-lg transition-all active-scale"
+                      >
+                        Go to Properties
+                      </button>
+                      <Button variant="outline" className="!px-8 !py-3.5 !rounded-[1.4rem] !font-bold" onClick={() => setTab('profile')}>
+                        Back to Profile
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div>
@@ -600,32 +581,37 @@ export function DashboardPage() {
                         <h2 className="text-xl font-black text-gray-900 dark:text-white leading-tight">Registered Properties & Addresses</h2>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Your ancestral homes and residencies under active Bhale Padharya management.</p>
                       </div>
-                      <button
-                        onClick={() => {
-                          const form = document.getElementById('add-address-form');
-                          if (form) form.scrollIntoView({ behavior: 'smooth' });
-                        }}
-                        className="px-5 py-2.5 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-extrabold rounded-xl text-xs hover:bg-brand-100 transition shrink-0 w-full sm:w-auto text-center"
-                      >
-                        + Add New Property
-                      </button>
+                      <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <button
+                          onClick={() => {
+                            const form = document.getElementById('add-address-form');
+                            if (form) form.scrollIntoView({ behavior: 'smooth' });
+                          }}
+                          className="px-5 py-2.5 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-extrabold rounded-xl text-xs hover:bg-brand-100 transition shrink-0 flex-1 sm:flex-none text-center"
+                        >
+                          + Add New Property
+                        </button>
+                        <Button variant="outline" size="sm" className="!rounded-xl !font-bold shadow-2xs flex-1 sm:flex-none" onClick={() => setTab('profile')}>
+                          Back to Profile
+                        </Button>
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {addresses.map((a) => (
-                        <div key={a.id} className="p-5 rounded-3xl border border-gray-200/80 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/40 flex items-start justify-between hover:border-brand-500/30 transition">
-                          <div className="flex items-start gap-3.5">
-                            <div className="w-10 h-10 rounded-2xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0 mt-0.5 font-black">
-                              <Building className="w-5 h-5" />
+                        <div key={a.id} className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-200/80 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-800/40 flex items-start justify-between hover:border-brand-500/30 transition">
+                          <div className="flex items-start gap-3 sm:gap-3.5">
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0 mt-0.5 font-black">
+                              <Building className="w-4 h-4 sm:w-5 sm:h-5" />
                             </div>
                             <div className="text-xs">
-                              <p className="font-extrabold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                              <p className="font-extrabold text-sm text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
                                 {a.label}
                                 {a.isDefault && <Badge tone="brand" className="text-[9px] font-black uppercase px-2 py-0.5">Primary Home</Badge>}
                               </p>
-                              <p className="text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed text-sm font-medium">
+                              <p className="text-gray-500 dark:text-gray-400 mt-1 leading-relaxed text-[13px] font-medium">
                                 {a.address}, {a.city} - {a.pincode}
                               </p>
-                              <div className="mt-3 flex items-center gap-2 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                              <div className="mt-2 flex items-center gap-2 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                 Remote Management Ready
                               </div>
@@ -633,7 +619,7 @@ export function DashboardPage() {
                           </div>
                           <button
                             onClick={() => removeAddress(a.id)}
-                            className="text-gray-400 hover:text-red-500 p-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 transition"
+                            className="text-gray-400 hover:text-red-500 p-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 transition shrink-0"
                             aria-label="Delete address"
                           >
                             <Trash2 className="w-4.5 h-4.5" />
@@ -644,20 +630,20 @@ export function DashboardPage() {
                   </div>
                 )}
 
-                <div id="add-address-form" className="p-6 sm:p-8 rounded-3xl bg-gray-50/70 dark:bg-slate-800/40 border border-gray-200/80 dark:border-slate-800 max-w-2xl">
+                <div id="add-address-form" className="p-4 sm:p-8 rounded-2xl sm:rounded-3xl bg-gray-50/70 dark:bg-slate-800/40 border border-gray-200/80 dark:border-slate-800 max-w-2xl">
                   <h4 className="font-extrabold text-base mb-1 text-gray-900 dark:text-white">Register New Property Address</h4>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">Add a property to receive instant on-demand cleaning, plumbing, or catering services.</p>
-                  <div className="grid grid-cols-2 gap-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <Input label="Property Label" placeholder="e.g. Patan Ancestral Home, Bungalow 4" value={newAddr.label} onChange={(e) => setNewAddr({ ...newAddr, label: e.target.value })} />
                     <Input label="Pincode" placeholder="384265" value={newAddr.pincode} onChange={(e) => setNewAddr({ ...newAddr, pincode: e.target.value })} />
-                    <div className="col-span-2">
+                    <div className="sm:col-span-2">
                       <Input label="Complete Address" placeholder="House / Bungalow No., Society Name, Landmark or Street" value={newAddr.address} onChange={(e) => setNewAddr({ ...newAddr, address: e.target.value })} />
                     </div>
-                    <div className="col-span-2">
+                    <div className="sm:col-span-2">
                       <Input label="City / Town" placeholder="Patan / Ahmedabad / Gandhinagar" value={newAddr.city} onChange={(e) => setNewAddr({ ...newAddr, city: e.target.value })} />
                     </div>
                   </div>
-                  <Button size="sm" onClick={addAddress} leftIcon={<Plus className="w-4.5 h-4.5" />} className="mt-6 px-8 py-3 !rounded-[1.2rem] !font-extrabold">
+                  <Button size="sm" onClick={addAddress} leftIcon={<Plus className="w-4.5 h-4.5" />} className="mt-6 w-full sm:w-auto justify-center px-8 py-3 !rounded-[1.2rem] !font-extrabold">
                     Save Property Address
                   </Button>
                 </div>
@@ -667,16 +653,21 @@ export function DashboardPage() {
             {/* 4. NOTIFICATIONS TAB */}
             {tab === 'notifications' && (
               <div className="space-y-6 max-w-3xl">
-                <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-4">
+                <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800 pb-4 flex-wrap gap-4">
                   <div>
                     <h2 className="text-xl font-black text-gray-900 dark:text-white">Recent Notifications & Alerts</h2>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Real-time status updates from assigned service specialists.</p>
                   </div>
-                  {unreadCount > 0 && (
-                    <button onClick={markAllRead} className="px-4 py-2 rounded-xl text-xs font-extrabold text-brand-600 bg-brand-50 dark:bg-brand-500/10 hover:bg-brand-100 transition">
-                      Mark all as read
-                    </button>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {unreadCount > 0 && (
+                      <button onClick={markAllRead} className="px-4 py-2 rounded-xl text-xs font-extrabold text-brand-600 bg-brand-50 dark:bg-brand-500/10 hover:bg-brand-100 transition whitespace-nowrap">
+                        Mark all as read
+                      </button>
+                    )}
+                    <Button variant="outline" size="sm" className="!rounded-xl !font-bold shadow-2xs" onClick={() => setTab('profile')}>
+                      Back to Profile
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-3">
                   {notifList.map((n) => (
@@ -702,171 +693,298 @@ export function DashboardPage() {
 
             {/* 6. PROFESSIONAL PERSONAL INFO (PROFILE TAB) */}
             {tab === 'profile' && (
-              <div className="space-y-8 max-w-5xl">
-                <div className="border-b border-gray-100 dark:border-slate-800 pb-4 flex items-center justify-between flex-wrap gap-4">
-                  <div>
-                    <h2 className="text-xl font-black text-gray-900 dark:text-white">Executive Profile & Account Settings</h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage personal details, security credentials, and preferred contact roles.</p>
-                  </div>
-                  <button
-                    onClick={() => setTab('edit_profile')}
-                    className="px-6 py-2.5 bg-gray-950 hover:bg-gray-800 dark:bg-white dark:text-gray-950 text-white text-xs font-extrabold rounded-2xl transition shadow-sm flex items-center gap-2"
+              <div className="space-y-6 sm:space-y-8 max-w-4xl mx-auto">
+                {/* Profile Header Card */}
+                <div className="p-4 sm:p-8 rounded-2xl sm:rounded-[2.5rem] border border-gray-200/80 dark:border-slate-800 bg-gradient-to-br from-gray-50 to-white dark:from-slate-850 dark:to-slate-900 flex flex-col sm:flex-row items-center gap-4 sm:gap-8 relative overflow-hidden shadow-soft hover:shadow-soft-md transition-shadow">
+                  <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-brand-500/5 blur-3xl pointer-events-none" />
+                  
+                  <div
+                    onClick={() => !avatarLoading && fileInputRef.current?.click()}
+                    className="w-20 h-20 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-brand-600 via-blue-500 to-indigo-500 text-white text-2xl sm:text-4xl font-black flex items-center justify-center shrink-0 shadow-lg border-4 border-white dark:border-slate-800 relative group cursor-pointer overflow-hidden ring-4 ring-brand-50 dark:ring-brand-900/20 transition-transform duration-300 hover:scale-105"
+                    title="Click to upload new profile picture"
                   >
-                    <Settings className="w-4 h-4" /> Edit Details
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Left Column: Personal Card */}
-                  <div className="lg:col-span-2 p-6 sm:p-8 rounded-[2.5rem] border border-gray-200/80 dark:border-slate-800 bg-white dark:bg-slate-800/30 flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-8 relative overflow-hidden shadow-soft hover:shadow-soft-md transition-shadow">
-                    <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-brand-500/5 blur-3xl pointer-events-none" />
-                    
-                    <div
-                      onClick={() => !avatarLoading && fileInputRef.current?.click()}
-                      className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-brand-600 via-blue-500 to-indigo-500 text-white text-4xl font-black flex items-center justify-center shrink-0 shadow-lg border-4 border-white dark:border-slate-800 relative group cursor-pointer overflow-hidden ring-4 ring-brand-50 dark:ring-brand-900/20 transition-transform duration-300 hover:scale-105"
-                      title="Click to upload new profile picture"
-                    >
-                      {avatarSrc ? (
-                        <img src={avatarSrc} alt={userName} className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        userName.charAt(0).toUpperCase()
-                      )}
-                      {avatarLoading ? (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white backdrop-blur-sm">
-                          <Loader2 className="w-6 h-6 animate-spin" />
-                        </div>
-                      ) : (
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-extrabold gap-1 backdrop-blur-[2px]">
-                          <Camera className="w-6 h-6" />
-                          <span>Change Photo</span>
-                        </div>
-                      )}
+                    {avatarSrc ? (
+                      <img src={avatarSrc} alt={userName} className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      userName.charAt(0).toUpperCase()
+                    )}
+                    {avatarLoading ? (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white backdrop-blur-sm">
+                        <Loader2 className="w-6 h-6 animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-extrabold gap-1 backdrop-blur-[2px]">
+                        <Camera className="w-5 h-5" />
+                        <span>Change Photo</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2.5 relative z-10 w-full text-center sm:text-left">
+                    <div>
+                      <div className="flex items-center gap-2.5 justify-center sm:justify-start flex-wrap">
+                        <h3 className="text-xl sm:text-3xl font-black text-gray-950 dark:text-white capitalize tracking-tight">{userName}</h3>
+                        <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border border-emerald-200/60 shadow-sm">
+                          <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]" /> Verified Identity
+                        </span>
+                      </div>
+                      <p className="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400 mt-0.5">{userEmail}</p>
                     </div>
                     
-                    <div className="space-y-3 relative z-10 w-full">
-                      <div>
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <h3 className="text-2xl sm:text-3xl font-black text-gray-950 dark:text-white capitalize tracking-tight">{userName}</h3>
-                          <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-200/60 shadow-sm">
-                            <Check className="w-3 h-3 stroke-[3]" /> Verified Identity
-                          </span>
-                        </div>
-                        <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 mt-1">{userEmail}</p>
-                      </div>
-                      
-                      <div className="pt-3 flex items-center gap-3 flex-wrap text-xs font-bold border-t border-gray-100 dark:border-slate-800/60">
+                    <div className="pt-2.5 flex items-center justify-center sm:justify-start gap-2.5 flex-wrap text-[11px] sm:text-xs font-bold border-t border-gray-100 dark:border-slate-800/60">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={avatarLoading}
+                        loading={avatarLoading}
+                        onClick={() => fileInputRef.current?.click()}
+                        className="!rounded-xl !text-[11px] sm:!text-xs !py-1.5 sm:!py-2 !px-3 sm:!px-4 !font-extrabold flex items-center gap-1.5 shadow-sm hover:shadow"
+                      >
+                        <Camera className="w-3.5 h-3.5" /> Upload Photo
+                      </Button>
+                      {user?.avatar && (
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           disabled={avatarLoading}
-                          loading={avatarLoading}
-                          onClick={() => fileInputRef.current?.click()}
-                          className="!rounded-xl !text-xs !py-2 !px-4 !font-extrabold flex items-center gap-2 shadow-sm hover:shadow"
+                          onClick={() => setConfirmDeleteAvatarModal(true)}
+                          className="!rounded-xl !text-[11px] sm:!text-xs !py-1.5 sm:!py-2 !px-3 sm:!px-4 !font-extrabold text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-1.5 shadow-sm hover:shadow"
                         >
-                          <Camera className="w-4 h-4" /> Upload New Photo
+                          <Trash2 className="w-3.5 h-3.5 text-red-500" /> Remove Photo
                         </Button>
-                        {user?.avatar && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={avatarLoading}
-                            onClick={() => setConfirmDeleteAvatarModal(true)}
-                            className="!rounded-xl !text-xs !py-2 !px-4 !font-extrabold text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-1.5 shadow-sm hover:shadow"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" /> Remove Photo
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Stat Widgets */}
-                  <div className="grid grid-cols-1 gap-4">
-                    <div onClick={() => setTab('addresses')} className="p-6 sm:p-8 rounded-[2.5rem] border border-gray-200/80 dark:border-slate-800 bg-gradient-to-br from-gray-50 to-white dark:from-slate-800/40 dark:to-slate-800/20 flex flex-col justify-between cursor-pointer hover:border-brand-400 hover:shadow-soft transition group h-full relative overflow-hidden">
-                      <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-brand-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-brand-500/10 transition-colors" />
-                      <div>
-                        <p className="text-[11px] font-extrabold text-gray-500 uppercase tracking-wider mb-2">Registered Properties</p>
-                        <p className="text-3xl font-black text-gray-900 dark:text-white group-hover:text-brand-600 transition-colors">{addresses.length} Properties</p>
-                      </div>
-                      <div className="mt-4 flex items-center justify-between w-full">
-                         <div className="w-10 h-10 rounded-2xl bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
-                           <Building className="w-5 h-5" />
-                         </div>
-                         <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-700 shadow-sm flex items-center justify-center group-hover:translate-x-1 transition-transform border border-gray-100 dark:border-slate-600">
-                           <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-brand-600" />
-                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* Quick Shortcuts & Role Switching */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+                {/* Profile Sections & Settings Menu List */}
+                <div className="bg-white dark:bg-slate-900 border border-gray-150 dark:border-slate-800 rounded-2xl sm:rounded-[2.5rem] shadow-soft overflow-hidden">
+                  <div className="p-4 sm:p-8 border-b border-gray-100 dark:border-slate-800">
+                    <h3 className="text-base sm:text-lg font-black text-gray-950 dark:text-white tracking-tight">Account Dashboard & Options</h3>
+                    <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">Access all your bookings, properties, and settings from here.</p>
+                  </div>
+
+                  <div className="divide-y divide-gray-100 dark:divide-slate-800/60">
+                    {/* Item 1: Overview */}
+                    <button
+                      onClick={() => setTab('dashboard')}
+                      className="w-full p-4 sm:p-6 flex items-center justify-between text-left hover:bg-gray-50/50 dark:hover:bg-slate-800/20 transition group"
+                    >
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                          <LayoutDashboard className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+                        </div>
+                        <div>
+                          <span className="block text-sm sm:text-base font-extrabold text-gray-900 dark:text-white">Overview Dashboard</span>
+                          <span className="block text-[10px] sm:text-xs text-gray-400 mt-0.5 leading-tight">Concierge highlights, quick metrics & summaries</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-gray-400 group-hover:translate-x-1 transition-transform shrink-0" />
+                    </button>
+
+                    {/* Item 2: Edit Personal Details */}
+                    <button
+                      onClick={() => setTab('edit_profile')}
+                      className="w-full p-4 sm:p-6 flex items-center justify-between text-left hover:bg-gray-50/50 dark:hover:bg-slate-800/20 transition group"
+                    >
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                          <User className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+                        </div>
+                        <div>
+                          <span className="block text-sm sm:text-base font-extrabold text-gray-900 dark:text-white">Personal Information</span>
+                          <span className="block text-[10px] sm:text-xs text-gray-400 mt-0.5 leading-tight">Update name, email, phone & avatar details</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-gray-400 group-hover:translate-x-1 transition-transform shrink-0" />
+                    </button>
+
+                    {/* Item 3: Properties / Addresses */}
+                    <button
+                      onClick={() => setTab('addresses')}
+                      className="w-full p-4 sm:p-6 flex items-center justify-between text-left hover:bg-gray-50/50 dark:hover:bg-slate-800/20 transition group"
+                    >
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                          <Building className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+                        </div>
+                        <div>
+                          <span className="block text-sm sm:text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                            <span>Registered Properties</span>
+                            {addresses.length > 0 && (
+                              <span className="bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 text-[10px] font-black px-2 py-0.5 rounded-full">{addresses.length}</span>
+                            )}
+                          </span>
+                          <span className="block text-[10px] sm:text-xs text-gray-400 mt-0.5 leading-tight">Manage ancestral home coordinates & addresses</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-gray-400 group-hover:translate-x-1 transition-transform shrink-0" />
+                    </button>
+
+                    {/* Item 4: Bookings */}
+                    <button
+                      onClick={() => setTab('bookings')}
+                      className="w-full p-4 sm:p-6 flex items-center justify-between text-left hover:bg-gray-50/50 dark:hover:bg-slate-800/20 transition group"
+                    >
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                          <Calendar className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+                        </div>
+                        <div>
+                          <span className="block text-sm sm:text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                            <span>Service Bookings</span>
+                            {bookings.length > 0 && (
+                              <span className="bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-400 text-[10px] font-black px-2 py-0.5 rounded-full">{bookings.length}</span>
+                            )}
+                          </span>
+                          <span className="block text-[10px] sm:text-xs text-gray-400 mt-0.5 leading-tight">Monitor and schedule cleaning & maintenance services</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-gray-400 group-hover:translate-x-1 transition-transform shrink-0" />
+                    </button>
+
+                    {/* Item 5: Saved / Favorites */}
+                    <button
+                      onClick={() => setTab('favorites')}
+                      className="w-full p-4 sm:p-6 flex items-center justify-between text-left hover:bg-gray-50/50 dark:hover:bg-slate-800/20 transition group"
+                    >
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                          <Heart className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+                        </div>
+                        <div>
+                          <span className="block text-sm sm:text-base font-extrabold text-gray-900 dark:text-white">Saved Services</span>
+                          <span className="block text-[10px] sm:text-xs text-gray-400 mt-0.5 leading-tight">Quickly access bookmarked favorites</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-gray-400 group-hover:translate-x-1 transition-transform shrink-0" />
+                    </button>
+
+                    {/* Item 6: Alerts / Notifications */}
+                    <button
+                      onClick={() => setTab('notifications')}
+                      className="w-full p-4 sm:p-6 flex items-center justify-between text-left hover:bg-gray-50/50 dark:hover:bg-slate-800/20 transition group"
+                    >
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                          <Bell className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+                        </div>
+                        <div>
+                          <span className="block text-sm sm:text-base font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
+                            <span>System Alerts</span>
+                            {unreadCount > 0 && (
+                              <span className="bg-yellow-100 dark:bg-yellow-950/60 text-yellow-700 dark:text-yellow-400 text-[10px] font-black px-2 py-0.5 rounded-full">{unreadCount}</span>
+                            )}
+                          </span>
+                          <span className="block text-[10px] sm:text-xs text-gray-400 mt-0.5 leading-tight">Review real-time task notifications & messages</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-gray-400 group-hover:translate-x-1 transition-transform shrink-0" />
+                    </button>
+
+                    {/* Item 7: Food Arrangements */}
+                    <button
+                      onClick={() => setTab('food')}
+                      className="w-full p-4 sm:p-6 flex items-center justify-between text-left hover:bg-gray-50/50 dark:hover:bg-slate-800/20 transition group"
+                    >
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                          <ChefHat className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+                        </div>
+                        <div>
+                          <span className="block text-sm sm:text-base font-extrabold text-gray-900 dark:text-white">Heritage Food & Catering</span>
+                          <span className="block text-[10px] sm:text-xs text-gray-400 mt-0.5 leading-tight">Order Gujarati and Jain thali feasts to your home</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-gray-400 group-hover:translate-x-1 transition-transform shrink-0" />
+                    </button>
+
+                    {/* Item 8: Taxi Bookings */}
+                    <button
+                      onClick={() => setTab('taxi')}
+                      className="w-full p-4 sm:p-6 flex items-center justify-between text-left hover:bg-gray-50/50 dark:hover:bg-slate-800/20 transition group"
+                    >
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                          <Car className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+                        </div>
+                        <div>
+                          <span className="block text-sm sm:text-base font-extrabold text-gray-900 dark:text-white">Airport Transfers & Taxi</span>
+                          <span className="block text-[10px] sm:text-xs text-gray-400 mt-0.5 leading-tight">Book rides with professional concierge drivers</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-gray-400 group-hover:translate-x-1 transition-transform shrink-0" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* System Control & Role Switching */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   {user?.role === 'admin' && (
                     <Link
                       to="/admin"
-                      className="p-5 sm:p-6 rounded-[2rem] bg-gradient-to-r from-violet-600 to-violet-500 text-white font-bold text-sm flex items-center justify-between shadow-soft hover:shadow-md hover:-translate-y-0.5 transition-all group"
+                      className="p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] bg-gradient-to-r from-violet-600 to-violet-500 text-white font-bold text-sm flex items-center justify-between shadow-soft hover:shadow-md hover:-translate-y-0.5 transition-all group"
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/30 transition-colors">
-                          <Shield className="w-6 h-6 text-white drop-shadow-sm" />
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/30 transition-colors">
+                          <Shield className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white drop-shadow-sm" />
                         </div>
                         <div>
-                          <span className="block text-base font-extrabold drop-shadow-sm">Admin Control Center</span>
-                          <span className="block text-xs text-white/80 font-medium mt-0.5">Manage users, services & system</span>
+                          <span className="block text-sm sm:text-base font-extrabold drop-shadow-sm">Admin Control Center</span>
+                          <span className="block text-[10px] sm:text-xs text-white/80 font-medium mt-0.5">Manage users, services & system</span>
                         </div>
                       </div>
-                      <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                      <ChevronRight className="w-4.5 h-4.5 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform shrink-0" />
                     </Link>
                   )}
                   {user?.role === 'professional' && (
                     <Link
                       to="/pro/dashboard"
-                      className="p-5 sm:p-6 rounded-[2rem] bg-gradient-to-r from-brand-600 to-brand-500 text-white font-bold text-sm flex items-center justify-between shadow-soft hover:shadow-md hover:-translate-y-0.5 transition-all group"
+                      className="p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] bg-gradient-to-r from-brand-600 to-brand-500 text-white font-bold text-sm flex items-center justify-between shadow-soft hover:shadow-md hover:-translate-y-0.5 transition-all group"
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/30 transition-colors">
-                          <Wrench className="w-6 h-6 text-white drop-shadow-sm" />
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm group-hover:bg-white/30 transition-colors">
+                          <Wrench className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-white drop-shadow-sm" />
                         </div>
                         <div>
-                          <span className="block text-base font-extrabold drop-shadow-sm">Professional Workspace</span>
-                          <span className="block text-xs text-white/80 font-medium mt-0.5">View tasks, earnings & schedule</span>
+                          <span className="block text-sm sm:text-base font-extrabold drop-shadow-sm">Professional Workspace</span>
+                          <span className="block text-[10px] sm:text-xs text-white/80 font-medium mt-0.5">View tasks, earnings & schedule</span>
                         </div>
                       </div>
-                      <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                      <ChevronRight className="w-4.5 h-4.5 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform shrink-0" />
                     </Link>
                   )}
                   <button
                     onClick={() => setTab('change_password')}
-                    className="p-5 sm:p-6 rounded-[2rem] border border-gray-200/80 dark:border-slate-800 bg-white hover:bg-gray-50 dark:bg-slate-800/20 dark:hover:bg-slate-800/40 text-gray-900 dark:text-white font-bold text-sm flex items-center justify-between transition text-left group shadow-sm hover:shadow-soft"
+                    className="p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-gray-200/80 dark:border-slate-800 bg-white hover:bg-gray-50 dark:bg-slate-800/20 dark:hover:bg-slate-800/40 text-gray-900 dark:text-white font-bold text-sm flex items-center justify-between transition text-left group shadow-sm hover:shadow-soft"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-slate-700 flex items-center justify-center group-hover:bg-brand-50 dark:group-hover:bg-brand-500/20 transition-colors border border-gray-100 dark:border-slate-600">
-                        <Shield className="w-5 h-5 text-gray-500 group-hover:text-brand-600 dark:group-hover:text-brand-400" />
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gray-50 dark:bg-slate-700 flex items-center justify-center group-hover:bg-brand-50 dark:group-hover:bg-brand-500/20 transition-colors border border-gray-100 dark:border-slate-600">
+                        <Shield className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-gray-500 group-hover:text-brand-600 dark:group-hover:text-brand-400" />
                       </div>
                       <div>
-                        <span className="block text-base text-gray-900 dark:text-white font-extrabold">Change Password</span>
-                        <span className="block text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Update your security credentials</span>
+                        <span className="block text-sm sm:text-base text-gray-900 dark:text-white font-extrabold">Change Password</span>
+                        <span className="block text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Update your security credentials</span>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition-transform" />
+                    <ChevronRight className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-gray-400 group-hover:translate-x-1 transition-transform shrink-0" />
                   </button>
                   <button
                     onClick={handleSignOut}
-                    className="p-5 sm:p-6 rounded-[2rem] border border-red-100 dark:border-red-900/40 bg-red-50/50 hover:bg-red-50 dark:bg-red-950/10 dark:hover:bg-red-950/20 text-red-600 font-bold text-sm flex items-center justify-between transition text-left group shadow-sm hover:shadow-soft"
+                    className="p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-red-100 dark:border-red-900/40 bg-red-50/50 hover:bg-red-50 dark:bg-red-950/10 dark:hover:bg-red-950/20 text-red-600 font-bold text-sm flex items-center justify-between transition text-left group shadow-sm hover:shadow-soft"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-white dark:bg-red-900/40 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-800/40 transition-colors border border-red-100 dark:border-red-800">
-                        <LogOut className="w-5 h-5 text-red-500 dark:text-red-400" />
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white dark:bg-red-900/40 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-800/40 transition-colors border border-red-100 dark:border-red-800">
+                        <LogOut className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-red-500 dark:text-red-400" />
                       </div>
                       <div>
-                        <span className="block text-base text-red-600 dark:text-red-400 font-extrabold">Sign Out of Bhale Padharya</span>
-                        <span className="block text-xs text-red-400/80 dark:text-red-500/80 font-medium mt-0.5">Securely close session</span>
+                        <span className="block text-sm sm:text-base text-red-600 dark:text-red-400 font-extrabold">Sign Out of Bhale Padharya</span>
+                        <span className="block text-[10px] sm:text-xs text-red-400/80 dark:text-red-500/80 font-medium mt-0.5">Securely close session</span>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-red-400 group-hover:translate-x-1 transition-transform" />
+                    <ChevronRight className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-red-400 group-hover:translate-x-1 transition-transform shrink-0" />
                   </button>
                 </div>
               </div>
@@ -1112,7 +1230,10 @@ export function DashboardPage() {
 
             {/* 8. FOOD ARRANGEMENTS TAB */}
             {tab === 'food' && (
-              <div className="py-12 flex flex-col items-center justify-center text-center max-w-xl mx-auto">
+              <div className="py-12 flex flex-col items-center justify-center text-center max-w-xl mx-auto relative">
+                <Button variant="outline" size="sm" className="absolute top-0 right-0 !rounded-xl !font-bold shadow-2xs" onClick={() => setTab('profile')}>
+                  Back to Profile
+                </Button>
                 <div className="w-20 h-20 rounded-[2rem] bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-6 shadow-2xs">
                   <ChefHat className="w-10 h-10 stroke-[2.2]" />
                 </div>
@@ -1130,7 +1251,10 @@ export function DashboardPage() {
 
             {/* 9. TAXI BOOKINGS TAB */}
             {tab === 'taxi' && (
-              <div className="py-12 flex flex-col items-center justify-center text-center max-w-xl mx-auto">
+              <div className="py-12 flex flex-col items-center justify-center text-center max-w-xl mx-auto relative">
+                <Button variant="outline" size="sm" className="absolute top-0 right-0 !rounded-xl !font-bold shadow-2xs" onClick={() => setTab('profile')}>
+                  Back to Profile
+                </Button>
                 <div className="w-20 h-20 rounded-[2rem] bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center mb-6 shadow-2xs">
                   <Car className="w-10 h-10 stroke-[2.2]" />
                 </div>
@@ -1300,7 +1424,7 @@ function BookingCard({ booking, onCancel }: { booking: Booking; onCancel: () => 
   const activeStep = allTrackerSteps[currentStepIdx] || allTrackerSteps[0];
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-800 rounded-[2rem] p-6 sm:p-8 flex flex-col shadow-sm hover:shadow-soft transition-all duration-300 text-left relative overflow-hidden select-none">
+    <div className="bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-800 rounded-2xl sm:rounded-[2rem] p-4 sm:p-8 flex flex-col shadow-sm hover:shadow-soft transition-all duration-300 text-left relative overflow-hidden select-none">
       {/* Top Title & Status Pill (Like Image 1) */}
       <div className="flex items-start justify-between gap-4">
         <div>

@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Home as HomeIcon, Mail, Phone, MapPin, Share2, Globe } from 'lucide-react';
 import { categories } from '../data/sampleData';
+import { apiClient } from '../services/apiClient';
 
 const companyLinks = [
   { to: '/about', label: 'About Us' },
@@ -14,6 +16,14 @@ const legalLinks = [
 ];
 
 export function Footer() {
+  const [settings, setSettings] = useState<any>(null);
+
+  useEffect(() => {
+    apiClient.getSettings()
+      .then(data => setSettings(data))
+      .catch(err => console.warn('Failed to load settings in Footer:', err));
+  }, []);
+
   return (
     <footer className="bg-gray-900 text-gray-300 mt-12 sm:mt-16 md:mt-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
@@ -67,9 +77,9 @@ export function Footer() {
           <div>
             <h4 className="text-xs font-bold text-white mb-3 sm:mb-4 uppercase tracking-wider">Get in Touch</h4>
             <ul className="space-y-2.5 text-xs sm:text-sm text-gray-400">
-              <li className="flex items-start gap-2.5"><Mail className="w-4 h-4 mt-0.5 text-brand-400 shrink-0" /> <span className="break-all">support@bhalepadharya.com</span></li>
-              <li className="flex items-start gap-2.5"><Phone className="w-4 h-4 mt-0.5 text-brand-400 shrink-0" /> 1800-200-3000</li>
-              <li className="flex items-start gap-2.5"><MapPin className="w-4 h-4 mt-0.5 text-brand-400 shrink-0" /> Bhale Padharya Tower, BKC, Mumbai 400051</li>
+              <li className="flex items-start gap-2.5"><Mail className="w-4 h-4 mt-0.5 text-brand-400 shrink-0" /> <span className="break-all">{settings?.business_email || 'support@bhalepadharya.com'}</span></li>
+              <li className="flex items-start gap-2.5"><Phone className="w-4 h-4 mt-0.5 text-brand-400 shrink-0" /> {settings?.business_phone || '1800-200-3000'}</li>
+              <li className="flex items-start gap-2.5"><MapPin className="w-4 h-4 mt-0.5 text-brand-400 shrink-0" /> {settings?.business_address || 'Bhale Padharya Tower, BKC, Mumbai 400051'}</li>
             </ul>
           </div>
         </div>

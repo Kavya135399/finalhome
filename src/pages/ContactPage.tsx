@@ -1,43 +1,51 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Mail, Phone, MapPin, Clock, Send, MessageSquare, Sparkles, ArrowUpRight, User, Tag, ShieldCheck } from 'lucide-react';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../context/ToastContext';
-
-const contactInfo = [
-  {
-    icon: Mail,
-    label: 'Direct Email Support',
-    value: 'support@bhalepadharya.com',
-    sub: 'For general & billing queries',
-    href: 'mailto:support@bhalepadharya.com',
-    color: 'from-blue-500/15 to-indigo-500/10 text-blue-600 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/50',
-  },
-  {
-    icon: Phone,
-    label: 'Toll-Free Helpline',
-    value: '+91 1800-200-3000',
-    sub: 'Available across India',
-    href: 'tel:18002003000',
-    color: 'from-emerald-500/15 to-teal-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/50',
-  },
-  {
-    icon: MapPin,
-    label: 'Corporate Headquarters',
-    value: 'BKC, Bandra East, Mumbai',
-    sub: 'Maharashtra 400051, India',
-    color: 'from-amber-500/15 to-orange-500/10 text-amber-600 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/50',
-  },
-  {
-    icon: Clock,
-    label: 'Operating Hours',
-    value: 'Mon – Sun, 8 AM – 10 PM',
-    sub: 'IST (Open on holidays)',
-    color: 'from-purple-500/15 to-pink-500/10 text-purple-600 dark:text-purple-400 border-purple-200/60 dark:border-purple-800/50',
-  },
-];
+import { apiClient } from '../services/apiClient';
 
 export function ContactPage() {
+  const [settings, setSettings] = useState<any>(null);
+
+  useEffect(() => {
+    apiClient.getSettings()
+      .then(data => setSettings(data))
+      .catch(err => console.warn('Failed to load settings in ContactPage:', err));
+  }, []);
+
+  const contactInfo = [
+    {
+      icon: Mail,
+      label: 'Direct Email Support',
+      value: settings?.business_email || 'support@bhalepadharya.com',
+      sub: 'For general & billing queries',
+      href: `mailto:${settings?.business_email || 'support@bhalepadharya.com'}`,
+      color: 'from-blue-500/15 to-indigo-500/10 text-blue-600 dark:text-blue-400 border-blue-200/60 dark:border-blue-800/50',
+    },
+    {
+      icon: Phone,
+      label: 'Toll-Free Helpline',
+      value: settings?.business_phone || '+91 1800-200-3000',
+      sub: 'Available across India',
+      href: `tel:${(settings?.business_phone || '18002003000').replace(/[^0-9+]/g, '')}`,
+      color: 'from-emerald-500/15 to-teal-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-800/50',
+    },
+    {
+      icon: MapPin,
+      label: 'Corporate Headquarters',
+      value: settings?.business_address || 'BKC, Bandra East, Mumbai',
+      sub: settings?.business_pincode ? `${settings.business_city || ''}, ${settings.business_state || ''} ${settings.business_pincode}` : 'Maharashtra 400051, India',
+      color: 'from-amber-500/15 to-orange-500/10 text-amber-600 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/50',
+    },
+    {
+      icon: Clock,
+      label: 'Operating Hours',
+      value: settings?.working_hours || 'Mon – Sun, 8 AM – 10 PM',
+      sub: 'IST (Open on holidays)',
+      color: 'from-purple-500/15 to-pink-500/10 text-purple-600 dark:text-purple-400 border-purple-200/60 dark:border-purple-800/50',
+    },
+  ];
   const { toast } = useToast();
   const [form, setForm] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
   const [loading, setLoading] = useState(false);

@@ -272,8 +272,33 @@ export const apiClient = {
     return res.data;
   },
 
-  async getLogs() {
-    const res = await api.get('/logs');
+  async getLogs(params: any = {}) {
+    const res = await api.get('/logs', { params });
+    return res.data;
+  },
+
+  async getSystemHealth() {
+    const res = await api.get('/admin/system-health');
+    return res.data;
+  },
+
+  async testEmailSettings(data: any) {
+    const res = await api.post('/admin/test-email', data);
+    return res.data;
+  },
+
+  async testPaymentSettings(data: any) {
+    const res = await api.post('/admin/test-payment', data);
+    return res.data;
+  },
+
+  async clearCache() {
+    const res = await api.post('/admin/clear-cache');
+    return res.data;
+  },
+
+  async refreshDb() {
+    const res = await api.post('/admin/refresh-db');
     return res.data;
   },
 

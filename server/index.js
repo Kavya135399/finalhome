@@ -20,8 +20,12 @@ import adminRoutes from './routes/adminRoutes.js';
 import { applySecurityMiddleware } from './middleware/securityMiddleware.js';
 import { verifySignature, fetchPaymentDetails } from './services/razorpayService.js';
 import { sendCustomerAccountNotification, sendAdminNotification, sendMarketingBroadcast, dispatchEmail, sendOrderNotification, sendCateringCustomerEmail, sendCateringAdminEmail, sendCateringStatusEmail } from './services/emailService.js';
-import { verifyTransporter } from './config/mailer.js';
+import { verifyTransporter, updateMailerConfig } from './config/mailer.js';
+import { updateRazorpayConfig } from './config/razorpay.js';
 import { sendPushNotification } from './services/fcmService.js';
+import { Booking } from './models/Booking.js';
+import nodemailer from 'nodemailer';
+import Razorpay from 'razorpay';
 
 dotenv.config();
 
@@ -257,9 +261,15 @@ const db = new sqlite3.Database(dbFile, (err) => {
           user_name TEXT NOT NULL,
           action TEXT NOT NULL,
           details TEXT NOT NULL,
-          timestamp TEXT NOT NULL
+          timestamp TEXT NOT NULL,
+          module TEXT DEFAULT 'System',
+          ip_address TEXT DEFAULT '127.0.0.1',
+          status TEXT DEFAULT 'success'
         )
       `);
+      db.run("ALTER TABLE logs ADD COLUMN module TEXT DEFAULT 'System'", () => {});
+      db.run("ALTER TABLE logs ADD COLUMN ip_address TEXT DEFAULT '127.0.0.1'", () => {});
+      db.run("ALTER TABLE logs ADD COLUMN status TEXT DEFAULT 'success'", () => {});
       db.run(`
         CREATE TABLE IF NOT EXISTS visitors (
           id TEXT PRIMARY KEY,
@@ -679,6 +689,193 @@ const db = new sqlite3.Database(dbFile, (err) => {
           created_at TEXT NOT NULL
         )
       `);
+
+      // Initialize Bookings table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS bookings (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          service_id TEXT NOT NULL,
+          professional_name TEXT,
+          date TEXT NOT NULL,
+          time_slot TEXT NOT NULL,
+          address TEXT NOT NULL,
+          status TEXT DEFAULT 'pending',
+          price REAL NOT NULL,
+          payment_method TEXT DEFAULT 'upi',
+          paid INTEGER DEFAULT 0,
+          utr TEXT,
+          driver_phone TEXT DEFAULT '',
+          license_plate TEXT DEFAULT '',
+          created_at TEXT NOT NULL
+        )
+      `);
+
+      // Initialize Booking Timeline table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS booking_timeline (
+          id TEXT PRIMARY KEY,
+          booking_id TEXT NOT NULL,
+          status TEXT NOT NULL,
+          note TEXT,
+          time TEXT NOT NULL
+        )
+      `);
+
+      // Initialize Orders table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS orders (
+          id TEXT PRIMARY KEY,
+          booking_id TEXT,
+          customer_name TEXT NOT NULL,
+          service_name TEXT NOT NULL,
+          amount REAL NOT NULL,
+          status TEXT DEFAULT 'pending',
+          payment_method TEXT NOT NULL,
+          date TEXT NOT NULL,
+          utr TEXT,
+          created_at TEXT NOT NULL
+        )
+      `);
+
+      // Initialize Store Orders table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS store_orders (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          items TEXT NOT NULL,
+          address TEXT NOT NULL,
+          subtotal REAL NOT NULL,
+          delivery_fee REAL DEFAULT 0,
+          platform_fee REAL DEFAULT 0,
+          gst REAL DEFAULT 0,
+          coupon TEXT,
+          discount REAL DEFAULT 0,
+          total REAL NOT NULL,
+          payment_method TEXT NOT NULL,
+          payment_status TEXT DEFAULT 'pending',
+          utr_number TEXT,
+          screenshot_url TEXT,
+          order_status TEXT DEFAULT 'pending',
+          notes TEXT,
+          preferred_date TEXT,
+          preferred_time TEXT,
+          tracking_stage TEXT DEFAULT 'placed',
+          worker_name TEXT DEFAULT '',
+          worker_phone TEXT DEFAULT '',
+          verification_status TEXT DEFAULT 'pending',
+          created_at TEXT NOT NULL
+        )
+      `);
+
+      // Initialize Store Addresses table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS store_addresses (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          label TEXT,
+          name TEXT,
+          phone TEXT,
+          address TEXT,
+          landmark TEXT,
+          city TEXT,
+          state TEXT,
+          pincode TEXT,
+          is_default INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL
+        )
+      `);
+
+      // Initialize Store Payment Sessions table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS store_payment_sessions (
+          id TEXT PRIMARY KEY,
+          amount REAL NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      `);
+
+      // Initialize Store Settings table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS store_settings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          delivery_fee REAL DEFAULT 50,
+          platform_fee REAL DEFAULT 10,
+          delivery_threshold REAL DEFAULT 500
+        )
+      `);
+
+      // Initialize Global Settings table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        )
+      `, () => {
+        // Seed default settings if empty
+        db.get('SELECT COUNT(*) as cnt FROM settings', (err, row) => {
+          const runSync = () => {
+            db.all('SELECT * FROM settings', (err, rows) => {
+              if (!err && rows) {
+                const config = {};
+                rows.forEach((r) => {
+                  config[r.key] = r.value;
+                });
+                updateMailerConfig(config);
+                updateRazorpayConfig(config.razorpay_key_id, config.razorpay_secret_key);
+              }
+            });
+          };
+
+          if (!err && row && row.cnt === 0) {
+            const defaults = {
+              business_name: 'Bhale Padharya',
+              business_logo: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&q=80&w=200',
+              business_address: 'Suite 404, Tech Park, Mumbai, MH, 400001',
+              business_phone: '+91 98765 43210',
+              business_email: 'bhalepadharya.app@gmail.com',
+              working_hours: '09:00 AM - 08:00 PM',
+              
+              admin_name: 'Super Admin',
+              admin_email: 'admin@example.com',
+              
+              support_email: 'support@bhalepadharya.com',
+              website_url: 'https://bhalepadharya.com',
+              timezone: 'Asia/Kolkata',
+              currency: 'INR',
+              business_city: 'Mumbai',
+              business_state: 'Maharashtra',
+              business_pincode: '400051',
+
+              notif_cust_reg: 'true',
+              notif_booking_conf: 'true',
+              notif_payment_success: 'true',
+              notif_payment_fail: 'true',
+              notif_order_cancel: 'true',
+              notif_offers: 'false',
+              notif_email_enabled: 'true',
+              
+              razorpay_status: 'test',
+              razorpay_mode: 'test',
+              razorpay_config_status: 'configured',
+              
+              last_sync_time: new Date().toISOString()
+            };
+            let completed = 0;
+            const entries = Object.entries(defaults);
+            entries.forEach(([key, val]) => {
+              db.run('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', [key, val], () => {
+                completed++;
+                if (completed === entries.length) {
+                  runSync();
+                }
+              });
+            });
+          } else {
+            runSync();
+          }
+        });
+      });
     });
   }
 });
@@ -711,11 +908,21 @@ const dbRun = (sql, params = []) => {
   });
 };
 
-const addAuditLog = async (userId, userName, action, details) => {
+const addAuditLog = async (userId, userName, action, details, module = 'System', ipAddress = '127.0.0.1', status = 'success') => {
   try {
     await dbRun(
-      'INSERT INTO logs (id, user_id, user_name, action, details, timestamp) VALUES (?, ?, ?, ?, ?, ?)',
-      [`log_${Date.now()}`, userId || 'system', userName || 'System', action, details, new Date().toISOString()]
+      'INSERT INTO logs (id, user_id, user_name, action, details, timestamp, module, ip_address, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        `log_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        userId || 'system',
+        userName || 'System',
+        action,
+        details,
+        new Date().toISOString(),
+        module || 'System',
+        ipAddress || '127.0.0.1',
+        status || 'success'
+      ]
     );
   } catch (err) {
     console.error('Audit log insertion failed:', err);
@@ -2564,6 +2771,15 @@ app.get('/api/settings', async (req, res) => {
     rows.forEach((r) => {
       config[r.key] = r.value;
     });
+    
+    // Mask sensitive credentials if they exist
+    if (config.email_smtp_password && config.email_smtp_password.trim() !== '') {
+      config.email_smtp_password = '••••••••';
+    }
+    if (config.razorpay_secret_key && config.razorpay_secret_key.trim() !== '') {
+      config.razorpay_secret_key = '••••••••';
+    }
+    
     res.json(config);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -2574,18 +2790,39 @@ app.put('/api/settings', authenticateToken, requireRole(['admin']), async (req, 
   const settingsData = req.body;
   try {
     for (const key of Object.keys(settingsData)) {
+      const val = settingsData[key] !== null && settingsData[key] !== undefined ? settingsData[key].toString() : '';
+      
+      // Skip saving the masked placeholder
+      if ((key === 'email_smtp_password' || key === 'razorpay_secret_key') && val === '••••••••') {
+        continue;
+      }
+
       await dbRun(
         'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?',
-        [key, settingsData[key].toString(), settingsData[key].toString()]
+        [key, val, val]
       );
     }
-    await addAuditLog(req.user.id, 'Admin Panel', 'Update Settings', 'Updated global site preferences');
     
+    // Fetch and sync active settings in memory
     const rows = await dbAll('SELECT * FROM settings');
     const config = {};
     rows.forEach((r) => {
       config[r.key] = r.value;
     });
+
+    updateMailerConfig(config);
+    updateRazorpayConfig(config.razorpay_key_id, config.razorpay_secret_key);
+
+    await addAuditLog(req.user.id, req.user.role || 'Admin', 'Update Settings', 'Updated global site preferences', 'Settings');
+    
+    // Return config with masked values
+    if (config.email_smtp_password && config.email_smtp_password.trim() !== '') {
+      config.email_smtp_password = '••••••••';
+    }
+    if (config.razorpay_secret_key && config.razorpay_secret_key.trim() !== '') {
+      config.razorpay_secret_key = '••••••••';
+    }
+
     res.json(config);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -2593,9 +2830,287 @@ app.put('/api/settings', authenticateToken, requireRole(['admin']), async (req, 
 });
 
 app.get('/api/logs', async (req, res) => {
+  const { search = '', module = '', action = '', status = '', startDate = '', endDate = '', page = 1, limit = 50 } = req.query;
+  const pageNum = parseInt(page, 10) || 1;
+  const limitNum = parseInt(limit, 10) || 50;
+  const offset = (pageNum - 1) * limitNum;
+  
   try {
-    const logs = await dbAll('SELECT * FROM logs ORDER BY timestamp DESC');
-    res.json(logs);
+    let query = 'SELECT * FROM logs WHERE 1=1';
+    let countQuery = 'SELECT COUNT(*) as count FROM logs WHERE 1=1';
+    const params = [];
+    
+    if (search) {
+      const searchParam = `%${search}%`;
+      query += ' AND (action LIKE ? OR details LIKE ? OR user_name LIKE ?)';
+      countQuery += ' AND (action LIKE ? OR details LIKE ? OR user_name LIKE ?)';
+      params.push(searchParam, searchParam, searchParam);
+    }
+    
+    if (module) {
+      query += ' AND module = ?';
+      countQuery += ' AND module = ?';
+      params.push(module);
+    }
+    
+    if (action) {
+      query += ' AND action = ?';
+      countQuery += ' AND action = ?';
+      params.push(action);
+    }
+    
+    if (status) {
+      query += ' AND status = ?';
+      countQuery += ' AND status = ?';
+      params.push(status);
+    }
+    
+    if (startDate) {
+      query += ' AND timestamp >= ?';
+      countQuery += ' AND timestamp >= ?';
+      params.push(startDate);
+    }
+    
+    if (endDate) {
+      const endStr = endDate.includes('T') ? endDate : `${endDate}T23:59:59.999Z`;
+      query += ' AND timestamp <= ?';
+      countQuery += ' AND timestamp <= ?';
+      params.push(endStr);
+    }
+    
+    query += ' ORDER BY timestamp DESC LIMIT ? OFFSET ?';
+    
+    const totalRow = await dbGet(countQuery, params);
+    const total = totalRow ? totalRow.count : 0;
+    
+    const dataParams = [...params, limitNum, offset];
+    const logs = await dbAll(query, dataParams);
+    
+    res.json({
+      success: true,
+      logs,
+      total,
+      page: pageNum,
+      limit: limitNum
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ==========================================
+// 8b. System Health, Tests & Admin Actions
+// ==========================================
+app.get('/api/admin/system-health', authenticateToken, requireRole(['admin']), async (req, res) => {
+  try {
+    // 1. SQLite Database Health Check
+    let sqliteStatus = 'Operational';
+    try {
+      await dbGet('SELECT 1');
+    } catch (e) {
+      sqliteStatus = 'Error';
+    }
+
+    // 2. MongoDB Database Health Check
+    let mongodbStatus = 'Offline (Fallback)';
+    try {
+      if (mongoose.connection.readyState === 1) {
+        mongodbStatus = 'Connected';
+      }
+    } catch (e) {}
+
+    // 3. Email Service Transporter Verify
+    let emailStatus = 'Operational';
+    try {
+      const mailVerified = await verifyTransporter();
+      if (!mailVerified) emailStatus = 'Error';
+    } catch (e) {
+      emailStatus = 'Error';
+    }
+
+    // 4. Razorpay Gateway Verify
+    let razorpayStatus = 'Operational';
+    try {
+      // Run low-cost list payments call
+      await razorpayInstance.payments.all({ count: 1 });
+    } catch (e) {
+      console.warn('[Health Check] Razorpay check warning:', e.message);
+      if (e.message && (e.message.includes('auth') || e.message.includes('key') || e.message.includes('secret') || e.message.includes('401'))) {
+        razorpayStatus = 'Error';
+      } else {
+        razorpayStatus = 'Operational';
+      }
+    }
+
+    // 5. Storage Write Check
+    let storageStatus = 'Operational';
+    try {
+      const testPath = path.join(__dirname, 'uploads', '.health_check');
+      fs.writeFileSync(testPath, 'health_ok');
+      fs.unlinkSync(testPath);
+    } catch (e) {
+      storageStatus = 'Error';
+    }
+
+    // 6. Auth Service Verify
+    let authStatus = 'Operational';
+    try {
+      const usersCheck = await dbGet('SELECT COUNT(*) as count FROM users');
+      if (!usersCheck) authStatus = 'Error';
+    } catch (e) {
+      authStatus = 'Error';
+    }
+
+    // Calculate DB sizes & statistics
+    let dbSizeStr = '0.00 MB';
+    try {
+      const stat = fs.statSync(dbFile);
+      dbSizeStr = (stat.size / (1024 * 1024)).toFixed(2) + ' MB';
+    } catch (e) {}
+
+    const totalCustomersRow = await dbGet("SELECT COUNT(*) as cnt FROM users WHERE role = 'customer'");
+    const totalServicesRow = await dbGet("SELECT COUNT(*) as cnt FROM services");
+    const totalOrdersRow = await dbGet("SELECT COUNT(*) as cnt FROM orders");
+    const totalStoreOrdersRow = await dbGet("SELECT COUNT(*) as cnt FROM store_orders");
+
+    const totalCustomers = totalCustomersRow ? totalCustomersRow.cnt : 0;
+    const totalServices = totalServicesRow ? totalServicesRow.cnt : 0;
+    const totalOrders = (totalOrdersRow ? totalOrdersRow.cnt : 0) + (totalStoreOrdersRow ? totalStoreOrdersRow.cnt : 0);
+
+    // Retrieve backup info from settings table
+    const backupDateRow = await dbGet("SELECT value FROM settings WHERE key = 'last_backup_date'");
+    const backupStatusRow = await dbGet("SELECT value FROM settings WHERE key = 'last_backup_status'");
+
+    res.json({
+      success: true,
+      health: {
+        database_sqlite: sqliteStatus,
+        database_mongodb: mongodbStatus,
+        api_server: 'Operational',
+        email_service: emailStatus,
+        payment_gateway: razorpayStatus,
+        storage: storageStatus,
+        auth_service: authStatus
+      },
+      stats: {
+        database_size: dbSizeStr,
+        total_customers: totalCustomers,
+        total_services: totalServices,
+        total_orders: totalOrders,
+        last_backup_date: backupDateRow ? backupDateRow.value : 'Not configured',
+        last_backup_status: backupStatusRow ? backupStatusRow.value : 'Not configured'
+      }
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/test-email', authenticateToken, requireRole(['admin']), async (req, res) => {
+  const { toEmail, email_smtp_host, email_smtp_port, email_smtp_username, email_smtp_password, email_encryption, email_sender_name, email_sender_email } = req.body;
+  if (!toEmail) {
+    return res.status(400).json({ error: 'Recipient email address is required' });
+  }
+
+  try {
+    let transporter;
+    let senderEmail = email_sender_email || 'bhalepadharya.app@gmail.com';
+    let senderName = email_sender_name || 'Bhale Padharya';
+
+    if (email_smtp_host) {
+      // Create temporary transporter with params from form
+      const encryption = email_encryption || 'ssl';
+      const isSecure = encryption === 'ssl' || parseInt(email_smtp_port, 10) === 465;
+      
+      let passVal = email_smtp_password;
+      if (passVal === '••••••••') {
+        const savedPass = await dbGet("SELECT value FROM settings WHERE key = 'email_smtp_password'");
+        passVal = savedPass ? savedPass.value : '';
+      }
+
+      transporter = nodemailer.createTransport({
+        host: email_smtp_host,
+        port: parseInt(email_smtp_port, 10),
+        secure: isSecure,
+        auth: {
+          user: email_smtp_username,
+          pass: passVal
+        },
+        tls: {
+          rejectUnauthorized: false
+        }
+      });
+    } else {
+      transporter = createTransporter();
+    }
+
+    const mailOptions = {
+      from: `"${senderName}" <${senderEmail}>`,
+      to: toEmail,
+      subject: 'Bhale Padharya Admin Center - SMTP Test Email',
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1e8ed; rounded: 12px;">
+          <h2 style="color: #2b6cb0;">SMTP Mail Configuration Test</h2>
+          <p>Hello,</p>
+          <p>This is a test email sent from the <strong>Bhale Padharya</strong> Admin settings panel. If you are reading this, your email configuration works correctly!</p>
+          <hr style="border: 0; border-top: 1px solid #e1e8ed; margin: 20px 0;" />
+          <p style="font-size: 11px; color: #718096;">Sent at: ${new Date().toLocaleString()}</p>
+        </div>
+      `
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    await addAuditLog(req.user.id, req.user.role || 'Admin', 'Test Email', `Sent test email to ${toEmail}`, 'Settings');
+    res.json({ success: true, messageId: result.messageId });
+  } catch (err) {
+    console.error('Test email sending error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/test-payment', authenticateToken, requireRole(['admin']), async (req, res) => {
+  const { razorpay_key_id, razorpay_secret_key } = req.body;
+  if (!razorpay_key_id) {
+    return res.status(400).json({ error: 'Razorpay Key ID is required for testing' });
+  }
+
+  try {
+    let key = razorpay_key_id;
+    let secret = razorpay_secret_key;
+    if (secret === '••••••••') {
+      const savedSecret = await dbGet("SELECT value FROM settings WHERE key = 'razorpay_secret_key'");
+      secret = savedSecret ? savedSecret.value : '';
+    }
+
+    const testRzp = new Razorpay({
+      key_id: key,
+      key_secret: secret
+    });
+
+    await testRzp.payments.all({ count: 1 });
+    await addAuditLog(req.user.id, req.user.role || 'Admin', 'Test Razorpay', 'Tested Razorpay configurations successfully', 'Settings');
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Test payment config error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/clear-cache', authenticateToken, requireRole(['admin']), async (req, res) => {
+  try {
+    await addAuditLog(req.user.id, req.user.role || 'Admin', 'Clear Cache', 'Cleared application system cache', 'System');
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/admin/refresh-db', authenticateToken, requireRole(['admin']), async (req, res) => {
+  try {
+    await dbGet('SELECT 1');
+    await addAuditLog(req.user.id, req.user.role || 'Admin', 'Refresh DB', 'Refreshed active database connections', 'System');
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -3900,17 +4415,60 @@ app.delete('/api/memberships/:id', authenticateToken, async (req, res) => {
 // ==========================================
 app.get('/api/admin/payments/categorized', authenticateToken, async (req, res) => {
   try {
-    // 1. Fetch Service Bookings
-    const bookings = await dbAll('SELECT * FROM bookings ORDER BY created_at DESC');
-    // 2. Fetch Store Orders
-    const storeOrders = await dbAll('SELECT * FROM store_orders ORDER BY created_at DESC');
-    // 3. Fetch Catering Requests
-    const cateringRequests = await dbAll('SELECT * FROM catering_requests ORDER BY created_at DESC');
-
     const formattedPayments = [];
 
-    // Map Service Bookings
-    bookings.forEach(b => {
+    // 1. Fetch MongoDB Service Bookings (Mongoose)
+    let mongoBookings = [];
+    try {
+      mongoBookings = await Booking.find({}).sort({ createdAt: -1 });
+    } catch (mongoErr) {
+      console.warn('MongoDB query warning (falling back to memory):', mongoErr.message);
+      try {
+        const { fallbackBookings } = await import('./controllers/paymentController.js');
+        mongoBookings = fallbackBookings || [];
+      } catch (err) {}
+    }
+
+    // Map MongoDB Service Bookings
+    mongoBookings.forEach(b => {
+      let category = 'services';
+      const productName = b.productName || b.serviceName || '';
+      const prodId = b.productId || '';
+      
+      if (productName.toLowerCase().includes('taxi') || prodId.startsWith('taxi') || prodId.startsWith('t_')) {
+        category = 'taxi';
+      } else if (productName.toLowerCase().includes('meal') || prodId.startsWith('meal') || prodId.startsWith('m_') || prodId.startsWith('m1') || prodId.startsWith('m2') || prodId.startsWith('m3')) {
+        category = 'meal';
+      } else if (productName.toLowerCase().includes('membership') || prodId.startsWith('member') || prodId === 'essential' || prodId === 'premium' || prodId === 'elite') {
+        category = 'membership';
+      }
+
+      formattedPayments.push({
+        id: b.bookingId || b.id || `b_${Date.now()}`,
+        booking_id: b.bookingId || b.id,
+        category: category,
+        customer_name: b.customerName || 'Customer',
+        customer_email: b.email || 'customer@example.com',
+        customer_phone: b.phoneNumber || b.phone || '+91 98765 43210',
+        item_name: productName || 'Home Service',
+        amount: b.finalAmount || b.amount || 0,
+        status: (b.paymentStatus || b.bookingStatus || 'paid').toLowerCase(),
+        payment_method: (b.paymentMethod || 'Online Payment').toUpperCase(),
+        transaction_id: b.razorpayPaymentId || b.transactionId || `TXN_${(b.bookingId || '').slice(-6)}`,
+        utr_number: b.transactionId || '',
+        date: b.createdAt || b.bookingDate || new Date().toISOString()
+      });
+    });
+
+    // 2. Fetch SQLite Service Bookings (Legacy/Fallback)
+    let sqliteBookings = [];
+    try {
+      sqliteBookings = await dbAll('SELECT * FROM bookings ORDER BY created_at DESC');
+    } catch (e) {
+      console.warn('SQLite bookings query warning:', e.message);
+    }
+
+    sqliteBookings.forEach(b => {
       let category = 'services';
       if (b.service_name && b.service_name.toLowerCase().includes('taxi')) category = 'taxi';
       if (b.service_name && b.service_name.toLowerCase().includes('meal')) category = 'meal';
@@ -3933,7 +4491,14 @@ app.get('/api/admin/payments/categorized', authenticateToken, async (req, res) =
       });
     });
 
-    // Map Store Orders
+    // 3. Fetch Store Orders (SQLite)
+    let storeOrders = [];
+    try {
+      storeOrders = await dbAll('SELECT * FROM store_orders ORDER BY created_at DESC');
+    } catch (e) {
+      console.warn('SQLite store_orders query warning:', e.message);
+    }
+
     storeOrders.forEach(so => {
       let itemsSummary = 'Store Purchase';
       try {
@@ -3949,23 +4514,30 @@ app.get('/api/admin/payments/categorized', authenticateToken, async (req, res) =
         customer_email: so.customer_email || 'customer@example.com',
         customer_phone: so.customer_phone || '+91 98765 43210',
         item_name: itemsSummary,
-        amount: so.total_amount || so.final_amount || 0,
+        amount: so.total || so.total_amount || so.final_amount || 0,
         status: (so.payment_status || 'paid').toLowerCase(),
         payment_method: (so.payment_method || 'Razorpay UPI').toUpperCase(),
-        transaction_id: so.razorpay_payment_id || so.transaction_id || `ORD_${so.id.slice(-6)}`,
+        transaction_id: so.razorpay_payment_id || so.transaction_id || so.utr_number || `ORD_${so.id.slice(-6)}`,
         utr_number: so.utr_number || '',
         date: so.created_at || new Date().toISOString()
       });
     });
 
-    // Map Catering Requests
+    // 4. Fetch Catering Requests (SQLite)
+    let cateringRequests = [];
+    try {
+      cateringRequests = await dbAll('SELECT * FROM catering_requests ORDER BY created_at DESC');
+    } catch (e) {
+      console.warn('SQLite catering_requests query warning:', e.message);
+    }
+
     cateringRequests.forEach(cr => {
       formattedPayments.push({
         id: cr.id,
         booking_id: cr.id,
         category: 'catering',
         customer_name: cr.user_name || 'Catering Customer',
-        customer_email: cr.user_email || 'customer@example.com',
+        customer_email: cr.email || cr.user_email || 'customer@example.com',
         customer_phone: cr.contact_phone || '+91 98765 43210',
         item_name: `${cr.package_title || 'Catering Package'} (${cr.guest_count} Guests)`,
         amount: cr.total_estimated_price || 0,

@@ -1,14 +1,6 @@
-import { createTransporter } from '../config/mailer.js';
+import { createTransporter, getFromEmail } from '../config/mailer.js';
 import { generateInvoicePDF } from './invoiceService.js';
 import { getTemplateHtml } from './emailTemplates.js';
-
-const getFromEmail = () => {
-  const from = process.env.EMAIL_FROM;
-  if (!from || from.includes('noreply@homeseva.com')) {
-    return 'Bhale Padharya <bhalepadharya.app@gmail.com>';
-  }
-  return from;
-};
 
 const getAdminEmail = () => process.env.ADMIN_EMAIL || 'bhalepadharya.app@gmail.com';
 
@@ -93,7 +85,7 @@ export const sendOrderNotification = async (templateKey, orderData) => {
   const html = getTemplateHtml(templateKey, orderData);
   const attachments = [];
 
-  if (['order_confirmed', 'delivered'].includes(templateKey)) {
+  if (['order_confirmed', 'order_placed', 'delivered'].includes(templateKey)) {
     try {
       const pdfBuffer = await generateInvoicePDF(orderData);
       attachments.push({
@@ -115,7 +107,51 @@ export const sendOrderNotification = async (templateKey, orderData) => {
 };
 
 export const sendBookingConfirmationEmail = async (bookingData) => {
-  return await sendOrderNotification('order_confirmed', bookingData);
+  const result = await sendOrderNotification('order_confirmed', bookingData);
+  
+  // Also send order details notification to admin (bhalepadharya.app@gmail.com)
+  try {
+    const adminEmail = getAdminEmail();
+    const adminHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <div style="background-color: #10B981; color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0; font-size: 22px; font-weight: bold;">✅ New Order Confirmed</h1>
+          <p style="margin: 4px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.95);">Client booking has been confirmed & invoice sent.</p>
+        </div>
+        <div style="padding: 24px; color: #1e293b; line-height: 1.6; background-color: #ffffff;">
+          <p style="font-size: 15px; margin-top: 0;">Hello Admin,</p>
+          <p>A new service order has been successfully paid and confirmed. Here are the details:</p>
+          
+          <div style="background-color: #f8fafc; padding: 18px; border-radius: 10px; margin: 20px 0; border: 1px solid #e2e8f0; font-size: 14px;">
+            <p style="margin: 4px 0;"><strong>Booking ID:</strong> <span style="color: #2563EB; font-weight: bold;">#${bookingData.bookingId || bookingData.orderId || 'N/A'}</span></p>
+            <p style="margin: 4px 0;"><strong>Client Name:</strong> ${bookingData.customerName || 'Customer'}</p>
+            <p style="margin: 4px 0;"><strong>Client Email:</strong> ${bookingData.email || 'N/A'}</p>
+            <p style="margin: 4px 0;"><strong>Client Phone:</strong> ${bookingData.phoneNumber || bookingData.phone || 'N/A'}</p>
+            <p style="margin: 4px 0;"><strong>Product / Service:</strong> ${bookingData.productName || 'Home Service'}</p>
+            <p style="margin: 4px 0;"><strong>Quantity:</strong> ${bookingData.quantity || 1}</p>
+            <p style="margin: 4px 0;"><strong>Amount Paid:</strong> ₹${(bookingData.finalAmount || bookingData.amount || 0).toLocaleString('en-IN')}</p>
+            <p style="margin: 4px 0;"><strong>Scheduled Date:</strong> ${bookingData.bookingDate || 'N/A'}</p>
+            <p style="margin: 4px 0;"><strong>Scheduled Time:</strong> ${bookingData.bookingTime || 'N/A'}</p>
+            <p style="margin: 4px 0; line-height: 1.4;"><strong>Address:</strong> ${bookingData.address?.fullAddress || bookingData.address?.street || bookingData.address || 'N/A'}</p>
+          </div>
+          
+          <p>This is a copy generated automatically for your reference. Please configure support/specialist assignment details in your admin workspace.</p>
+          <p style="margin-top: 24px; color: #64748b; font-size: 13px; border-top: 1px solid #f1f5f9; padding-top: 16px;">Regards,<br/><strong>Bhale Padharya Notification Service</strong></p>
+        </div>
+      </div>
+    `;
+
+    await dispatchEmail({
+      to: adminEmail,
+      subject: `🔔 [New Confirmed Order] #${bookingData.bookingId || 'N/A'} - ${bookingData.customerName || 'Customer'}`,
+      html: adminHtml,
+    });
+    console.log(`[EMAIL Admin Notification] Successfully sent order confirmation copy to admin: ${adminEmail}`);
+  } catch (err) {
+    console.error('[EMAIL Admin Notification Error]:', err.message);
+  }
+
+  return result;
 };
 
 /**

@@ -17,11 +17,18 @@ const isPlaceholder = (val) => {
   );
 };
 
+let customMailerConfig = null;
+
+export const updateMailerConfig = (config) => {
+  customMailerConfig = { ...customMailerConfig, ...config };
+};
+
 export const createTransporter = () => {
-  let host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  let port = parseInt(process.env.SMTP_PORT || '465', 10);
-  let user = process.env.SMTP_USER;
-  let pass = process.env.SMTP_PASS;
+  let host = customMailerConfig?.email_smtp_host || process.env.SMTP_HOST || 'smtp.gmail.com';
+  let port = parseInt(customMailerConfig?.email_smtp_port || process.env.SMTP_PORT || '465', 10);
+  let user = customMailerConfig?.email_smtp_username || process.env.SMTP_USER;
+  let pass = customMailerConfig?.email_smtp_password || process.env.SMTP_PASS;
+  let encryption = customMailerConfig?.email_encryption || 'ssl'; // none, ssl, tls
 
   // Fallback to working Gmail credentials if env contains placeholders or is missing
   if (isPlaceholder(user) || isPlaceholder(pass)) {
@@ -29,10 +36,11 @@ export const createTransporter = () => {
     pass = DEFAULT_SMTP_PASS;
     host = 'smtp.gmail.com';
     port = 465;
+    encryption = 'ssl';
   }
 
   const isGmail = host.includes('gmail');
-  const isSecure = port === 465;
+  const isSecure = encryption === 'ssl' || port === 465;
 
   if (isGmail) {
     return nodemailer.createTransport({
@@ -68,4 +76,10 @@ export const verifyTransporter = async () => {
     console.error('[Mailer] ❌ SMTP Connection Verification Failed:', err.message);
     return false;
   }
+};
+
+export const getFromEmail = () => {
+  const name = customMailerConfig?.email_sender_name || 'Bhale Padharya';
+  const email = customMailerConfig?.email_sender_email || 'bhalepadharya.app@gmail.com';
+  return `"${name}" <${email}>`;
 };

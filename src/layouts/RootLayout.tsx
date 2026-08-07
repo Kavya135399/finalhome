@@ -19,6 +19,7 @@ import {
   Camera,
   Settings,
   Car,
+  ShoppingBag,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -141,6 +142,8 @@ export function RootLayout() {
   if (pathname === '/services') pageTitle = 'Explore Services';
   else if (pathname.startsWith('/services/')) pageTitle = 'Service Details';
   else if (pathname.startsWith('/book/')) pageTitle = 'Book Service';
+  else if (pathname === '/store') pageTitle = 'Store';
+  else if (pathname.startsWith('/store/order')) pageTitle = 'My Orders';
   else if (pathname === '/dashboard') {
     const queryParams = new URLSearchParams(location.search);
     const tab = queryParams.get('tab');
@@ -172,6 +175,7 @@ export function RootLayout() {
   const getActiveTab = () => {
     if (pathname === '/') return 'home';
     if (pathname === '/services') return 'explore';
+    if (pathname.startsWith('/store')) return 'store';
     if (pathname === '/dashboard') {
       const tab = new URLSearchParams(location.search).get('tab');
       if (tab === 'bookings') return 'bookings';
@@ -499,16 +503,16 @@ export function RootLayout() {
               )}
             </Link>
 
-            {/* Tab 4: Favorites */}
+            {/* Tab 4: Store */}
             <Link
-              to={user ? '/dashboard?tab=favorites' : '/login'}
+              to="/store"
               className={`flex flex-col items-center justify-center w-14 h-full relative transition active-scale ${
-                activeTab === 'favorites' ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'
+                activeTab === 'store' ? 'text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'
               }`}
             >
-              <Heart className="w-5 h-5" />
-              <span className="text-[10px] font-bold mt-1">Favorites</span>
-              {activeTab === 'favorites' && (
+              <ShoppingBag className="w-5 h-5" />
+              <span className="text-[10px] font-bold mt-1">Store</span>
+              {activeTab === 'store' && (
                 <motion.div layoutId="nav-dot" className="absolute bottom-1 w-1 h-1 bg-brand-600 dark:bg-brand-400 rounded-full" />
               )}
             </Link>
