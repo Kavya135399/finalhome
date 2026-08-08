@@ -31,6 +31,7 @@ function safeLazy<T extends { [key: string]: any }>(
         if (reloads < 3) {
           sessionStorage.setItem('chunk_reload_retry', (reloads + 1).toString());
           window.location.reload();
+          return new Promise<any>(() => {});
         } else {
           console.error("Max chunk reloads reached. Halting.");
           setTimeout(() => sessionStorage.removeItem('chunk_reload_retry'), 5000);

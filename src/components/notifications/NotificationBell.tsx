@@ -57,7 +57,7 @@ export const NotificationBell: React.FC = () => {
   }, []);
 
   const displayUnreadCount = unreadCount !== null ? unreadCount : ctx.unreadCount;
-  const displayNotifications = notifications.length > 0
+  const displayNotifications: NotificationItem[] = notifications.length > 0
     ? notifications
     : ctx.notifications.map((n) => ({
         id: n.id,
@@ -65,7 +65,9 @@ export const NotificationBell: React.FC = () => {
         message: n.message,
         type: n.type,
         status: n.read ? 'read' : 'unread',
+        read: n.read,
         createdAt: n.time,
+        time: n.time,
       }));
 
   const markAsRead = async (id: string) => {

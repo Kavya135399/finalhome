@@ -150,13 +150,14 @@ export function DashboardPage() {
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
   const [addresses, setAddresses] = useState<SavedAddress[]>(() => {
     try {
-      const stored = localStorage.getItem('homeseva.addresses');
+      const key = user ? `homeseva.addresses.${user.id}` : 'homeseva.addresses';
+      const stored = localStorage.getItem(key);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch {}
-    return savedAddresses;
+    return [];
   });
   const [notifList, setNotifList] = useState(notifications);
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
@@ -288,7 +289,8 @@ export function DashboardPage() {
     }
     const updated = [...addresses, { ...newAddr, id: `a${Date.now()}`, isDefault: false }];
     setAddresses(updated);
-    localStorage.setItem('homeseva.addresses', JSON.stringify(updated));
+    const key = user ? `homeseva.addresses.${user.id}` : 'homeseva.addresses';
+    localStorage.setItem(key, JSON.stringify(updated));
     setNewAddr({ label: '', address: '', city: '', pincode: '' });
     toast('Address added', 'success');
   };
@@ -296,7 +298,8 @@ export function DashboardPage() {
   const removeAddress = (id: string) => {
     const updated = addresses.filter((a) => a.id !== id);
     setAddresses(updated);
-    localStorage.setItem('homeseva.addresses', JSON.stringify(updated));
+    const key = user ? `homeseva.addresses.${user.id}` : 'homeseva.addresses';
+    localStorage.setItem(key, JSON.stringify(updated));
     toast('Address removed', 'success');
   };
 

@@ -102,28 +102,29 @@ export function BookingPage() {
       });
   }, []);
 
+  const service = servicesList.find((s) => s.slug === slug);
+
+  const [step, setStep] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(nextDays(1)[0].date);
+  const [slot, setSlot] = useState('');
+
   // Reset selected slot if it becomes invalid on date change
   useEffect(() => {
     if (slot && isSlotInvalidIST(selectedDate, slot)) {
       setSlot('');
     }
   }, [selectedDate]);
-
-  const service = servicesList.find((s) => s.slug === slug);
-
-  const [step, setStep] = useState(0);
-  const [selectedDate, setSelectedDate] = useState(nextDays(1)[0].date);
-  const [slot, setSlot] = useState('');
   const addresses = useMemo<SavedAddress[]>(() => {
     try {
-      const stored = localStorage.getItem('homeseva.addresses');
+      const key = user ? `homeseva.addresses.${user.id}` : 'homeseva.addresses';
+      const stored = localStorage.getItem(key);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch {}
-    return savedAddresses;
-  }, []);
+    return [];
+  }, [user]);
 
   const [addressId, setAddressId] = useState(addresses[0]?.id ?? '');
   const [newAddr, setNewAddr] = useState({ label: '', address: '', city: '', pincode: '' });

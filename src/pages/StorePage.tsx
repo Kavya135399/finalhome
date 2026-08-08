@@ -1035,34 +1035,6 @@ export function StorePage() {
                 )}
               </div>
 
-              {/* AVAILABLE COUPONS */}
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">AVAILABLE COUPONS</p>
-                <div className="space-y-2.5">
-                  {[
-                    { code: 'FIRST50', discount: 50, type: 'percent', maxDiscount: 200, minOrder: 199, description: '50% off on first booking (max ₹200)' },
-                    { code: 'CLEAN20', discount: 20, type: 'percent', maxDiscount: 500, minOrder: 999, description: '20% off on cleaning services (max ₹500)' },
-                    { code: 'FLAT100', discount: 100, type: 'flat', maxDiscount: 100, minOrder: 499, description: 'Flat ₹100 off on orders above ₹499' },
-                    { code: 'NEW200', discount: 200, type: 'flat', maxDiscount: 200, minOrder: 499, description: 'Flat ₹200 off on orders above ₹499' },
-                  ].map((c) => (
-                    <div
-                      key={c.code}
-                      className="bg-blue-50/50 dark:bg-blue-950/10 border-2 border-dashed border-blue-200 dark:border-blue-900/40 rounded-2xl p-3.5 flex items-center justify-between transition hover:border-blue-400"
-                    >
-                      <div>
-                        <span className="font-black text-xs text-blue-600 dark:text-blue-400">{c.code}</span>
-                        <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5">{c.description}</p>
-                      </div>
-                      <button
-                        onClick={() => applyCoupon(c.code)}
-                        className="text-xs font-black text-blue-600 dark:text-blue-400 hover:text-blue-800 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-blue-200 dark:border-blue-900/50 shadow-sm transition active:scale-95 cursor-pointer"
-                      >
-                        Use Code
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
 
@@ -1161,6 +1133,12 @@ export function StorePage() {
                   if (checkoutStep === 2 && !selectedAddr) {
                     toast('Please select a delivery address', 'error');
                     return;
+                  }
+                  if (checkoutStep === 3) {
+                    if (coupon.trim() !== '' && !couponApplied) {
+                      toast('Please apply a valid coupon code or clear the input to continue', 'error');
+                      return;
+                    }
                   }
                   setCheckoutStep(s => Math.min(4, s + 1) as any);
                 }}

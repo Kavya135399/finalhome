@@ -165,7 +165,8 @@ export function ServicesPage() {
   // Address & Scheduling State
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(() => {
     try {
-      const stored = localStorage.getItem('homeseva.addresses');
+      const key = user ? `homeseva.addresses.${user.id}` : 'homeseva.addresses';
+      const stored = localStorage.getItem(key);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -179,11 +180,12 @@ export function ServicesPage() {
         }
       }
     } catch {}
-    return defaultAddresses;
+    return [];
   });
   const [selectedAddressId, setSelectedAddressId] = useState<string>(() => {
     try {
-      const stored = localStorage.getItem('homeseva.addresses');
+      const key = user ? `homeseva.addresses.${user.id}` : 'homeseva.addresses';
+      const stored = localStorage.getItem(key);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -191,7 +193,7 @@ export function ServicesPage() {
         }
       }
     } catch {}
-    return 'addr-1';
+    return '';
   });
   const [isChangingAddress, setIsChangingAddress] = useState<boolean>(false);
   const [newAddressForm, setNewAddressForm] = useState({ title: '', address: '', city: 'Ahmedabad', pincode: '' });
@@ -310,7 +312,8 @@ export function ServicesPage() {
         pincode: a.pincode,
         isDefault: false,
       }));
-      localStorage.setItem('homeseva.addresses', JSON.stringify(storageFormat));
+      const key = user ? `homeseva.addresses.${user.id}` : 'homeseva.addresses';
+      localStorage.setItem(key, JSON.stringify(storageFormat));
     } catch (err) {
       console.warn('Failed to save address to localStorage:', err);
     }

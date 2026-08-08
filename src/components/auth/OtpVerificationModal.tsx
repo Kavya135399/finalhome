@@ -205,7 +205,7 @@ export const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
             Valid for <strong>10 mins</strong>. Max 5 wrong attempts.
           </p>
 
-          <Button type="submit" fullWidth size="default" loading={loading} disabled={otp.join('').length !== 6}>
+          <Button type="submit" fullWidth size="md" loading={loading} disabled={otp.join('').length !== 6}>
             Verify Code
           </Button>
 

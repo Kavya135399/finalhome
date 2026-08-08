@@ -83,8 +83,8 @@ export function ServiceDetailsPage() {
           
           {/* Core Badges */}
           <div className="flex flex-wrap gap-1.5 mb-5 select-none">
-            {service.tags.includes('bestseller') && <Badge tone="amber">Bestseller</Badge>}
-            {service.tags.includes('same-day') && <Badge tone="green">Same-day available</Badge>}
+            {service.tags && service.tags.includes('bestseller') && <Badge tone="amber">Bestseller</Badge>}
+            {service.tags && service.tags.includes('same-day') && <Badge tone="green">Same-day available</Badge>}
             <Badge tone="brand"><ShieldCheck className="w-3.5 h-3.5 inline mr-1" /> 45-day warranty</Badge>
           </div>
 
@@ -146,9 +146,9 @@ export function ServiceDetailsPage() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
                 <div className="card p-4 flex items-center gap-6 bg-white dark:bg-slate-900">
                   <div className="text-center select-none shrink-0">
-                    <p className="text-4xl font-black text-brand-600 dark:text-brand-400">{service.rating}</p>
-                    <div className="flex justify-center mt-1"><Rating value={service.rating} size="sm" showValue={false} /></div>
-                    <p className="text-[9px] text-gray-400 mt-1">{service.reviewCount.toLocaleString()} reviews</p>
+                    <p className="text-4xl font-black text-brand-600 dark:text-brand-400">{service.rating || 5}</p>
+                    <div className="flex justify-center mt-1"><Rating value={service.rating || 5} size="sm" showValue={false} /></div>
+                    <p className="text-[9px] text-gray-400 mt-1">{(service.reviewCount || 0).toLocaleString()} reviews</p>
                   </div>
                   <div className="flex-1 space-y-1 select-none">
                     {[5, 4, 3, 2, 1].map((star) => {
@@ -195,7 +195,7 @@ export function ServiceDetailsPage() {
             <span className="text-[9px] text-gray-400 font-extrabold uppercase tracking-wide">Total Price</span>
             <div className="flex items-baseline gap-1.5">
               <span className="text-xl font-black text-gray-900 dark:text-white">₹{service.price}</span>
-              {service.originalPrice > service.price && (
+              {service.originalPrice && service.originalPrice > service.price && (
                 <span className="text-xs text-gray-400 line-through">₹{service.originalPrice}</span>
               )}
             </div>

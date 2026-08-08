@@ -165,6 +165,8 @@ export function RootLayout() {
 
   // Navigation flags
   const isAdminView = pathname.startsWith('/admin');
+  const isAuthView = ['/login', '/register', '/forgot-password'].includes(pathname);
+  const hideHeader = isAdminView || isAuthView;
   const hideBottomNavList = ['/login', '/register', '/forgot-password', '/book', '/admin', '/pro'];
   const isDetailsView = pathname.startsWith('/services/') && pathname !== '/services';
   const showBottomNav = !hideBottomNavList.some((p) => pathname.startsWith(p)) && !isDetailsView;
@@ -191,10 +193,31 @@ export function RootLayout() {
     <div className="h-screen h-[100dvh] w-full bg-gray-50 dark:bg-slate-950 flex flex-col text-gray-900 dark:text-white antialiased overflow-hidden">
       
       {/* Top App Bar */}
-      {!isAdminView && (
+      {!hideHeader && (
       <header className="fixed top-0 inset-x-0 h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-b border-gray-150 dark:border-slate-800/60 z-50 select-none">
         <div className="max-w-7xl mx-auto h-full flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
+            {showBackButton && (
+              <button
+                onClick={() => {
+                  const queryParams = new URLSearchParams(location.search);
+                  const tabParam = queryParams.get('tab');
+                  if (pathname === '/dashboard' && tabParam && tabParam !== 'dashboard') {
+                    navigate('/dashboard');
+                  } else {
+                    if (window.history.length > 1) {
+                      navigate(-1);
+                    } else {
+                      navigate('/');
+                    }
+                  }
+                }}
+                className="mr-1.5 p-1.5 -ml-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition active:scale-95 flex items-center justify-center shrink-0"
+                aria-label="Go back"
+              >
+                <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
+              </button>
+            )}
             <Link to="/" className="flex items-center px-1">
               <span className="text-[17px] font-extrabold tracking-tight text-gray-900 dark:text-white font-display">
                 Bhale Padharya
@@ -289,7 +312,7 @@ export function RootLayout() {
       </header>
       )}
 
-      <main className={`flex-1 flex flex-col overflow-y-auto overflow-x-hidden scroll-smooth ${isAdminView ? 'pt-0' : 'pt-14'} ${showBottomNav ? 'pb-16' : 'pb-0'}`}>
+      <main className={`flex-1 flex flex-col overflow-y-auto overflow-x-hidden scroll-smooth ${hideHeader ? 'pt-0' : 'pt-14'} ${showBottomNav ? 'pb-16' : 'pb-0'}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={pathname + location.search}
